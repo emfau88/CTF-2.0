@@ -142,13 +142,14 @@ export class Bot {
 }
 
 export class Projectile {
-  ttl = 1100; dead = false;
+  ttl = 2600; dead = false;
   constructor(public x: number, public y: number, public vx: number, public vy: number, public owner: Player | Bot) {}
   update(dt: number, ms: number, targets: Array<Player | Bot>) {
     this.ttl -= ms; if (this.ttl <= 0) { this.dead = true; return; }
     this.x += this.vx * dt; this.y += this.vy * dt;
     for (const t of targets) {
       if (t === this.owner) continue;
+      if (t.team === this.owner.team) continue;
       if (t instanceof Bot && !t.alive) continue;
       if (t instanceof Player && t.state !== "alive") continue;
       if (len(this.x - t.x, this.y - t.y) <= t.radius + T.projectileRadius) { t.damage(T.projectileDamage); this.dead = true; return; }
@@ -176,7 +177,13 @@ export class AutoAttack {
     if (!best) return;
     const dx = best.x - this.owner.x, dy = best.y - this.owner.y, d = len(dx, dy) || 1;
     const height = this.owner instanceof Player ? this.owner.jump.height : 0;
-    this.projectiles.push(new Projectile(this.owner.x, this.owner.y - height, dx / d * T.projectileSpeed, dy / d * T.projectileSpeed, this.owner));
+    this.projectiles.push(new Projectile(
+      this.owner.x + dx / d * (this.owner.radius + T.projectileRadius + 3),
+      this.owner.y - height + dy / d * (this.owner.radius + T.projectileRadius + 3),
+      dx / d * T.projectileSpeed,
+      dy / d * T.projectileSpeed,
+      this.owner,
+    ));
     this.cooldown = this.fireRate;
   }
 }

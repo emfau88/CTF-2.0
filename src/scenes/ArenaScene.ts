@@ -105,10 +105,12 @@ export class ArenaScene extends Phaser.Scene {
 
     const blockers: Rect[] = [...this.level.walls, ...this.level.gaps];
     for (const b of this.bots) b.update(dt, ms, blockers, this.flags, this.player);
+    for (const p of this.projectiles) p.update(dt, ms, [...this.bots, this.player]);
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      if (this.projectiles[i].dead) this.projectiles.splice(i, 1);
+    }
     this.auto.update(ms, this.bots);
     for (const b of this.bots) this.botAutos.get(b)?.update(ms, [this.player]);
-    for (const p of this.projectiles) p.update(dt, ms, [...this.bots, this.player]);
-    this.projectiles = this.projectiles.filter(p => !p.dead);
     for (const b of this.bots) if (!b.alive) this.flags.failed(b);
     this.flags.update(this.player);
     this.updateTrail(ms);
@@ -137,11 +139,14 @@ export class ArenaScene extends Phaser.Scene {
         ?.setPosition(b.x, b.y)
         .setFillStyle(b.carriedFlag ? TEAM.red.color : TEAM.blue.color)
         .setVisible(b.alive);
+      if (b.alive) this.drawHpBar(b.x - 18, b.y - 31, 36, 5, b.hp / T.botMaxHp, TEAM.blue.dark);
     }
     for (const p of this.projectiles) {
       const color = p.owner.team === "red" ? TEAM.red.dark : TEAM.blue.dark;
-      if (!this.projectileViews.has(p)) this.projectileViews.set(p, this.add.circle(p.x, p.y, T.projectileRadius, color).setDepth(50));
-      this.projectileViews.get(p)?.setPosition(p.x, p.y);
+      if (!this.projectileViews.has(p)) {
+        this.projectileViews.set(p, this.add.circle(p.x, p.y, T.projectileRadius, color, .95).setStrokeStyle(2, 0xffffff, .85).setDepth(50));
+      }
+      this.projectileViews.get(p)?.setPosition(p.x, p.y).setFillStyle(color, .95);
     }
     for (const [p, v] of this.projectileViews) if (p.dead) { v.destroy(); this.projectileViews.delete(p); }
     this.drawTouch();
@@ -163,6 +168,12 @@ export class ArenaScene extends Phaser.Scene {
       this.gfx.fillStyle(c, .95).fillTriangle(f.x + 2, f.y - 28, f.x + 34, f.y - 18, f.x + 2, f.y - 8);
       this.gfx.fillStyle(0xffffff, .9).fillCircle(f.x, f.y + 17, 6);
     }
+  }
+
+  drawHpBar(x: number, y: number, w: number, h: number, ratio: number, color: number) {
+    const clamped = Phaser.Math.Clamp(ratio, 0, 1);
+    this.gfx.fillStyle(0x17211f, .72).fillRoundedRect(x, y, w, h, 2);
+    this.gfx.fillStyle(color, .95).fillRoundedRect(x, y, w * clamped, h, 2);
   }
 
   updateTrail(ms: number) {
@@ -240,6 +251,7 @@ export class ArenaScene extends Phaser.Scene {
     document.querySelector("#red-score")!.textContent = String(this.flags.redScore);
     document.querySelector("#blue-score")!.textContent = String(this.flags.blueScore);
     document.querySelector("#flag-state")!.textContent = this.flags.text(this.player);
+    document.querySelector("#player-hp")!.textContent = String(Math.max(0, Math.ceil(this.player.hp)));
     document.querySelector("#speed")!.textContent = this.player.speed().toFixed(0);
     document.querySelector("#jump")!.textContent = this.player.jump.state();
     document.querySelector("#capture")!.textContent = this.flags.capture(this.player);
@@ -253,6 +265,9 @@ jump height: ${this.player.jump.height.toFixed(1)}
 jump charge: ${Math.round(this.player.jump.charge() * 100)}%
 friction: ${this.player.movement.currentFriction.toFixed(2)}
 carried flag: ${this.player.carriedFlag ?? "none"}
+projectiles: ${this.projectiles.length}
+bot hp: ${this.bots.map((b) => `${b.role}:${Math.max(0, Math.ceil(b.hp))}`).join(", ")}
+nearest enemy: ${Math.min(...this.bots.filter((b) => b.alive).map((b) => Phaser.Math.Distance.Between(this.player.x, this.player.y, b.x, b.y)), 9999).toFixed(0)}
 over gap: ${this.player.overGap ? "yes" : "no"}
 last safe: ${this.player.lastSafe.x.toFixed(0)}, ${this.player.lastSafe.y.toFixed(0)}`;
   }
