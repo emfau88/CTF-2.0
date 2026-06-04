@@ -8,6 +8,7 @@ import { AutoAttack, Bot, CollisionSystem, FlagSystem, Pickup, PickupSystem, Pro
 type Trail = { x: number; y: number; life: number; max: number; air: boolean; speed: number };
 type RocketSmokeFx = { x: number; y: number; life: number; max: number; frame: number; scale: number; rotation: number; view?: Phaser.GameObjects.Image };
 type ExplosionFx = { x: number; y: number; life: number; max: number; view?: Phaser.GameObjects.Image };
+type SpawnPadParticle = { x: number; y: number; ox: number; life: number; max: number; size: number };
 
 export class ArenaScene extends Phaser.Scene {
   player!: Player;
@@ -38,11 +39,17 @@ export class ArenaScene extends Phaser.Scene {
   projectileViews = new Map<Projectile, Phaser.GameObjects.Arc>();
   rocketViews = new Map<Projectile, Phaser.GameObjects.Image>();
   pickupViews = new Map<Pickup, Phaser.GameObjects.Container>();
+  flagViews = new Map<string, Phaser.GameObjects.Image>();
+  rocketButtonView?: Phaser.GameObjects.Image;
+  ammoBadgeView?: Phaser.GameObjects.Image;
+  ammoText?: Phaser.GameObjects.Text;
   botAlive = new Map<Bot, boolean>();
   trail: Trail[] = [];
   rocketSmoke: RocketSmokeFx[] = [];
   rocketSmokeTimers = new Map<Projectile, number>();
   explosions: ExplosionFx[] = [];
+  spawnPadParticles: SpawnPadParticle[] = [];
+  spawnPadParticleTimer = 0;
   trailTimer = 0;
   lastState = "alive";
   debugVisible = window.innerWidth > 620;
@@ -64,6 +71,14 @@ export class ArenaScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.image("uiRocketButton", "/assets/ui-rocket-button.png");
+    this.load.image("uiAmmoBadge", "/assets/ui-ammo-badge.png");
+    this.load.image("pickupHealth", "/assets/pickup-health.png");
+    this.load.image("pickupArmor", "/assets/pickup-armor.png");
+    this.load.image("pickupRocket", "/assets/pickup-rocket.png");
+    this.load.image("flagRed", "/assets/flag-red.png");
+    this.load.image("flagBlue", "/assets/flag-blue.png");
+    this.load.image("spawnPad", "/assets/spawn-pad.png");
   }
 
   create(data?: { mapId?: LevelId; redCount?: number; blueCount?: number }) {
@@ -161,6 +176,7 @@ export class ArenaScene extends Phaser.Scene {
     this.updateTrail(ms);
     this.updateRocketSmoke(ms);
     this.updateExplosions(ms);
+    this.updateSpawnPadParticles(ms);
     this.render();
   }
 
@@ -262,7 +278,15 @@ export class ArenaScene extends Phaser.Scene {
   renderPickups() {
     for (const pickup of this.pickups.pickups) {
       if (!this.pickupViews.has(pickup)) this.pickupViews.set(pickup, this.createPickupView(pickup));
-      this.pickupViews.get(pickup)?.setVisible(pickup.active);
+      const view = this.pickupViews.get(pickup);
+      view?.setVisible(true);
+      const age = this.time.now * .001 + pickup.x * .011 + pickup.y * .007;
+      const pad = view?.getByName("pad") as Phaser.GameObjects.Image | undefined;
+      const icon = view?.getByName("icon") as Phaser.GameObjects.Image | undefined;
+      const label = view?.getByName("amount") as Phaser.GameObjects.Text | undefined;
+      pad?.setRotation(0).setScale(.27).setAlpha((pickup.temporary ? .38 : .82) + Math.sin(age * 2.4) * .05);
+      icon?.setVisible(pickup.active).setScale((pickup.temporary ? .17 : .18) + Math.sin(age * 3.2) * .008).setAlpha(pickup.active ? 1 : .2);
+      label?.setVisible(pickup.active && pickup.temporary);
     }
     for (const [pickup, view] of this.pickupViews) {
       if (!this.pickups.pickups.includes(pickup)) {
@@ -270,6 +294,7 @@ export class ArenaScene extends Phaser.Scene {
         this.pickupViews.delete(pickup);
       }
     }
+    this.renderSpawnPadParticles();
   }
 
   dropWeaponAmmo(actor: Player | Bot) {
@@ -280,41 +305,34 @@ export class ArenaScene extends Phaser.Scene {
 
   createPickupView(pickup: Pickup) {
     const container = this.add.container(pickup.x, pickup.y).setDepth(18);
-    const colors = {
-      health: { fill: 0x43d675, stroke: 0x166237 },
-      armor: { fill: 0x35d890, stroke: 0x0f6845 },
-      rocket: { fill: 0xf59f2f, stroke: 0x8f3d0f },
-    };
-    const color = colors[pickup.kind];
-    const base = this.add.circle(0, 0, pickup.temporary ? 14 : 16, color.fill, pickup.temporary ? .82 : .92).setStrokeStyle(3, pickup.temporary ? 0xffffff : color.stroke, pickup.temporary ? .86 : .95);
-    container.add(base);
-    if (pickup.kind === "health") {
-      container.add(this.add.rectangle(0, 0, 18, 6, 0xffffff, .94));
-      container.add(this.add.rectangle(0, 0, 6, 18, 0xffffff, .94));
-    } else if (pickup.kind === "armor") {
-      container.add(this.add.triangle(0, 1, -10, -8, 10, -8, 0, 11, 0xffffff, .92));
-    } else {
-      container.add(this.add.rectangle(0, 0, 20, 7, 0xffffff, .92).setRotation(-.45));
-      container.add(this.add.circle(9, -4, 4, 0x34220a, .95));
-      if (pickup.temporary) {
-        container.add(this.add.text(11, 8, String(pickup.amount), {
-          fontFamily: "Arial",
-          fontSize: "11px",
-          color: "#ffffff",
-          stroke: "#17211f",
-          strokeThickness: 3,
-        }).setOrigin(.5));
-      }
+    const iconKey = pickup.kind === "health" ? "pickupHealth" : pickup.kind === "armor" ? "pickupArmor" : "pickupRocket";
+    const icon = this.add.image(0, pickup.kind === "rocket" ? -3 : -5, iconKey).setName("icon").setScale(pickup.temporary ? .17 : .18).setDepth(1);
+    if (!pickup.temporary) {
+      container.add(this.add.image(0, 2, "spawnPad").setName("pad").setScale(.27).setAlpha(.82).setDepth(0));
+    }
+    container.add(icon);
+    if (pickup.temporary) {
+      container.add(this.add.text(16, 12, String(pickup.amount), {
+        fontFamily: "Arial",
+        fontSize: "13px",
+        color: "#ffffff",
+        stroke: "#17211f",
+        strokeThickness: 4,
+      }).setName("amount").setOrigin(.5).setDepth(2));
     }
     return container;
   }
 
   renderFlags() {
     for (const f of Object.values(this.flags.flags)) {
-      const c = f.team === "red" ? TEAM.red.dark : TEAM.blue.dark;
-      this.gfx.lineStyle(4, 0x243633, .9).beginPath().moveTo(f.x, f.y + 16).lineTo(f.x, f.y - 28).strokePath();
-      this.gfx.fillStyle(c, .95).fillTriangle(f.x + 2, f.y - 28, f.x + 34, f.y - 18, f.x + 2, f.y - 8);
-      this.gfx.fillStyle(0xffffff, .9).fillCircle(f.x, f.y + 17, 6);
+      const key = f.team;
+      if (!this.flagViews.has(key)) {
+        this.flagViews.set(key, this.add.image(f.x, f.y - 16, f.team === "red" ? "flagRed" : "flagBlue").setDepth(34).setScale(.28));
+      }
+      this.flagViews.get(key)
+        ?.setPosition(f.x + 10, f.y - 18)
+        .setScale(.25 + Math.sin(this.time.now * .006) * .01)
+        .setAlpha(f.carrier ? .94 : 1);
     }
   }
 
@@ -394,6 +412,39 @@ export class ArenaScene extends Phaser.Scene {
     this.explosions = this.explosions.filter((fx) => fx.life > 0);
   }
 
+  updateSpawnPadParticles(ms: number) {
+    this.spawnPadParticleTimer -= ms;
+    if (this.spawnPadParticleTimer <= 0) {
+      this.spawnPadParticleTimer = 95;
+      for (const pickup of this.pickups.pickups) {
+        if (pickup.temporary) continue;
+        const life = Phaser.Math.Between(620, 920);
+        this.spawnPadParticles.push({
+          x: pickup.x + Phaser.Math.Between(-14, 14),
+          y: pickup.y - 2 + Phaser.Math.Between(-4, 7),
+          ox: Phaser.Math.FloatBetween(-8, 8),
+          life,
+          max: life,
+          size: Phaser.Math.FloatBetween(2.2, 4.2),
+        });
+      }
+    }
+    for (const particle of this.spawnPadParticles) particle.life -= ms;
+    this.spawnPadParticles = this.spawnPadParticles.filter((particle) => particle.life > 0);
+  }
+
+  renderSpawnPadParticles() {
+    for (const particle of this.spawnPadParticles) {
+      const t = 1 - particle.life / particle.max;
+      const alpha = Phaser.Math.Clamp(particle.life / particle.max, 0, 1) * .45;
+      this.gfx.fillStyle(0x7dfcff, alpha).fillCircle(
+        particle.x + particle.ox * t,
+        particle.y - t * 34,
+        particle.size * (1 - t * .35),
+      );
+    }
+  }
+
   renderExplosions() {
     for (const fx of this.explosions) {
       const t = 1 - fx.life / fx.max;
@@ -435,8 +486,6 @@ export class ArenaScene extends Phaser.Scene {
     for (let y = 0; y <= T.worldHeight; y += 50) g.beginPath().moveTo(0, y).lineTo(T.worldWidth, y).strokePath();
     this.zone(g, this.level.redBase, TEAM.red.base, TEAM.red.dark); this.zone(g, this.level.blueBase, TEAM.blue.base, TEAM.blue.dark);
     g.lineStyle(3, 0x9dafaa, .45).beginPath().moveTo(T.worldWidth / 2, 40).lineTo(T.worldWidth / 2, T.worldHeight - 40).strokePath();
-    for (const gap of this.level.gaps) this.gap(g, gap);
-    for (const wall of this.level.walls) this.wall(g, wall);
   }
   drawFloorTiles() {
     const size = 50;
@@ -451,8 +500,6 @@ export class ArenaScene extends Phaser.Scene {
     this.add.image(r.x + r.w / 2, r.y + r.h / 2, "arenaTiles", frame).setDisplaySize(r.w, r.h).setAlpha(alpha).setDepth(-1);
   }
   zone(g: Phaser.GameObjects.Graphics, r: Rect, fill: number, stroke: number) { g.fillStyle(fill, .18).fillRoundedRect(r.x, r.y, r.w, r.h, 8).lineStyle(3, stroke, .62).strokeRoundedRect(r.x, r.y, r.w, r.h, 8); }
-  gap(g: Phaser.GameObjects.Graphics, r: Rect) { g.fillStyle(0x111f20, .24).fillRoundedRect(r.x, r.y, r.w, r.h, 8).lineStyle(3, 0x5eb5dc, .72).strokeRoundedRect(r.x + 3, r.y + 3, r.w - 6, r.h - 6, 7); }
-  wall(g: Phaser.GameObjects.Graphics, r: Rect) { g.fillStyle(0xb9c8be, .16).fillRoundedRect(r.x, r.y, r.w, r.h, 6).lineStyle(2, 0x6f837b, .95).strokeRoundedRect(r.x, r.y, r.w, r.h, 6); }
 
   layoutTouch() {
     this.joy.ox = Math.max(96, this.scale.width * .12);
@@ -519,16 +566,32 @@ export class ArenaScene extends Phaser.Scene {
   drawRocketButton() {
     const ready = this.player.state === "alive" && this.player.rocketAmmo > 0;
     const active = this.rocketBtn.held && ready;
-    const fill = ready ? 0xf59f2f : 0x8b8f90;
-    const stroke = active ? 0xfff0b2 : ready ? 0x8f3d0f : 0x4d5355;
-    this.uiGfx.fillStyle(fill, ready ? .86 : .42).lineStyle(3, stroke, active ? .95 : .58).fillCircle(this.rocketBtn.x, this.rocketBtn.y, this.rocketBtn.r).strokeCircle(this.rocketBtn.x, this.rocketBtn.y, this.rocketBtn.r);
-    this.uiGfx.fillStyle(0xffffff, ready ? .95 : .48).fillRect(this.rocketBtn.x - 16, this.rocketBtn.y - 4, 26, 8);
-    this.uiGfx.fillStyle(0x3a2406, ready ? .95 : .48).fillCircle(this.rocketBtn.x + 12, this.rocketBtn.y - 5, 6);
-    this.uiGfx.lineStyle(3, 0xffffff, ready ? .92 : .42).strokeCircle(this.rocketBtn.x + 19, this.rocketBtn.y + 18, 13);
-    this.uiGfx.fillStyle(0x17211f, ready ? .95 : .56).fillCircle(this.rocketBtn.x + 19, this.rocketBtn.y + 18, 11);
-    this.uiGfx.fillStyle(0xffffff, ready ? .96 : .5);
-    const ammo = String(this.player.rocketAmmo);
-    for (let i = 0; i < ammo.length; i++) this.drawDigit(ammo[i], this.rocketBtn.x + 15 + i * 8, this.rocketBtn.y + 12);
+    if (!this.rocketButtonView) {
+      this.rocketButtonView = this.add.image(this.rocketBtn.x, this.rocketBtn.y, "uiRocketButton").setScrollFactor(0).setDepth(1001).setScale(.38);
+    }
+    if (!this.ammoBadgeView) {
+      this.ammoBadgeView = this.add.image(this.rocketBtn.x + 30, this.rocketBtn.y + 30, "uiAmmoBadge").setScrollFactor(0).setDepth(1002).setScale(.16);
+    }
+    if (!this.ammoText) {
+      this.ammoText = this.add.text(this.rocketBtn.x + 30, this.rocketBtn.y + 30, "0", {
+        fontFamily: "Arial",
+        fontSize: "17px",
+        color: "#ffffff",
+        stroke: "#17211f",
+        strokeThickness: 5,
+      }).setOrigin(.5).setScrollFactor(0).setDepth(1003);
+    }
+    this.rocketButtonView
+      .setPosition(this.rocketBtn.x, this.rocketBtn.y)
+      .setScale(active ? .41 : .38)
+      .setAlpha(ready ? 1 : .42);
+    this.ammoBadgeView
+      .setPosition(this.rocketBtn.x + 31, this.rocketBtn.y + 31)
+      .setAlpha(ready ? .95 : .48);
+    this.ammoText
+      .setPosition(this.rocketBtn.x + 31, this.rocketBtn.y + 31)
+      .setText(String(this.player.rocketAmmo))
+      .setAlpha(ready ? 1 : .55);
     if (active && this.rocketBtn.dragged) {
       const len = Math.min(68, Math.max(28, this.rocketBtn.drag));
       this.uiGfx.lineStyle(5, 0xfff0b2, this.rocketBtn.drag < 18 ? .38 : .9)
