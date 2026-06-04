@@ -105,7 +105,7 @@ export class ArenaScene extends Phaser.Scene {
 
     const blockers: Rect[] = [...this.level.walls, ...this.level.gaps];
     for (const b of this.bots) b.update(dt, ms, blockers, this.flags, this.player);
-    for (const p of this.projectiles) p.update(dt, ms, [...this.bots, this.player]);
+    for (const p of this.projectiles) p.update(dt, ms, [...this.bots, this.player], this.level.walls);
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       if (this.projectiles[i].dead) this.projectiles.splice(i, 1);
     }
@@ -137,9 +137,9 @@ export class ArenaScene extends Phaser.Scene {
     for (const b of this.bots) {
       this.botViews.get(b)
         ?.setPosition(b.x, b.y)
-        .setFillStyle(b.carriedFlag ? TEAM.red.color : TEAM.blue.color)
+        .setFillStyle(TEAM[b.team].color)
         .setVisible(b.alive);
-      if (b.alive) this.drawHpBar(b.x - 18, b.y - 31, 36, 5, b.hp / T.botMaxHp, TEAM.blue.dark);
+      if (b.alive) this.drawHpBar(b.x - 18, b.y - 31, 36, 5, b.hp / T.botMaxHp, TEAM[b.team].dark);
     }
     for (const p of this.projectiles) {
       const color = p.owner.team === "red" ? TEAM.red.dark : TEAM.blue.dark;
@@ -156,7 +156,13 @@ export class ArenaScene extends Phaser.Scene {
   renderPlayer() {
     const h = this.player.jump.height, s = Math.min(1, this.player.speed() / T.maxSpeed), scale = 1 + h / 210;
     this.shadow.setPosition(this.player.x, this.player.y + 8).setScale(1 + h / 160, Math.max(.35, 1 - h / 95)).setAlpha(this.player.state === "alive" ? Math.max(.1, .22 - h / 330) : 0);
-    const color = this.player.carriedFlag ? TEAM.blue.color : Phaser.Display.Color.GetColor(Phaser.Math.Linear(228, 120, s), Phaser.Math.Linear(81, 38, s), Phaser.Math.Linear(81, 38, s));
+    const team = TEAM[this.player.team];
+    const color = Phaser.Display.Color.Interpolate.ColorWithColor(
+      Phaser.Display.Color.IntegerToColor(team.color),
+      Phaser.Display.Color.IntegerToColor(team.dark),
+      100,
+      Math.round(s * 100),
+    ).color;
     this.playerBody.setPosition(this.player.x, this.player.y - h).setRadius(this.player.radius * scale).setFillStyle(this.player.state === "falling" ? 0x333333 : color, this.player.state === "alive" ? 1 : .35).setVisible(this.player.state !== "dead");
     this.playerRing.setPosition(this.player.x, this.player.y - h).setRadius(this.player.radius * scale + 4).setStrokeStyle(3, this.player.jump.active ? 0xffd86b : 0xffffff, .95).setVisible(this.player.state !== "dead");
   }

@@ -144,9 +144,10 @@ export class Bot {
 export class Projectile {
   ttl = 2600; dead = false;
   constructor(public x: number, public y: number, public vx: number, public vy: number, public owner: Player | Bot) {}
-  update(dt: number, ms: number, targets: Array<Player | Bot>) {
+  update(dt: number, ms: number, targets: Array<Player | Bot>, walls: Rect[] = []) {
     this.ttl -= ms; if (this.ttl <= 0) { this.dead = true; return; }
     this.x += this.vx * dt; this.y += this.vy * dt;
+    if (walls.some(w => circleRect(this.x, this.y, T.projectileRadius, w))) { this.dead = true; return; }
     for (const t of targets) {
       if (t === this.owner) continue;
       if (t.team === this.owner.team) continue;
