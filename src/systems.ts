@@ -227,7 +227,7 @@ export class FlagSystem {
 }
 
 export class Bot {
-  radius = 15; vx = 0; vy = 0; hp = T.botMaxHp; armor = 0; rocketAmmo = 0; alive = true; respawnTimer = 0; carriedFlag: TeamId | null = null;
+  radius = 15; vx = 0; vy = 0; hp = T.botMaxHp; armor = 0; rocketAmmo = 0; railAmmo = 0; railCooldown = 0; alive = true; respawnTimer = 0; carriedFlag: TeamId | null = null;
   state = "spawn";
   private routeIndex = 0;
   private path: Vec2[] = [];
@@ -249,10 +249,11 @@ export class Bot {
     if (!this.alive) {
       this.respawnTimer -= ms;
       if (this.respawnTimer <= 0) {
-        this.x = this.spawn.x; this.y = this.spawn.y; this.hp = T.botMaxHp; this.armor = 0; this.rocketAmmo = 0; this.alive = true; this.routeIndex = 0; this.path = []; this.pathIndex = 0; this.pathTarget = null; this.state = "spawn";
+        this.x = this.spawn.x; this.y = this.spawn.y; this.hp = T.botMaxHp; this.armor = 0; this.rocketAmmo = 0; this.railAmmo = 0; this.railCooldown = 0; this.alive = true; this.routeIndex = 0; this.path = []; this.pathIndex = 0; this.pathTarget = null; this.state = "spawn";
       }
       return;
     }
+    this.railCooldown = Math.max(0, this.railCooldown - ms);
 
     const target = this.chooseTarget(flags, actors, walls, pickups);
     this.pathTimer -= ms;
@@ -358,7 +359,8 @@ export class Bot {
   private itemUseful(pickup: Pickup) {
     if (pickup.kind === "health") return this.hp < T.botMaxHp * .72;
     if (pickup.kind === "armor") return this.armor < T.botMaxHp * .25;
-    return pickup.temporary || this.rocketAmmo <= 0;
+    if (pickup.kind === "rocket") return pickup.temporary || this.rocketAmmo <= 0;
+    return pickup.temporary || this.railAmmo <= 0;
   }
   private ownBaseCenter(): Vec2 {
     const base = this.team === "red" ? this.level.redBase : this.level.blueBase;
@@ -487,7 +489,7 @@ export class Pickup {
     public kind: PickupKind,
     public x: number,
     public y: number,
-    public amount = kind === "rocket" ? T.rocketAmmo : 1,
+    public amount = kind === "rocket" ? T.rocketAmmo : kind === "rail" ? T.railAmmo : 1,
     public temporary = false,
   ) {
     this.life = temporary ? T.weaponDropLifetimeMs : 0;
@@ -509,11 +511,13 @@ export class Pickup {
     if (!this.active) return;
     if (actor instanceof Player && actor.state !== "alive") return;
     if (actor instanceof Bot && !actor.alive) return;
+    if (actor instanceof Bot && this.kind === "rail") return;
     if (len(actor.x - this.x, actor.y - this.y) > T.pickupRadius + actor.radius) return;
     const maxHp = actor instanceof Player ? T.playerMaxHp : T.botMaxHp;
     if (this.kind === "health") actor.heal(maxHp * T.healthPackHealRatio);
     else if (this.kind === "armor") actor.addArmor(maxHp * T.armorPackRatio);
-    else actor.rocketAmmo += this.amount;
+    else if (this.kind === "rocket") actor.rocketAmmo += this.amount;
+    else actor.railAmmo += this.amount;
     this.active = false;
     if (!this.temporary) this.respawnTimer = T.pickupRespawnMs;
   }
@@ -527,6 +531,10 @@ export class PickupSystem {
   dropRocketAmmo(x: number, y: number, amount: number) {
     if (amount <= 0) return;
     this.pickups.push(new Pickup("rocket", x, y, amount, true));
+  }
+  dropRailAmmo(x: number, y: number, amount: number) {
+    if (amount <= 0) return;
+    this.pickups.push(new Pickup("rail", x, y, amount, true));
   }
   update(ms: number, actors: Actor[]) {
     for (const pickup of this.pickups) {

@@ -1,20 +1,36 @@
 import type { Rect } from "./math";
 
-export type PickupKind = "health" | "armor" | "rocket";
+export type PickupKind = "health" | "armor" | "rocket" | "rail";
 export type PickupSpawn = { kind: PickupKind; x: number; y: number };
+export type LevelTheme = "ruins" | "library" | "sports";
+export type WallVisual = "stone-wall" | "bookshelf" | "bookshelf-damaged" | "reading-table" | "sports-barrier";
+export type GapVisual = "chasm" | "collapsed-floor" | "maintenance-pit";
+export type DecorationKind = "rug" | "book-pile" | "reading-lamp" | "cobweb-spider" | "field-marking";
+export type LevelWall = Rect & { visual?: WallVisual };
+export type LevelGap = Rect & { visual?: GapVisual };
+export type LevelDecoration = Rect & { kind: DecorationKind };
+
+export const LEVEL_THEME_VISUALS = {
+  ruins: { floorPrimary: 0, floorAccent: 1, redBase: 2, blueBase: 3, wallHorizontal: 4, wallVertical: 5, gap: 8 },
+  library: { floorPrimary: 0, floorAccent: 1, redBase: 2, blueBase: 3, wallHorizontal: 4, wallVertical: 5, gap: 8 },
+  sports: { floorPrimary: 0, floorAccent: 1, redBase: 2, blueBase: 3, wallHorizontal: 4, wallVertical: 5, gap: 8 },
+} as const;
 
 export type LevelData = {
   id: string;
   name: string;
   plan: string;
+  theme: LevelTheme;
   redSpawn: { x: number; y: number };
   blueSpawn: { x: number; y: number };
   redBase: Rect;
   blueBase: Rect;
   redFlag: { x: number; y: number };
   blueFlag: { x: number; y: number };
-  walls: Rect[];
-  gaps: Rect[];
+  walls: LevelWall[];
+  gaps: LevelGap[];
+  decorations?: LevelDecoration[];
+  combatZone?: Rect;
   pickups: PickupSpawn[];
   botRoutes: {
     attacker: { x: number; y: number }[];
@@ -25,7 +41,8 @@ export type LevelData = {
 const trainingCrossing: LevelData = {
   id: "training-crossing",
   name: "Training Crossing",
-  plan: "Balanced starter arena with a risky central jump route and safer top/bottom lanes.",
+  plan: "Balanced starter arena with a contested central power-up court and clear jump flanks.",
+  theme: "ruins",
   redSpawn: { x: 150, y: 410 },
   blueSpawn: { x: 1350, y: 410 },
   redBase: { x: 70, y: 280, w: 190, h: 260 },
@@ -33,58 +50,71 @@ const trainingCrossing: LevelData = {
   redFlag: { x: 150, y: 410 },
   blueFlag: { x: 1350, y: 410 },
   walls: [
-    { x: 332, y: 120, w: 42, h: 185 }, { x: 332, y: 515, w: 42, h: 185 },
-    { x: 470, y: 333, w: 44, h: 154 }, { x: 1126, y: 120, w: 42, h: 185 },
-    { x: 1126, y: 515, w: 42, h: 185 }, { x: 986, y: 333, w: 44, h: 154 },
-    { x: 620, y: 96, w: 260, h: 36 }, { x: 620, y: 688, w: 260, h: 36 },
-    { x: 726, y: 312, w: 48, h: 196 }, { x: 585, y: 392, w: 100, h: 36 },
-    { x: 815, y: 392, w: 100, h: 36 },
+    { x: 320, y: 112, w: 60, h: 194 }, { x: 320, y: 514, w: 60, h: 194 },
+    { x: 1120, y: 112, w: 60, h: 194 }, { x: 1120, y: 514, w: 60, h: 194 },
+    { x: 458, y: 328, w: 60, h: 164 }, { x: 982, y: 328, w: 60, h: 164 },
+    { x: 620, y: 88, w: 260, h: 52 }, { x: 620, y: 680, w: 260, h: 52 },
+    { x: 612, y: 306, w: 64, h: 64 }, { x: 824, y: 450, w: 64, h: 64 },
   ] satisfies Rect[],
   gaps: [
-    { x: 555, y: 218, w: 140, h: 64 }, { x: 805, y: 218, w: 140, h: 64 },
-    { x: 555, y: 538, w: 140, h: 64 }, { x: 805, y: 538, w: 140, h: 64 },
-    { x: 666, y: 350, w: 168, h: 120 },
+    { x: 548, y: 214, w: 128, h: 72 }, { x: 824, y: 534, w: 128, h: 72 },
   ] satisfies Rect[],
+  combatZone: { x: 600, y: 288, w: 300, h: 244 },
   pickups: [
-    { kind: "health", x: 120, y: 320 }, { kind: "armor", x: 220, y: 320 }, { kind: "rocket", x: 150, y: 500 },
-    { kind: "health", x: 1290, y: 320 }, { kind: "armor", x: 1390, y: 320 }, { kind: "rocket", x: 1350, y: 500 },
+    { kind: "health", x: 120, y: 320 }, { kind: "armor", x: 220, y: 320 }, { kind: "rocket", x: 130, y: 500 }, { kind: "rail", x: 215, y: 500 },
+    { kind: "health", x: 1290, y: 320 }, { kind: "armor", x: 1390, y: 320 }, { kind: "rocket", x: 1370, y: 500 }, { kind: "rail", x: 1285, y: 500 },
+    { kind: "armor", x: 750, y: 410 },
   ],
   botRoutes: {
-    attacker: [{ x: 1160, y: 84 }, { x: 760, y: 72 }, { x: 360, y: 84 }, { x: 150, y: 410 }],
+    attacker: [{ x: 1160, y: 72 }, { x: 900, y: 62 }, { x: 600, y: 62 }, { x: 340, y: 72 }, { x: 150, y: 410 }],
     defender: [{ x: 1180, y: 280 }, { x: 1340, y: 280 }, { x: 1340, y: 540 }, { x: 1180, y: 540 }],
   },
 };
 
 const midlineRush: LevelData = {
   id: "midline-rush",
-  name: "Midline Rush",
-  plan: "Faster map with a broad middle lane, two chained jump gaps, and open return routes for speed retention.",
+  name: "Grand Archive",
+  plan: "A fast library arena with broad gallery lanes, an open reading hall, cross-passages, and collapsed-floor jump shortcuts.",
+  theme: "library",
   redSpawn: { x: 145, y: 410 },
   blueSpawn: { x: 1355, y: 410 },
-  redBase: { x: 70, y: 300, w: 180, h: 220 },
-  blueBase: { x: 1250, y: 300, w: 180, h: 220 },
+  redBase: { x: 65, y: 285, w: 195, h: 250 },
+  blueBase: { x: 1240, y: 285, w: 195, h: 250 },
   redFlag: { x: 150, y: 410 },
   blueFlag: { x: 1350, y: 410 },
   walls: [
-    { x: 360, y: 110, w: 42, h: 210 }, { x: 360, y: 500, w: 42, h: 210 },
-    { x: 1098, y: 110, w: 42, h: 210 }, { x: 1098, y: 500, w: 42, h: 210 },
-    { x: 535, y: 185, w: 160, h: 34 }, { x: 805, y: 185, w: 160, h: 34 },
-    { x: 535, y: 601, w: 160, h: 34 }, { x: 805, y: 601, w: 160, h: 34 },
-    { x: 715, y: 300, w: 70, h: 70 }, { x: 715, y: 450, w: 70, h: 70 },
+    { x: 330, y: 92, w: 58, h: 188, visual: "bookshelf" },
+    { x: 330, y: 540, w: 58, h: 188, visual: "bookshelf" },
+    { x: 1112, y: 92, w: 58, h: 188, visual: "bookshelf" },
+    { x: 1112, y: 540, w: 58, h: 188, visual: "bookshelf" },
+    { x: 470, y: 176, w: 190, h: 52, visual: "bookshelf-damaged" },
+    { x: 840, y: 176, w: 190, h: 52, visual: "bookshelf" },
+    { x: 470, y: 592, w: 190, h: 52, visual: "bookshelf" },
+    { x: 840, y: 592, w: 190, h: 52, visual: "bookshelf-damaged" },
+    { x: 612, y: 314, w: 76, h: 76, visual: "reading-table" },
+    { x: 812, y: 430, w: 76, h: 76, visual: "reading-table" },
   ],
   gaps: [
-    { x: 575, y: 350, w: 140, h: 120 },
-    { x: 785, y: 350, w: 140, h: 120 },
-    { x: 655, y: 250, w: 190, h: 54 },
-    { x: 655, y: 516, w: 190, h: 54 },
+    { x: 682, y: 190, w: 136, h: 66, visual: "collapsed-floor" },
+    { x: 682, y: 564, w: 136, h: 66, visual: "collapsed-floor" },
   ],
+  decorations: [
+    { kind: "rug", x: 564, y: 292, w: 172, h: 120 },
+    { kind: "rug", x: 764, y: 408, w: 172, h: 120 },
+    { kind: "book-pile", x: 422, y: 320, w: 38, h: 38 },
+    { kind: "book-pile", x: 1040, y: 462, w: 38, h: 38 },
+    { kind: "cobweb-spider", x: 392, y: 96, w: 72, h: 58 },
+    { kind: "cobweb-spider", x: 1038, y: 666, w: 72, h: 58 },
+  ],
+  combatZone: { x: 552, y: 270, w: 396, h: 280 },
   pickups: [
-    { kind: "health", x: 118, y: 335 }, { kind: "armor", x: 212, y: 335 }, { kind: "rocket", x: 150, y: 485 },
-    { kind: "health", x: 1288, y: 335 }, { kind: "armor", x: 1382, y: 335 }, { kind: "rocket", x: 1350, y: 485 },
+    { kind: "health", x: 112, y: 325 }, { kind: "armor", x: 215, y: 325 }, { kind: "rocket", x: 125, y: 500 }, { kind: "rail", x: 215, y: 500 },
+    { kind: "health", x: 1285, y: 325 }, { kind: "armor", x: 1388, y: 325 }, { kind: "rocket", x: 1375, y: 500 }, { kind: "rail", x: 1285, y: 500 },
+    { kind: "health", x: 750, y: 410 },
   ],
   botRoutes: {
-    attacker: [{ x: 1130, y: 735 }, { x: 760, y: 735 }, { x: 360, y: 735 }, { x: 150, y: 410 }],
-    defender: [{ x: 1190, y: 310 }, { x: 1380, y: 310 }, { x: 1380, y: 520 }, { x: 1190, y: 520 }],
+    attacker: [{ x: 1150, y: 760 }, { x: 900, y: 752 }, { x: 600, y: 752 }, { x: 350, y: 760 }, { x: 150, y: 410 }],
+    defender: [{ x: 1210, y: 285 }, { x: 1375, y: 300 }, { x: 1375, y: 520 }, { x: 1210, y: 535 }],
   },
 };
 
@@ -92,6 +122,7 @@ const flankSwitch: LevelData = {
   id: "flank-switch",
   name: "Flank Switch",
   plan: "More technical map with curved wall gates, tight passages, and diagonal-feeling gap decisions.",
+  theme: "sports",
   redSpawn: { x: 150, y: 410 },
   blueSpawn: { x: 1350, y: 410 },
   redBase: { x: 75, y: 275, w: 190, h: 270 },
@@ -112,8 +143,8 @@ const flankSwitch: LevelData = {
     { x: 706, y: 338, w: 88, h: 144 },
   ],
   pickups: [
-    { kind: "health", x: 125, y: 315 }, { kind: "armor", x: 220, y: 315 }, { kind: "rocket", x: 150, y: 505 },
-    { kind: "health", x: 1280, y: 315 }, { kind: "armor", x: 1375, y: 315 }, { kind: "rocket", x: 1350, y: 505 },
+    { kind: "health", x: 125, y: 315 }, { kind: "armor", x: 220, y: 315 }, { kind: "rocket", x: 125, y: 505 }, { kind: "rail", x: 215, y: 505 },
+    { kind: "health", x: 1280, y: 315 }, { kind: "armor", x: 1375, y: 315 }, { kind: "rocket", x: 1375, y: 505 }, { kind: "rail", x: 1285, y: 505 },
   ],
   botRoutes: {
     attacker: [{ x: 1180, y: 720 }, { x: 930, y: 720 }, { x: 750, y: 720 }, { x: 520, y: 720 }, { x: 150, y: 410 }],

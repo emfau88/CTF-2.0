@@ -1,14 +1,36 @@
 import Phaser from "phaser";
 import { T, TEAM } from "../config";
-import { LEVEL_BY_ID, LEVELS, type LevelData, type LevelId } from "../level";
+import {
+  LEVEL_BY_ID,
+  LEVEL_THEME_VISUALS,
+  LEVELS,
+  type LevelData,
+  type LevelDecoration,
+  type LevelGap,
+  type LevelId,
+  type LevelWall,
+} from "../level";
 import { len, lineIntersectsRect, type InputVector, type Rect, type Vec2 } from "../math";
 import { Player } from "../player";
 import { AutoAttack, Bot, CollisionSystem, FlagSystem, Pickup, PickupSystem, Projectile, type BotRole } from "../systems";
+
+const assetUrl = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`;
 
 type Trail = { x: number; y: number; life: number; max: number; air: boolean; speed: number };
 type RocketSmokeFx = { x: number; y: number; life: number; max: number; frame: number; scale: number; rotation: number; view?: Phaser.GameObjects.Image };
 type ExplosionFx = { x: number; y: number; life: number; max: number; view?: Phaser.GameObjects.Image };
 type SpawnPadParticle = { x: number; y: number; ox: number; life: number; max: number; size: number };
+type LibraryDust = { x: number; y: number; speed: number; drift: number; phase: number; size: number; alpha: number };
+type RailBeamFx = { x1: number; y1: number; x2: number; y2: number; life: number; max: number; hit: boolean; impact?: Phaser.GameObjects.Image };
+type LibraryCandle = {
+  x: number;
+  y: number;
+  lit: boolean;
+  flame: Phaser.GameObjects.Sprite;
+  glow: Phaser.GameObjects.Arc;
+  flameTween: Phaser.Tweens.Tween;
+  glowTween: Phaser.Tweens.Tween;
+};
 
 export class ArenaScene extends Phaser.Scene {
   player!: Player;
@@ -29,8 +51,10 @@ export class ArenaScene extends Phaser.Scene {
   joy = { active: false, id: -1, ox: 110, oy: 500, x: 0, y: 0, len: 0 };
   jumpBtn = { id: -1, x: 0, y: 0, r: 52, held: false, pressed: false };
   rocketBtn = { id: -1, x: 0, y: 0, r: 43, held: false, aimX: 1, aimY: 0, drag: 0, dragged: false };
+  railBtn = { id: -1, x: 0, y: 0, r: 43, held: false, aimX: 1, aimY: 0, drag: 0, dragged: false };
   gfx!: Phaser.GameObjects.Graphics;
   trailGfx!: Phaser.GameObjects.Graphics;
+  atmosphereGfx!: Phaser.GameObjects.Graphics;
   uiGfx!: Phaser.GameObjects.Graphics;
   playerBody!: Phaser.GameObjects.Arc;
   playerRing!: Phaser.GameObjects.Arc;
@@ -43,45 +67,72 @@ export class ArenaScene extends Phaser.Scene {
   rocketButtonView?: Phaser.GameObjects.Image;
   ammoBadgeView?: Phaser.GameObjects.Image;
   ammoText?: Phaser.GameObjects.Text;
+  railButtonView?: Phaser.GameObjects.Image;
+  railAmmoBadgeView?: Phaser.GameObjects.Image;
+  railAmmoText?: Phaser.GameObjects.Text;
   botAlive = new Map<Bot, boolean>();
   trail: Trail[] = [];
   rocketSmoke: RocketSmokeFx[] = [];
   rocketSmokeTimers = new Map<Projectile, number>();
   explosions: ExplosionFx[] = [];
+  railBeams: RailBeamFx[] = [];
   spawnPadParticles: SpawnPadParticle[] = [];
+  libraryDust: LibraryDust[] = [];
+  libraryCandles: LibraryCandle[] = [];
   spawnPadParticleTimer = 0;
   trailTimer = 0;
   lastState = "alive";
   debugVisible = window.innerWidth > 620;
 
   preload() {
-    this.load.spritesheet("arenaTiles", "/assets/arena-tileset.png", {
+    this.load.spritesheet("arenaTiles", assetUrl("arena-tileset.png"), {
       frameWidth: 313,
       frameHeight: 313,
     });
-    this.load.spritesheet("rocketProjectile", "/assets/rocket-projectile.png?v=2", {
+    this.load.spritesheet("rocketProjectile", assetUrl("rocket-projectile.png?v=2"), {
       frameWidth: 128,
       frameHeight: 128,
     });
-    this.load.spritesheet("rocketSmoke", "/assets/rocket-smoke.png?v=1", {
+    this.load.spritesheet("rocketSmoke", assetUrl("rocket-smoke.png?v=1"), {
       frameWidth: 180,
       frameHeight: 180,
     });
-    this.load.spritesheet("rocketExplosion", "/assets/rocket-explosion.png?v=2", {
+    this.load.spritesheet("rocketExplosion", assetUrl("rocket-explosion.png?v=2"), {
       frameWidth: 256,
       frameHeight: 256,
     });
-    this.load.image("uiRocketButton", "/assets/ui-rocket-button.png");
-    this.load.image("uiAmmoBadge", "/assets/ui-ammo-badge.png");
-    this.load.image("pickupHealth", "/assets/pickup-health.png");
-    this.load.image("pickupArmor", "/assets/pickup-armor.png");
-    this.load.image("pickupRocket", "/assets/pickup-rocket.png");
-    this.load.image("flagRed", "/assets/flag-red.png");
-    this.load.image("flagBlue", "/assets/flag-blue.png");
-    this.load.image("spawnPad", "/assets/spawn-pad.png");
+    this.load.image("uiRocketButton", assetUrl("ui-rocket-button.png"));
+    this.load.image("uiAmmoBadge", assetUrl("ui-ammo-badge.png"));
+    this.load.image("pickupHealth", assetUrl("pickup-health.png"));
+    this.load.image("pickupArmor", assetUrl("pickup-armor.png"));
+    this.load.image("pickupRocket", assetUrl("pickup-rocket.png"));
+    this.load.image("pickupRail", assetUrl("pickup-rail.png"));
+    this.load.image("uiRailButton", assetUrl("ui-rail-button.png"));
+    this.load.image("uiRailBadge", assetUrl("ui-rail-badge.png"));
+    this.load.image("railImpact", assetUrl("rail-impact.png"));
+    this.load.image("flagRed", assetUrl("flag-red.png"));
+    this.load.image("flagBlue", assetUrl("flag-blue.png"));
+    this.load.image("spawnPad", assetUrl("spawn-pad.png"));
+    this.load.image("libraryFloorStone", assetUrl("library/floor-stone.png"));
+    this.load.image("libraryFloorWood", assetUrl("library/floor-wood.png"));
+    this.load.image("libraryFloorCarpet", assetUrl("library/floor-carpet.png"));
+    this.load.image("libraryShelfHorizontal", assetUrl("library/shelf-horizontal.png"));
+    this.load.image("libraryShelfVertical", assetUrl("library/shelf-vertical.png"));
+    this.load.image("libraryShelfDamaged", assetUrl("library/shelf-damaged.png"));
+    this.load.image("libraryRoundTable", assetUrl("library/round-table.png"));
+    this.load.image("libraryCollapsedFloor", assetUrl("library/collapsed-floor.png"));
+    this.load.image("libraryRug", assetUrl("library/rug.png"));
+    this.load.image("libraryBooks", assetUrl("library/book-pile.png"));
+    this.load.image("libraryCobweb", assetUrl("library/cobweb.png"));
+    this.load.image("librarySpider", assetUrl("library/spider.png"));
+    this.load.spritesheet("libraryCandleFlame", assetUrl("library/candle-flame.png"), {
+      frameWidth: 128,
+      frameHeight: 128,
+    });
   }
 
   create(data?: { mapId?: LevelId; redCount?: number; blueCount?: number }) {
+    this.resetViewState();
     this.levelId = data?.mapId && LEVEL_BY_ID[data.mapId] ? data.mapId : "training-crossing";
     this.redCount = this.teamCount(data?.redCount, 1);
     this.blueCount = this.teamCount(data?.blueCount, 2);
@@ -98,7 +149,18 @@ export class ArenaScene extends Phaser.Scene {
     this.botAutos = new Map(this.bots.map((bot) => [bot, new AutoAttack(bot, this.projectiles, T.botFireRate)]));
     this.botAlive = new Map(this.bots.map((bot) => [bot, bot.alive]));
 
+    if (!this.anims.exists("library-candle-flicker")) {
+      this.anims.create({
+        key: "library-candle-flicker",
+        frames: this.anims.generateFrameNumbers("libraryCandleFlame", { start: 0, end: 5 }),
+        frameRate: 10,
+        repeat: -1,
+        yoyo: true,
+      });
+    }
     this.drawArena();
+    this.atmosphereGfx = this.add.graphics().setDepth(8);
+    if (this.level.theme === "library") this.createLibraryAtmosphere();
     this.trailGfx = this.add.graphics().setDepth(15);
     this.gfx = this.add.graphics().setDepth(40);
     this.uiGfx = this.add.graphics().setScrollFactor(0).setDepth(1000);
@@ -124,8 +186,34 @@ export class ArenaScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.playerBody, true, .12, .12);
   }
 
+  resetViewState() {
+    this.botViews = new Map();
+    this.projectileViews = new Map();
+    this.rocketViews = new Map();
+    this.pickupViews = new Map();
+    this.flagViews = new Map();
+    this.rocketButtonView = undefined;
+    this.ammoBadgeView = undefined;
+    this.ammoText = undefined;
+    this.railButtonView = undefined;
+    this.railAmmoBadgeView = undefined;
+    this.railAmmoText = undefined;
+    this.trail = [];
+    this.rocketSmoke = [];
+    this.rocketSmokeTimers = new Map();
+    this.explosions = [];
+    this.railBeams = [];
+    this.spawnPadParticles = [];
+    this.libraryDust = [];
+    this.libraryCandles = [];
+    this.spawnPadParticleTimer = 0;
+    this.trailTimer = 0;
+    this.lastState = "alive";
+  }
+
   update(_t: number, delta: number) {
     const ms = Math.min(delta, 34), dt = ms / 1000;
+    this.player.railCooldown = Math.max(0, this.player.railCooldown - ms);
     const input = this.inputVector();
     if (input.length > .05) this.player.lastMoveDir = { x: input.x, y: input.y };
     if (Phaser.Input.Keyboard.JustDown(this.jumpKey) || this.jumpBtn.pressed) this.player.jump.start();
@@ -152,7 +240,11 @@ export class ArenaScene extends Phaser.Scene {
     const blockers: Rect[] = [...this.level.walls, ...this.level.gaps];
     const actors = [this.player, ...this.bots];
     for (const b of this.bots) b.update(dt, ms, blockers, this.flags, actors, this.level.walls, this.pickups.pickups);
-    for (const p of this.projectiles) p.update(dt, ms, [...this.bots, this.player], this.level.walls);
+    for (const p of this.projectiles) {
+      const wasDead = p.dead;
+      p.update(dt, ms, [...this.bots, this.player], this.level.walls);
+      if (!wasDead && p.dead) this.handleLibraryProjectileImpact(p);
+    }
     this.emitRocketSmoke(ms);
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       if (this.projectiles[i].dead) {
@@ -176,7 +268,9 @@ export class ArenaScene extends Phaser.Scene {
     this.updateTrail(ms);
     this.updateRocketSmoke(ms);
     this.updateExplosions(ms);
+    this.updateRailBeams(ms);
     this.updateSpawnPadParticles(ms);
+    this.updateLibraryDust(dt);
     this.render();
   }
 
@@ -218,9 +312,11 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   render() {
+    this.renderLibraryDust();
     this.renderTrail();
     this.gfx.clear();
     this.renderExplosions();
+    this.renderRailBeams();
     this.renderFlags();
     this.renderPickups();
     this.renderRocketSmoke();
@@ -251,6 +347,7 @@ export class ArenaScene extends Phaser.Scene {
     for (const [p, v] of this.projectileViews) if (p.dead) { v.destroy(); this.projectileViews.delete(p); }
     for (const [p, v] of this.rocketViews) if (p.dead) { v.destroy(); this.rocketViews.delete(p); }
     this.renderRocketAim();
+    this.renderRailAim();
     this.drawTouch();
     this.updateHud();
   }
@@ -298,15 +395,23 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   dropWeaponAmmo(actor: Player | Bot) {
-    if (actor.rocketAmmo <= 0) return;
-    this.pickups.dropRocketAmmo(actor.x, actor.y, actor.rocketAmmo);
-    actor.rocketAmmo = 0;
+    if (actor.rocketAmmo > 0) {
+      this.pickups.dropRocketAmmo(actor.x - 15, actor.y, actor.rocketAmmo);
+      actor.rocketAmmo = 0;
+    }
+    if (actor.railAmmo > 0) {
+      this.pickups.dropRailAmmo(actor.x + 15, actor.y, actor.railAmmo);
+      actor.railAmmo = 0;
+    }
   }
 
   createPickupView(pickup: Pickup) {
     const container = this.add.container(pickup.x, pickup.y).setDepth(18);
-    const iconKey = pickup.kind === "health" ? "pickupHealth" : pickup.kind === "armor" ? "pickupArmor" : "pickupRocket";
-    const icon = this.add.image(0, pickup.kind === "rocket" ? -3 : -5, iconKey).setName("icon").setScale(pickup.temporary ? .17 : .18).setDepth(1);
+    const iconKey = pickup.kind === "health" ? "pickupHealth"
+      : pickup.kind === "armor" ? "pickupArmor"
+        : pickup.kind === "rocket" ? "pickupRocket" : "pickupRail";
+    const weapon = pickup.kind === "rocket" || pickup.kind === "rail";
+    const icon = this.add.image(0, weapon ? -3 : -5, iconKey).setName("icon").setScale(pickup.temporary ? .17 : .18).setDepth(1);
     if (!pickup.temporary) {
       container.add(this.add.image(0, 2, "spawnPad").setName("pad").setScale(.27).setAlpha(.82).setDepth(0));
     }
@@ -462,6 +567,96 @@ export class ArenaScene extends Phaser.Scene {
       this.gfx.lineStyle(2, 0xffd36c, .3 * alpha).strokeCircle(fx.x, fx.y, T.rocketSplashRadius * Math.min(1, t * 1.1));
     }
   }
+  updateRailBeams(ms: number) {
+    for (const beam of this.railBeams) beam.life -= ms;
+    for (const beam of this.railBeams.filter((beam) => beam.life <= 0)) beam.impact?.destroy();
+    this.railBeams = this.railBeams.filter((beam) => beam.life > 0);
+  }
+  renderRailBeams() {
+    for (const beam of this.railBeams) {
+      const alpha = Phaser.Math.Clamp(beam.life / beam.max, 0, 1);
+      this.gfx.lineStyle(14, 0x34ff79, .08 * alpha).beginPath().moveTo(beam.x1, beam.y1).lineTo(beam.x2, beam.y2).strokePath();
+      this.gfx.lineStyle(7, 0x20e966, .32 * alpha).beginPath().moveTo(beam.x1, beam.y1).lineTo(beam.x2, beam.y2).strokePath();
+      this.gfx.lineStyle(3, 0xbaffd0, .96 * alpha).beginPath().moveTo(beam.x1, beam.y1).lineTo(beam.x2, beam.y2).strokePath();
+      this.gfx.fillStyle(0xe6ffed, .9 * alpha).fillCircle(beam.x1, beam.y1, 4);
+      if (beam.hit) {
+        if (!beam.impact) beam.impact = this.add.image(beam.x2, beam.y2, "railImpact").setDepth(56).setScale(.18);
+        beam.impact.setPosition(beam.x2, beam.y2).setRotation(this.time.now * .018).setScale(.13 + (1 - alpha) * .1).setAlpha(alpha);
+      }
+    }
+  }
+  fireRailgun(owner: Player | Bot, direction: Vec2, targets: Array<Player | Bot>) {
+    if (owner.railAmmo <= 0 || owner.railCooldown > 0) return false;
+    if (owner instanceof Player && owner.state !== "alive") return false;
+    if (owner instanceof Bot && !owner.alive) return false;
+    const magnitude = len(direction.x, direction.y);
+    if (magnitude < .001) return false;
+    const dx = direction.x / magnitude, dy = direction.y / magnitude;
+    const start = {
+      x: owner.x + dx * (owner.radius + 5),
+      y: owner.y - (owner instanceof Player ? owner.jump.height : 0) + dy * (owner.radius + 5),
+    };
+    let distance = T.railRange;
+    for (const wall of this.level.walls) distance = Math.min(distance, this.rayRectDistance(start, { x: dx, y: dy }, wall) ?? distance);
+    let hit: Player | Bot | null = null;
+    for (const target of targets) {
+      if (target === owner || target.team === owner.team) continue;
+      if (target instanceof Bot && !target.alive) continue;
+      if (target instanceof Player && target.state !== "alive") continue;
+      const targetDistance = this.rayCircleDistance(start, { x: dx, y: dy }, target, target.radius + 5);
+      if (targetDistance === null || targetDistance >= distance) continue;
+      distance = targetDistance;
+      hit = target;
+    }
+    const end = { x: start.x + dx * distance, y: start.y + dy * distance };
+    if (hit) {
+      const maxHp = hit instanceof Player ? T.playerMaxHp : T.botMaxHp;
+      hit.damage(maxHp * T.railDamageRatio);
+    }
+    if (this.level.theme === "library") {
+      for (const candle of this.libraryCandles.filter((item) => item.lit)) {
+        const distanceToBeam = this.pointSegmentDistance(candle, start, end);
+        if (distanceToBeam <= 12) this.extinguishLibraryCandle(candle);
+      }
+    }
+    owner.railAmmo--;
+    owner.railCooldown = T.railCooldownMs;
+    this.railBeams.push({ x1: start.x, y1: start.y, x2: end.x, y2: end.y, life: T.railBeamLifeMs, max: T.railBeamLifeMs, hit: Boolean(hit) });
+    return true;
+  }
+  rayCircleDistance(origin: Vec2, direction: Vec2, center: Vec2, radius: number) {
+    const ox = origin.x - center.x, oy = origin.y - center.y;
+    const projection = ox * direction.x + oy * direction.y;
+    const discriminant = projection * projection - (ox * ox + oy * oy - radius * radius);
+    if (discriminant < 0) return null;
+    const near = -projection - Math.sqrt(discriminant);
+    const far = -projection + Math.sqrt(discriminant);
+    return near >= 0 ? near : far >= 0 ? far : null;
+  }
+  rayRectDistance(origin: Vec2, direction: Vec2, rect: Rect) {
+    let near = 0, far = Infinity;
+    for (const axis of ["x", "y"] as const) {
+      const min = rect[axis];
+      const max = min + (axis === "x" ? rect.w : rect.h);
+      const value = origin[axis], delta = direction[axis];
+      if (Math.abs(delta) < .00001) {
+        if (value < min || value > max) return null;
+        continue;
+      }
+      const a = (min - value) / delta, b = (max - value) / delta;
+      near = Math.max(near, Math.min(a, b));
+      far = Math.min(far, Math.max(a, b));
+      if (near > far) return null;
+    }
+    return far >= 0 ? Math.max(0, near) : null;
+  }
+  pointSegmentDistance(point: Vec2, start: Vec2, end: Vec2) {
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const lengthSquared = dx * dx + dy * dy;
+    if (!lengthSquared) return len(point.x - start.x, point.y - start.y);
+    const t = Phaser.Math.Clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared, 0, 1);
+    return len(point.x - (start.x + dx * t), point.y - (start.y + dy * t));
+  }
 
   renderRocketAim() {
     if (!this.rocketBtn.held || !this.rocketBtn.dragged || this.player.rocketAmmo <= 0 || this.player.state !== "alive") return;
@@ -472,26 +667,58 @@ export class ArenaScene extends Phaser.Scene {
     this.gfx.lineStyle(4, 0xffd36c, alpha).beginPath().moveTo(sx, sy).lineTo(ex, ey).strokePath();
     this.gfx.fillStyle(0xfff0b2, alpha).fillCircle(ex, ey, 7);
   }
+  renderRailAim() {
+    if (!this.railBtn.held || !this.railBtn.dragged || this.player.railAmmo <= 0 || this.player.state !== "alive") return;
+    const ready = this.player.railCooldown <= 0;
+    const h = this.player.jump.height;
+    const sx = this.player.x, sy = this.player.y - h;
+    const ex = sx + this.railBtn.aimX * 310, ey = sy + this.railBtn.aimY * 310;
+    this.gfx.lineStyle(ready ? 3 : 2, ready ? 0x62ff91 : 0x6b8072, ready ? .8 : .3)
+      .beginPath().moveTo(sx, sy).lineTo(ex, ey).strokePath();
+    this.gfx.fillStyle(ready ? 0xcaffd9 : 0x7b8c80, ready ? .86 : .35).fillCircle(ex, ey, 6);
+  }
 
   drawArena() {
     const g = this.add.graphics().setDepth(0);
+    const visuals = LEVEL_THEME_VISUALS[this.level.theme];
     this.drawFloorTiles();
-    this.drawObjectSprite(this.level.redBase, 2, .92);
-    this.drawObjectSprite(this.level.blueBase, 3, .92);
-    for (const gap of this.level.gaps) this.drawObjectSprite(gap, 8, 1);
-    for (const wall of this.level.walls) this.drawObjectSprite(wall, wall.w > wall.h ? 4 : 5, 1);
+    if (this.level.theme === "library" && this.level.combatZone) {
+      const r = this.level.combatZone;
+      this.add.image(r.x + r.w / 2, r.y + r.h / 2, "libraryFloorCarpet")
+        .setDisplaySize(r.w, r.h)
+        .setAlpha(.78)
+        .setDepth(-1.8);
+    }
+    this.drawObjectSprite(this.level.redBase, visuals.redBase, .92);
+    this.drawObjectSprite(this.level.blueBase, visuals.blueBase, .92);
+    if (this.level.theme === "library") {
+      for (const decoration of this.level.decorations ?? []) this.drawLibraryDecoration(g, decoration);
+      for (const gap of this.level.gaps) this.drawLibraryGap(g, gap);
+      for (const wall of this.level.walls) this.drawLibraryWall(g, wall);
+    } else {
+      for (const gap of this.level.gaps) this.drawObjectSprite(gap, visuals.gap, 1);
+      for (const wall of this.level.walls) this.drawObjectSprite(wall, wall.w > wall.h ? visuals.wallHorizontal : visuals.wallVertical, 1);
+    }
 
     g.lineStyle(1, 0xcadbd4, .28);
     for (let x = 0; x <= T.worldWidth; x += 50) g.beginPath().moveTo(x, 0).lineTo(x, T.worldHeight).strokePath();
     for (let y = 0; y <= T.worldHeight; y += 50) g.beginPath().moveTo(0, y).lineTo(T.worldWidth, y).strokePath();
     this.zone(g, this.level.redBase, TEAM.red.base, TEAM.red.dark); this.zone(g, this.level.blueBase, TEAM.blue.base, TEAM.blue.dark);
+    if (this.level.combatZone) this.combatZone(g, this.level.combatZone);
     g.lineStyle(3, 0x9dafaa, .45).beginPath().moveTo(T.worldWidth / 2, 40).lineTo(T.worldWidth / 2, T.worldHeight - 40).strokePath();
   }
   drawFloorTiles() {
     const size = 50;
+    const visuals = LEVEL_THEME_VISUALS[this.level.theme];
     for (let y = 0; y < T.worldHeight; y += size) {
       for (let x = 0; x < T.worldWidth; x += size) {
-        const frame = (Math.floor(x / size) + Math.floor(y / size) * 2) % 7 === 0 ? 1 : 0;
+        if (this.level.theme === "library") {
+          const gallery = y < 165 || y >= T.worldHeight - 165;
+          const key = gallery ? "libraryFloorWood" : "libraryFloorStone";
+          this.add.image(x + size / 2, y + size / 2, key).setDisplaySize(size, size).setDepth(-2);
+          continue;
+        }
+        const frame = (Math.floor(x / size) + Math.floor(y / size) * 2) % 7 === 0 ? visuals.floorAccent : visuals.floorPrimary;
         this.add.image(x + size / 2, y + size / 2, "arenaTiles", frame).setDisplaySize(size, size).setDepth(-2);
       }
     }
@@ -500,6 +727,165 @@ export class ArenaScene extends Phaser.Scene {
     this.add.image(r.x + r.w / 2, r.y + r.h / 2, "arenaTiles", frame).setDisplaySize(r.w, r.h).setAlpha(alpha).setDepth(-1);
   }
   zone(g: Phaser.GameObjects.Graphics, r: Rect, fill: number, stroke: number) { g.fillStyle(fill, .18).fillRoundedRect(r.x, r.y, r.w, r.h, 8).lineStyle(3, stroke, .62).strokeRoundedRect(r.x, r.y, r.w, r.h, 8); }
+  combatZone(g: Phaser.GameObjects.Graphics, r: Rect) {
+    const library = this.level.theme === "library";
+    g.fillStyle(library ? 0x7a2736 : 0xdff6ef, library ? .08 : .13).fillRoundedRect(r.x, r.y, r.w, r.h, 24);
+    g.lineStyle(2, library ? 0xb58b58 : 0x4d887d, library ? .3 : .34).strokeRoundedRect(r.x, r.y, r.w, r.h, 24);
+    g.lineStyle(1, 0xffffff, .3).strokeCircle(r.x + r.w / 2, r.y + r.h / 2, 76);
+  }
+  drawLibraryWall(g: Phaser.GameObjects.Graphics, wall: LevelWall) {
+    const table = wall.visual === "reading-table";
+    g.fillStyle(0x17120f, .18).fillRoundedRect(wall.x + 5, wall.y + 7, wall.w, wall.h, 7);
+    if (table) {
+      this.add.image(wall.x + wall.w / 2, wall.y + wall.h / 2, "libraryRoundTable")
+        .setDisplaySize(wall.w + 10, wall.h + 10)
+        .setDepth(2);
+      this.addLibraryCandles(wall.x + wall.w / 2, wall.y + wall.h / 2);
+      return;
+    }
+    const horizontal = wall.w > wall.h;
+    const key = wall.visual === "bookshelf-damaged"
+      ? "libraryShelfDamaged"
+      : horizontal ? "libraryShelfHorizontal" : "libraryShelfVertical";
+    this.add.image(wall.x + wall.w / 2, wall.y + wall.h / 2, key)
+      .setDisplaySize(wall.w + (horizontal ? 8 : 4), wall.h + (horizontal ? 4 : 8))
+      .setDepth(2);
+  }
+  drawLibraryGap(g: Phaser.GameObjects.Graphics, gap: LevelGap) {
+    g.fillStyle(0x090707, .66).fillRoundedRect(gap.x + 3, gap.y + 5, gap.w, gap.h, 8);
+    this.add.image(gap.x + gap.w / 2, gap.y + gap.h / 2, "libraryCollapsedFloor")
+      .setDisplaySize(gap.w + 12, gap.h + 12)
+      .setDepth(1);
+  }
+  drawLibraryDecoration(g: Phaser.GameObjects.Graphics, decoration: LevelDecoration) {
+    if (decoration.kind === "rug") {
+      this.add.image(decoration.x + decoration.w / 2, decoration.y + decoration.h / 2, "libraryRug")
+        .setDisplaySize(decoration.w, decoration.h)
+        .setAlpha(.88)
+        .setDepth(-.5);
+    } else if (decoration.kind === "book-pile") {
+      this.add.image(decoration.x + decoration.w / 2, decoration.y + decoration.h / 2, "libraryBooks")
+        .setDisplaySize(decoration.w, decoration.h)
+        .setDepth(1);
+    } else if (decoration.kind === "cobweb-spider") {
+      this.add.image(decoration.x + decoration.w / 2, decoration.y + decoration.h / 2, "libraryCobweb")
+        .setDisplaySize(decoration.w, decoration.h)
+        .setAlpha(.66)
+        .setDepth(1);
+    } else if (decoration.kind === "reading-lamp") {
+      g.fillStyle(0xffdf8a, .18).fillCircle(decoration.x + decoration.w / 2, decoration.y + decoration.h / 2, 24);
+      g.fillStyle(0xffd36c, .86).fillCircle(decoration.x + decoration.w / 2, decoration.y + decoration.h / 2, 6);
+    }
+  }
+  addLibraryCandles(x: number, y: number) {
+    const points = [{ x: -10, y: -7 }, { x: 9, y: -6 }, { x: 0, y: 7 }];
+    for (const [index, point] of points.entries()) {
+      const glow = this.add.circle(x + point.x, y + point.y - 7, 15, 0xffc45a, .13)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(3);
+      const flame = this.add.sprite(x + point.x, y + point.y - 8, "libraryCandleFlame")
+        .setDisplaySize(12, 12)
+        .setDepth(4)
+        .play({ key: "library-candle-flicker", startFrame: index * 2 });
+      const glowTween = this.tweens.add({
+        targets: glow,
+        alpha: { from: .08, to: .18 },
+        duration: 180 + index * 45,
+        yoyo: true,
+        repeat: -1,
+      });
+      const flameTween = this.tweens.add({
+        targets: flame,
+        alpha: { from: index === 1 ? .72 : .88, to: 1 },
+        duration: 160 + index * 40,
+        yoyo: true,
+        repeat: -1,
+      });
+      this.libraryCandles.push({
+        x: x + point.x,
+        y: y + point.y - 8,
+        lit: true,
+        flame,
+        glow,
+        flameTween,
+        glowTween,
+      });
+    }
+  }
+  createLibraryAtmosphere() {
+    this.libraryDust = Array.from({ length: 34 }, (_, index) => ({
+      x: Phaser.Math.Between(270, T.worldWidth - 270),
+      y: Phaser.Math.Between(70, T.worldHeight - 70),
+      speed: Phaser.Math.FloatBetween(3.5, 8),
+      drift: Phaser.Math.FloatBetween(2, 7) * (index % 2 ? 1 : -1),
+      phase: Phaser.Math.FloatBetween(0, Math.PI * 2),
+      size: Phaser.Math.FloatBetween(.8, 1.8),
+      alpha: Phaser.Math.FloatBetween(.08, .2),
+    }));
+    const spiderRoutes = [
+      { x: 420, y: 142, dx: 42, dy: 8, flip: false },
+      { x: 1080, y: 684, dx: -38, dy: -6, flip: true },
+    ];
+    for (const [index, route] of spiderRoutes.entries()) {
+      const spider = this.add.image(route.x, route.y, "librarySpider")
+        .setDisplaySize(18, 18)
+        .setFlipX(route.flip)
+        .setAlpha(.82)
+        .setDepth(3);
+      this.tweens.add({
+        targets: spider,
+        x: route.x + route.dx,
+        y: route.y + route.dy,
+        angle: route.flip ? -8 : 8,
+        duration: 3800 + index * 700,
+        ease: "Sine.InOut",
+        yoyo: true,
+        repeat: -1,
+        hold: 900 + index * 500,
+        repeatDelay: 1200,
+      });
+    }
+  }
+  updateLibraryDust(dt: number) {
+    if (this.level.theme !== "library") return;
+    for (const dust of this.libraryDust) {
+      dust.phase += dt * .7;
+      dust.y -= dust.speed * dt;
+      dust.x += Math.sin(dust.phase) * dust.drift * dt;
+      if (dust.y < 55) {
+        dust.y = T.worldHeight - 55;
+        dust.x = Phaser.Math.Between(270, T.worldWidth - 270);
+      }
+    }
+  }
+  renderLibraryDust() {
+    this.atmosphereGfx?.clear();
+    if (this.level.theme !== "library") return;
+    for (const dust of this.libraryDust) {
+      const pulse = .72 + Math.sin(dust.phase * 1.7) * .28;
+      this.atmosphereGfx.fillStyle(0xffe8b0, dust.alpha * pulse).fillCircle(dust.x, dust.y, dust.size);
+    }
+  }
+  handleLibraryProjectileImpact(projectile: Projectile) {
+    if (this.level.theme !== "library" || !this.libraryCandles.length) return;
+    const lit = this.libraryCandles.filter((candle) => candle.lit);
+    if (projectile.kind === "rocket") {
+      for (const candle of lit) {
+        if (len(candle.x - projectile.x, candle.y - projectile.y) <= T.rocketSplashRadius) this.extinguishLibraryCandle(candle);
+      }
+      return;
+    }
+    const nearest = lit
+      .map((candle) => ({ candle, distance: len(candle.x - projectile.x, candle.y - projectile.y) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (nearest && nearest.distance <= 54) this.extinguishLibraryCandle(nearest.candle);
+  }
+  extinguishLibraryCandle(candle: LibraryCandle) {
+    candle.lit = false;
+    candle.flameTween.stop();
+    candle.glowTween.stop();
+    this.tweens.add({ targets: [candle.flame, candle.glow], alpha: 0, duration: 130 });
+  }
 
   layoutTouch() {
     this.joy.ox = Math.max(96, this.scale.width * .12);
@@ -508,8 +894,18 @@ export class ArenaScene extends Phaser.Scene {
     this.jumpBtn.y = this.scale.height - 94;
     this.rocketBtn.x = this.jumpBtn.x - 96;
     this.rocketBtn.y = this.jumpBtn.y + 10;
+    this.railBtn.x = this.jumpBtn.x - 190;
+    this.railBtn.y = this.jumpBtn.y + 10;
   }
   pointerDown(p: Phaser.Input.Pointer) {
+    if (Phaser.Math.Distance.Between(p.x, p.y, this.railBtn.x, this.railBtn.y) <= this.railBtn.r + 20 && this.railBtn.id < 0) {
+      this.railBtn.id = p.id;
+      this.railBtn.held = true;
+      this.railBtn.dragged = false;
+      this.railBtn.drag = 0;
+      this.updateRailAim(p);
+      return;
+    }
     if (Phaser.Math.Distance.Between(p.x, p.y, this.rocketBtn.x, this.rocketBtn.y) <= this.rocketBtn.r + 24 && this.rocketBtn.id < 0) {
       this.rocketBtn.id = p.id;
       this.rocketBtn.held = true;
@@ -522,6 +918,10 @@ export class ArenaScene extends Phaser.Scene {
     if (p.x < this.scale.width * .58 && this.joy.id < 0) { this.joy.id = p.id; this.joy.active = true; this.joy.ox = p.x; this.joy.oy = p.y; this.pointerMove(p); }
   }
   pointerMove(p: Phaser.Input.Pointer) {
+    if (p.id === this.railBtn.id) {
+      this.updateRailAim(p);
+      return;
+    }
     if (p.id === this.rocketBtn.id) {
       this.updateRocketAim(p);
       return;
@@ -533,6 +933,18 @@ export class ArenaScene extends Phaser.Scene {
   pointerUp(p: Phaser.Input.Pointer) {
     if (p.id === this.joy.id) { this.joy.id = -1; this.joy.x = 0; this.joy.y = 0; this.joy.len = 0; this.layoutTouch(); }
     if (p.id === this.jumpBtn.id) { this.jumpBtn.id = -1; this.jumpBtn.held = false; }
+    if (p.id === this.railBtn.id) {
+      const dragged = this.railBtn.dragged;
+      const cancelled = dragged && this.railBtn.drag < 18;
+      if (!cancelled) {
+        if (dragged) this.firePlayerRail({ x: this.railBtn.aimX, y: this.railBtn.aimY });
+        else this.firePlayerRailAtNearest();
+      }
+      this.railBtn.id = -1;
+      this.railBtn.held = false;
+      this.railBtn.drag = 0;
+      this.railBtn.dragged = false;
+    }
     if (p.id === this.rocketBtn.id) {
       const dragged = this.rocketBtn.dragged;
       const cancelled = dragged && this.rocketBtn.drag < 18;
@@ -551,6 +963,7 @@ export class ArenaScene extends Phaser.Scene {
     this.uiGfx.fillStyle(0x17302d, .42).fillCircle(this.joy.ox + this.joy.x * this.joy.len * 48, this.joy.oy + this.joy.y * this.joy.len * 48, 22);
     this.uiGfx.fillStyle(this.jumpBtn.held ? 0xffd86b : 0xffffff, this.jumpBtn.held ? .84 : .52).lineStyle(3, this.jumpBtn.held ? 0xb77516 : 0x17302d, .28).fillCircle(this.jumpBtn.x, this.jumpBtn.y, this.jumpBtn.r).strokeCircle(this.jumpBtn.x, this.jumpBtn.y, this.jumpBtn.r);
     this.drawRocketButton();
+    this.drawRailButton();
   }
 
   updateRocketAim(p: Phaser.Input.Pointer) {
@@ -561,6 +974,15 @@ export class ArenaScene extends Phaser.Scene {
       this.rocketBtn.aimY = dy / d;
     }
     if (d > 16) this.rocketBtn.dragged = true;
+  }
+  updateRailAim(p: Phaser.Input.Pointer) {
+    const dx = p.x - this.railBtn.x, dy = p.y - this.railBtn.y, d = Math.hypot(dx, dy);
+    this.railBtn.drag = d;
+    if (d > 10) {
+      this.railBtn.aimX = dx / d;
+      this.railBtn.aimY = dy / d;
+    }
+    if (d > 16) this.railBtn.dragged = true;
   }
 
   drawRocketButton() {
@@ -598,6 +1020,50 @@ export class ArenaScene extends Phaser.Scene {
         .beginPath()
         .moveTo(this.rocketBtn.x, this.rocketBtn.y)
         .lineTo(this.rocketBtn.x + this.rocketBtn.aimX * len, this.rocketBtn.y + this.rocketBtn.aimY * len)
+        .strokePath();
+    }
+  }
+  drawRailButton() {
+    const hasAmmo = this.player.state === "alive" && this.player.railAmmo > 0;
+    const ready = hasAmmo && this.player.railCooldown <= 0;
+    const active = this.railBtn.held && ready;
+    if (!this.railButtonView) {
+      this.railButtonView = this.add.image(this.railBtn.x, this.railBtn.y, "uiRailButton").setScrollFactor(0).setDepth(1001).setScale(.38);
+    }
+    if (!this.railAmmoBadgeView) {
+      this.railAmmoBadgeView = this.add.image(this.railBtn.x + 30, this.railBtn.y + 30, "uiRailBadge").setScrollFactor(0).setDepth(1002).setScale(.16);
+    }
+    if (!this.railAmmoText) {
+      this.railAmmoText = this.add.text(this.railBtn.x + 30, this.railBtn.y + 30, "0", {
+        fontFamily: "Arial",
+        fontSize: "17px",
+        color: "#ffffff",
+        stroke: "#10281a",
+        strokeThickness: 5,
+      }).setOrigin(.5).setScrollFactor(0).setDepth(1003);
+    }
+    this.railButtonView
+      .setPosition(this.railBtn.x, this.railBtn.y)
+      .setScale(active ? .41 : .38)
+      .setAlpha(ready ? 1 : hasAmmo ? .62 : .38);
+    this.railAmmoBadgeView
+      .setPosition(this.railBtn.x + 31, this.railBtn.y + 31)
+      .setAlpha(hasAmmo ? .95 : .45);
+    this.railAmmoText
+      .setPosition(this.railBtn.x + 31, this.railBtn.y + 31)
+      .setText(String(this.player.railAmmo))
+      .setAlpha(hasAmmo ? 1 : .5);
+    if (hasAmmo && !ready) {
+      const cooldownRatio = Phaser.Math.Clamp(this.player.railCooldown / T.railCooldownMs, 0, 1);
+      this.uiGfx.lineStyle(5, 0x62ff91, .72).beginPath()
+        .arc(this.railBtn.x, this.railBtn.y, this.railBtn.r + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - cooldownRatio))
+        .strokePath();
+    }
+    if (active && this.railBtn.dragged) {
+      const aimLength = Math.min(68, Math.max(28, this.railBtn.drag));
+      this.uiGfx.lineStyle(5, 0xbaffd0, .92).beginPath()
+        .moveTo(this.railBtn.x, this.railBtn.y)
+        .lineTo(this.railBtn.x + this.railBtn.aimX * aimLength, this.railBtn.y + this.railBtn.aimY * aimLength)
         .strokePath();
     }
   }
@@ -646,13 +1112,29 @@ export class ArenaScene extends Phaser.Scene {
       "rocket",
     ));
   }
+  firePlayerRailAtNearest() {
+    const target = this.bots
+      .filter((bot) => bot.alive && bot.team !== this.player.team)
+      .filter((bot) => !this.level.walls.some((wall) => lineIntersectsRect(this.player, bot, wall)))
+      .filter((bot) => len(this.player.x - bot.x, this.player.y - bot.y) <= T.railRange)
+      .sort((a, b) => len(this.player.x - a.x, this.player.y - a.y) - len(this.player.x - b.x, this.player.y - b.y))[0];
+    if (target) this.firePlayerRail({ x: target.x - this.player.x, y: target.y - this.player.y });
+    else this.firePlayerRail(this.player.lastMoveDir);
+  }
+  firePlayerRail(direction: Vec2) {
+    this.fireRailgun(this.player, direction, [this.player, ...this.bots]);
+  }
   updateHud() {
     document.querySelector("#red-score")!.textContent = String(this.flags.redScore);
     document.querySelector("#blue-score")!.textContent = String(this.flags.blueScore);
     document.querySelector("#flag-state")!.textContent = this.flags.text(this.player);
     document.querySelector("#player-hp")!.textContent = `${Math.max(0, Math.ceil(this.player.hp))}/${T.playerMaxHp}`;
     document.querySelector("#player-armor")!.textContent = String(Math.max(0, Math.ceil(this.player.armor)));
-    document.querySelector("#weapon")!.textContent = this.player.rocketAmmo > 0 ? `Rocket x${this.player.rocketAmmo}` : "Auto";
+    const weapons = [
+      this.player.rocketAmmo > 0 ? `Rocket x${this.player.rocketAmmo}` : "",
+      this.player.railAmmo > 0 ? `Rail x${this.player.railAmmo}` : "",
+    ].filter(Boolean);
+    document.querySelector("#weapon")!.textContent = weapons.join(" | ") || "Auto";
     document.querySelector("#speed")!.textContent = this.player.speed().toFixed(0);
     document.querySelector("#jump")!.textContent = this.player.jump.state();
     document.querySelector("#capture")!.textContent = this.flags.capture(this.player);
@@ -667,7 +1149,7 @@ jump charge: ${Math.round(this.player.jump.charge() * 100)}%
 friction: ${this.player.movement.currentFriction.toFixed(2)}
 carried flag: ${this.player.carriedFlag ?? "none"}
 armor: ${Math.ceil(this.player.armor)}
-weapon: ${this.player.rocketAmmo > 0 ? `rocket ${this.player.rocketAmmo}` : "auto"}
+weapon: rocket ${this.player.rocketAmmo}, rail ${this.player.railAmmo}, rail cd ${Math.ceil(this.player.railCooldown)}
 projectiles: ${this.projectiles.length}
 teams: ${this.redCount}v${this.blueCount}
 bot hp: ${this.bots.map((b) => `${b.team}-${b.role}-${b.state}:${Math.max(0, Math.ceil(b.hp))}`).join(", ")}
