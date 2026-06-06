@@ -13,6 +13,7 @@ import {
 } from "../level";
 import { HudController } from "../hud";
 import { LibraryEffects } from "../libraryEffects";
+import { MatchFlow } from "../matchFlow";
 import {
   len,
   lineIntersectsRect,
@@ -56,7 +57,7 @@ export class ArenaScene extends Phaser.Scene {
   shadow!: Phaser.GameObjects.Ellipse;
   botViews = new Map<Bot, Phaser.GameObjects.Sprite>();
   botCharacterRows = new Map<Bot, number>();
-  projectileViews = new Map<Projectile, Phaser.GameObjects.Arc>();
+  projectileViews = new Map<Projectile, Phaser.GameObjects.Ellipse>();
   rocketViews = new Map<Projectile, Phaser.GameObjects.Image>();
   pickupViews = new Map<Pickup, Phaser.GameObjects.Container>();
   flagViews = new Map<string, Phaser.GameObjects.Image>();
@@ -75,16 +76,24 @@ export class ArenaScene extends Phaser.Scene {
   libraryEffects!: LibraryEffects;
   lastState = "alive";
   hud = new HudController();
+  match!: MatchFlow;
+  menuOpen = false;
 
   preload() {
     preloadArenaAssets(this);
   }
 
-  create(data?: { mapId?: LevelId; redCount?: number; blueCount?: number }) {
+  create(data?: { mapId?: LevelId; redCount?: number; blueCount?: number; startPlaying?: boolean }) {
     this.resetViewState();
-    this.levelId = data?.mapId && LEVEL_BY_ID[data.mapId] ? data.mapId : "training-crossing";
-    this.redCount = this.teamCount(data?.redCount, 1);
-    this.blueCount = this.teamCount(data?.blueCount, 2);
+    const saved = this.loadMatchPreferences();
+    this.levelId = data?.mapId && LEVEL_BY_ID[data.mapId]
+      ? data.mapId
+      : saved.mapId && LEVEL_BY_ID[saved.mapId]
+        ? saved.mapId
+        : "training-crossing";
+    this.redCount = this.teamCount(data?.redCount ?? saved.redCount, 1);
+    this.blueCount = this.teamCount(data?.blueCount ?? saved.blueCount, 2);
+    this.menuOpen = data?.startPlaying !== true && new URLSearchParams(window.location.search).get("play") !== "1";
     this.level = LEVEL_BY_ID[this.levelId];
     this.player = new Player(this.level.redSpawn.x, this.level.redSpawn.y, "red");
     this.bots = [
@@ -93,6 +102,7 @@ export class ArenaScene extends Phaser.Scene {
     ];
     this.collision = new CollisionSystem(this.level);
     this.flags = new FlagSystem(this.level);
+    this.match = new MatchFlow(T.matchScoreLimit, T.matchDurationMs, T.matchCountdownMs);
     this.pickups = new PickupSystem(this.level.pickups);
     this.auto = new AutoAttack(this.player, this.projectiles);
     this.botAutos = new Map(this.bots.map((bot) => [bot, new AutoAttack(bot, this.projectiles, T.botFireRate)]));
@@ -141,6 +151,8 @@ export class ArenaScene extends Phaser.Scene {
     this.scale.on("resize", () => this.layoutTouch());
     this.layoutTouch();
     this.setupHudButtons();
+    if (this.menuOpen) this.openMainMenu();
+    else this.hud.hideMainMenu();
 
     this.cameras.main.setBounds(0, 0, T.worldWidth, T.worldHeight);
     this.cameras.main.startFollow(this.playerBody, true, .12, .12);
@@ -167,6 +179,20 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   update(_t: number, delta: number) {
+    if (this.menuOpen) {
+      this.render();
+      return;
+    }
+    this.match.update(Math.min(delta, 1000), this.flags.redScore, this.flags.blueScore);
+    if (this.match.phase !== "playing") {
+      this.jumpBtn.pressed = false;
+      this.joy.x = 0;
+      this.joy.y = 0;
+      this.joy.len = 0;
+      this.render();
+      return;
+    }
+
     const ms = Math.min(delta, 34), dt = ms / 1000;
     this.player.railCooldown = Math.max(0, this.player.railCooldown - ms);
     this.player.whipCooldown = Math.max(0, this.player.whipCooldown - ms);
@@ -213,7 +239,8 @@ export class ArenaScene extends Phaser.Scene {
         this.projectiles.splice(i, 1);
       }
     }
-    this.auto.update(ms, this.bots, this.level.walls);
+    const playerShot = this.auto.update(ms, this.bots, this.level.walls);
+    if (playerShot?.kind === "bullet") this.audio.playBulletFire();
     for (const b of this.bots) {
       const shot = this.botAutos.get(b)?.update(ms, actors, this.level.walls);
       if (shot) this.audio.playBotWeapon(b, this.player, shot.kind);
@@ -229,6 +256,7 @@ export class ArenaScene extends Phaser.Scene {
       this.botAlive.set(b, b.alive);
     }
     this.flags.update(this.player);
+    this.match.update(0, this.flags.redScore, this.flags.blueScore);
     const collectedPickups = this.pickups.update(ms, actors);
     for (const { pickup, actor } of collectedPickups) {
       if (actor === this.player) {
@@ -262,7 +290,49 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   restartWithSettings(mapId: LevelId = this.levelId) {
-    this.scene.restart({ mapId, redCount: this.redCount, blueCount: this.blueCount });
+    this.saveMatchPreferences(mapId, this.redCount, this.blueCount);
+    this.scene.restart({ mapId, redCount: this.redCount, blueCount: this.blueCount, startPlaying: true });
+  }
+
+  openMainMenu() {
+    this.menuOpen = true;
+    this.hud.showMainMenu({
+      levelId: this.levelId,
+      redCount: this.redCount,
+      blueCount: this.blueCount,
+      onPlay: (mapId, redCount, blueCount) => {
+        this.redCount = this.teamCount(redCount, this.redCount);
+        this.blueCount = this.teamCount(blueCount, this.blueCount);
+        this.saveMatchPreferences(mapId, this.redCount, this.blueCount);
+        this.scene.restart({
+          mapId,
+          redCount: this.redCount,
+          blueCount: this.blueCount,
+          startPlaying: true,
+        });
+      },
+    });
+  }
+
+  loadMatchPreferences() {
+    try {
+      const value = JSON.parse(localStorage.getItem("ctf-match-settings") ?? "{}");
+      return {
+        mapId: value.mapId as LevelId | undefined,
+        redCount: Number(value.redCount) || undefined,
+        blueCount: Number(value.blueCount) || undefined,
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  saveMatchPreferences(mapId: LevelId, redCount: number, blueCount: number) {
+    try {
+      localStorage.setItem("ctf-match-settings", JSON.stringify({ mapId, redCount, blueCount }));
+    } catch {
+      // The match still starts when storage is unavailable.
+    }
   }
 
   render() {
@@ -292,9 +362,18 @@ export class ArenaScene extends Phaser.Scene {
       } else {
         const color = p.owner.team === "red" ? TEAM.red.dark : TEAM.blue.dark;
         if (!this.projectileViews.has(p)) {
-          this.projectileViews.set(p, this.add.circle(p.x, p.y, p.radius, color, .95).setStrokeStyle(2, 0xffffff, .85).setDepth(50));
+          this.projectileViews.set(
+            p,
+            this.add.ellipse(p.x, p.y, p.radius * 2.7, p.radius * .9, color, .98)
+              .setStrokeStyle(1.5, 0xffffff, .9)
+              .setDepth(50),
+          );
         }
-        this.projectileViews.get(p)?.setPosition(p.x, p.y).setRadius(p.radius).setFillStyle(color, .95);
+        this.projectileViews.get(p)
+          ?.setPosition(p.x, p.y)
+          .setDisplaySize(p.radius * 2.7, p.radius * .9)
+          .setRotation(Math.atan2(p.vy, p.vx))
+          .setFillStyle(color, .98);
       }
     }
     for (const [p, v] of this.projectileViews) if (p.dead) { v.destroy(); this.projectileViews.delete(p); }
@@ -312,6 +391,10 @@ export class ArenaScene extends Phaser.Scene {
       blueScore: this.flags.blueScore,
       redFlagCarried: Boolean(this.flags.flags.red.carrier),
       blueFlagCarried: Boolean(this.flags.flags.blue.carrier),
+      matchPhase: this.match.phase,
+      matchTimeRemaining: this.match.timeRemaining,
+      matchCountdown: this.match.countdownValue,
+      matchWinner: this.match.winner,
     });
   }
 
@@ -348,7 +431,7 @@ export class ArenaScene extends Phaser.Scene {
       const icon = view?.getByName("icon") as Phaser.GameObjects.Image | undefined;
       const label = view?.getByName("amount") as Phaser.GameObjects.Text | undefined;
       pad?.setRotation(0).setScale(.27).setAlpha((pickup.temporary ? .38 : .82) + Math.sin(age * 2.4) * .05);
-      icon?.setVisible(pickup.active).setScale((pickup.temporary ? .17 : .18) + Math.sin(age * 3.2) * .008).setAlpha(pickup.active ? 1 : .2);
+      icon?.setVisible(pickup.active).setScale(this.pickupIconScale(pickup) + Math.sin(age * 3.2) * .008).setAlpha(pickup.active ? 1 : .2);
       label?.setVisible(pickup.active && pickup.temporary);
     }
     for (const [pickup, view] of this.pickupViews) {
@@ -382,7 +465,7 @@ export class ArenaScene extends Phaser.Scene {
         : pickup.kind === "rocket" ? "pickupRocket"
           : pickup.kind === "rail" ? "pickupRail" : "pickupWhip";
     const weapon = pickup.kind === "rocket" || pickup.kind === "rail" || pickup.kind === "whip";
-    const icon = this.add.image(0, weapon ? -3 : -5, iconKey).setName("icon").setScale(pickup.temporary ? .17 : .18).setDepth(1);
+    const icon = this.add.image(0, weapon ? -3 : -5, iconKey).setName("icon").setScale(this.pickupIconScale(pickup)).setDepth(1);
     if (!pickup.temporary) {
       container.add(this.add.image(0, 2, "spawnPad").setName("pad").setScale(.27).setAlpha(.82).setDepth(0));
     }
@@ -397,6 +480,13 @@ export class ArenaScene extends Phaser.Scene {
       }).setName("amount").setOrigin(.5).setDepth(2));
     }
     return container;
+  }
+
+  pickupIconScale(pickup: Pickup) {
+    if (pickup.temporary) return .17;
+    if (pickup.kind === "rail") return .22;
+    if (pickup.kind === "whip") return .34;
+    return .18;
   }
 
   renderFlags() {
@@ -481,6 +571,7 @@ export class ArenaScene extends Phaser.Scene {
     Object.assign(this.whipBtn, layout.whip);
   }
   pointerDown(p: Phaser.Input.Pointer) {
+    if (this.match.phase !== "playing") return;
     if (this.player.whipAmmo > 0 && Phaser.Math.Distance.Between(p.x, p.y, this.whipBtn.x, this.whipBtn.y) <= this.whipBtn.r + 20) {
       this.firePlayerWhipAtNearest();
       return;
@@ -813,6 +904,10 @@ export class ArenaScene extends Phaser.Scene {
     this.audio.playWhip(Boolean(hit));
   }
   setupHudButtons() {
+    this.hud.bindMatchActions(
+      () => this.restartWithSettings(),
+      () => this.openMainMenu(),
+    );
     this.hud.bindSettings({
       levelId: this.levelId,
       levels: LEVELS,
@@ -830,6 +925,7 @@ export class ArenaScene extends Phaser.Scene {
         this.blueCount = this.teamCount(count, this.blueCount);
         this.restartWithSettings();
       },
+      onMainMenu: () => this.openMainMenu(),
     });
   }
 }

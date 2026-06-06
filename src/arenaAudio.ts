@@ -68,6 +68,10 @@ export class ArenaAudio {
     this.scene.sound.play("rocketFire", { volume: .68 });
   }
 
+  playBulletFire() {
+    this.scene.sound.play("botBulletFire", { volume: .34 });
+  }
+
   playBotWeapon(bot: Bot, player: Player, kind: "bullet" | "rocket") {
     if (kind === "rocket") {
       this.playSpatial("rocketFire", bot, player, 950, .48);

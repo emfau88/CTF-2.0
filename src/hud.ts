@@ -1,5 +1,6 @@
 import { len } from "./math";
 import type { LevelId } from "./level";
+import type { MatchPhase, MatchWinner } from "./matchFlow";
 import type { Player } from "./player";
 import type { Bot, Projectile } from "./systems";
 
@@ -13,6 +14,10 @@ type ArenaHudState = {
   blueScore: number;
   redFlagCarried: boolean;
   blueFlagCarried: boolean;
+  matchPhase: MatchPhase;
+  matchTimeRemaining: number;
+  matchCountdown: number;
+  matchWinner: MatchWinner;
 };
 
 type SettingsState = {
@@ -23,6 +28,14 @@ type SettingsState = {
   onMapChange: (levelId: LevelId) => void;
   onRedCountChange: (count: number) => void;
   onBlueCountChange: (count: number) => void;
+  onMainMenu: () => void;
+};
+
+type MainMenuState = {
+  levelId: LevelId;
+  redCount: number;
+  blueCount: number;
+  onPlay: (levelId: LevelId, redCount: number, blueCount: number) => void;
 };
 
 export type FlagHudState = "home" | "player-carrier" | "red-stolen" | "blue-taken";
@@ -73,6 +86,13 @@ export class HudController {
   private readonly redScore = document.querySelector<HTMLElement>("#red-score");
   private readonly blueScore = document.querySelector<HTMLElement>("#blue-score");
   private readonly statusToast = document.querySelector<HTMLElement>("#status-toast");
+  private readonly matchTimer = document.querySelector<HTMLElement>("#match-timer");
+  private readonly matchOverlay = document.querySelector<HTMLElement>("#match-overlay");
+  private readonly matchTitle = document.querySelector<HTMLElement>("#match-title");
+  private readonly matchDetail = document.querySelector<HTMLElement>("#match-detail");
+  private readonly matchRestart = document.querySelector<HTMLButtonElement>("#match-restart");
+  private readonly matchMainMenu = document.querySelector<HTMLButtonElement>("#match-main-menu");
+  private readonly mainMenu = document.querySelector<HTMLElement>("#main-menu");
   private readonly debug = document.querySelector<HTMLElement>("#debug");
   private noticeUntil = 0;
   private flagState: FlagHudState = "home";
@@ -87,11 +107,15 @@ export class HudController {
     this.redScoreValue = 0;
     this.blueScoreValue = 0;
     this.statusToast?.classList.remove("is-visible");
+    this.matchOverlay?.classList.remove("is-hidden");
+    this.matchRestart?.classList.add("is-hidden");
+    this.matchMainMenu?.classList.add("is-hidden");
   }
 
   updateArena(now: number, state: ArenaHudState) {
     if (this.redScore) this.redScore.textContent = String(state.redScore);
     if (this.blueScore) this.blueScore.textContent = String(state.blueScore);
+    this.updateMatch(state);
     const flagTransition = getFlagHudTransition({
       playerCarrying: Boolean(state.player.carriedFlag),
       redFlagCarried: state.redFlagCarried,
@@ -117,6 +141,57 @@ export class HudController {
     this.debugVisible = !this.debugVisible;
   }
 
+  bindMatchActions(onRestart: () => void, onMainMenu: () => void) {
+    if (this.matchRestart) this.matchRestart.onclick = onRestart;
+    if (this.matchMainMenu) this.matchMainMenu.onclick = onMainMenu;
+  }
+
+  showMainMenu({ levelId, redCount, blueCount, onPlay }: MainMenuState) {
+    this.mainMenu?.classList.remove("is-hidden");
+    const map = document.querySelector<HTMLSelectElement>("#menu-map");
+    const red = document.querySelector<HTMLSelectElement>("#menu-red-count");
+    const blue = document.querySelector<HTMLSelectElement>("#menu-blue-count");
+    if (map) map.value = levelId;
+    if (red) red.value = String(redCount);
+    if (blue) blue.value = String(blueCount);
+    const play = document.querySelector<HTMLButtonElement>("#menu-play");
+    if (play) play.onclick = () => onPlay(
+      (map?.value ?? levelId) as LevelId,
+      Number(red?.value ?? redCount),
+      Number(blue?.value ?? blueCount),
+    );
+  }
+
+  hideMainMenu() {
+    this.mainMenu?.classList.add("is-hidden");
+  }
+
+  private updateMatch(state: ArenaHudState) {
+    if (this.matchTimer) this.matchTimer.textContent = formatMatchTime(state.matchTimeRemaining);
+    if (state.matchPhase === "playing") {
+      this.matchOverlay?.classList.add("is-hidden");
+      return;
+    }
+
+    this.matchOverlay?.classList.remove("is-hidden");
+    if (state.matchPhase === "countdown") {
+      if (this.matchTitle) this.matchTitle.textContent = String(state.matchCountdown);
+      if (this.matchDetail) this.matchDetail.textContent = "First to 3 - 3:00";
+      this.matchRestart?.classList.add("is-hidden");
+      this.matchMainMenu?.classList.add("is-hidden");
+      return;
+    }
+
+    if (this.matchTitle) {
+      this.matchTitle.textContent = state.matchWinner === "draw"
+        ? "DRAW"
+        : `${state.matchWinner?.toUpperCase()} WINS`;
+    }
+    if (this.matchDetail) this.matchDetail.textContent = `${state.redScore} : ${state.blueScore}`;
+    this.matchRestart?.classList.remove("is-hidden");
+    this.matchMainMenu?.classList.remove("is-hidden");
+  }
+
   private showNotice(text: string, now: number) {
     if (this.statusToast) this.statusToast.textContent = text;
     this.noticeUntil = now + 1800;
@@ -130,6 +205,7 @@ export class HudController {
     onMapChange,
     onRedCountChange,
     onBlueCountChange,
+    onMainMenu,
   }: SettingsState) {
     const panel = document.querySelector("#settings-panel");
     const settingsButton = document.querySelector<HTMLButtonElement>("#settings-button");
@@ -168,7 +244,19 @@ export class HudController {
       if (document.fullscreenElement) await document.exitFullscreen();
       else await document.documentElement.requestFullscreen();
     };
+
+    const mainMenuButton = document.querySelector<HTMLButtonElement>("#settings-main-menu");
+    if (mainMenuButton) mainMenuButton.onclick = () => {
+      panel?.classList.add("is-hidden");
+      onMainMenu();
+    };
   }
+}
+
+function formatMatchTime(ms: number) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${String(totalSeconds % 60).padStart(2, "0")}`;
 }
 
 function formatArenaDebug({ player, bots, projectiles, redCount, blueCount }: ArenaHudState) {

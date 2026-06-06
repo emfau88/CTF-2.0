@@ -238,6 +238,11 @@ export class Bot {
   private pathIndex = 0;
   private pathTarget: Vec2 | null = null;
   private pathTimer = 0;
+  private progressTimer = 0;
+  private progressPoint: Vec2;
+  private forceRepath = false;
+  private avoidanceTimer = 0;
+  private avoidanceSign = 1;
   private navigator: BotNavigator;
   constructor(
     public x: number,
@@ -248,20 +253,23 @@ export class Bot {
     private spawn = { x, y },
   ) {
     this.navigator = new BotNavigator(level, this.radius);
+    this.progressPoint = { x, y };
   }
   update(dt: number, ms: number, blockers: Rect[], flags: FlagSystem, actors: Actor[], walls: Rect[], pickups: Pickup[]) {
     if (!this.alive) {
       this.respawnTimer -= ms;
       if (this.respawnTimer <= 0) {
-        this.x = this.spawn.x; this.y = this.spawn.y; this.hp = T.botMaxHp; this.armor = 0; this.rocketAmmo = 0; this.railAmmo = 0; this.railCooldown = 0; this.alive = true; this.routeIndex = 0; this.path = []; this.pathIndex = 0; this.pathTarget = null; this.state = "spawn";
+        this.x = this.spawn.x; this.y = this.spawn.y; this.hp = T.botMaxHp; this.armor = 0; this.rocketAmmo = 0; this.railAmmo = 0; this.railCooldown = 0; this.alive = true; this.routeIndex = 0; this.path = []; this.pathIndex = 0; this.pathTarget = null; this.pathTimer = 0; this.progressTimer = 0; this.progressPoint = { ...this.spawn }; this.forceRepath = false; this.avoidanceTimer = 0; this.state = "spawn";
       }
       return;
     }
     this.railCooldown = Math.max(0, this.railCooldown - ms);
+    this.avoidanceTimer = Math.max(0, this.avoidanceTimer - ms);
 
     const target = this.chooseTarget(flags, actors, walls, pickups);
     this.pathTimer -= ms;
     this.moveToward(this.pathStep(target, blockers), dt, blockers);
+    this.trackProgress(ms);
     flags.update(this, this.alive);
   }
   heal(v: number) { this.hp = Math.min(T.botMaxHp, this.hp + v); }
@@ -384,7 +392,13 @@ export class Bot {
   private supportPoint(): Vec2 {
     const home = this.ownBaseCenter();
     const enemy = this.enemyBaseCenter();
-    return { x: home.x + (enemy.x - home.x) * .42, y: home.y + (enemy.y - home.y) * .42 };
+    const center = { x: home.x + (enemy.x - home.x) * .42, y: home.y + (enemy.y - home.y) * .42 };
+    return this.nextRoutePoint([
+      { x: center.x, y: center.y - 105 },
+      { x: center.x + (this.team === "red" ? 90 : -90), y: center.y },
+      { x: center.x, y: center.y + 105 },
+      { x: center.x + (this.team === "red" ? -55 : 55), y: center.y },
+    ]);
   }
   private routeForTeam(route: Vec2[]) {
     return this.team === "blue" ? route : route.map((point) => ({ x: T.worldWidth - point.x, y: point.y }));
@@ -395,18 +409,26 @@ export class Bot {
     return route[this.routeIndex] ?? point;
   }
   private pathStep(target: Vec2, blockers: Rect[]) {
-    if (this.clearLine({ x: this.x, y: this.y }, target, blockers)) {
+    const movedTarget = !this.pathTarget || len(target.x - this.pathTarget.x, target.y - this.pathTarget.y) > 70;
+    const activePath = this.pathIndex < this.path.length;
+    if (!this.forceRepath && activePath && !movedTarget && this.pathTimer > 0) {
+      while (this.pathIndex < this.path.length - 1 && len(this.x - this.path[this.pathIndex].x, this.y - this.path[this.pathIndex].y) < 34) {
+        this.pathIndex++;
+      }
+      return this.path[this.pathIndex] ?? target;
+    }
+    if (!this.forceRepath && this.clearLine({ x: this.x, y: this.y }, target, blockers)) {
       this.path = [];
       this.pathIndex = 0;
-      this.pathTarget = target;
+      this.pathTarget = { ...target };
       return target;
     }
-    const movedTarget = !this.pathTarget || len(target.x - this.pathTarget.x, target.y - this.pathTarget.y) > 70;
-    if (movedTarget || this.pathTimer <= 0 || this.pathIndex >= this.path.length) {
+    if (this.forceRepath || movedTarget || this.pathTimer <= 0 || this.pathIndex >= this.path.length) {
       this.path = this.navigator.findPath({ x: this.x, y: this.y }, target);
       this.pathIndex = 0;
       this.pathTarget = { ...target };
-      this.pathTimer = 420;
+      this.pathTimer = 700;
+      this.forceRepath = false;
     }
     while (this.pathIndex < this.path.length - 1 && len(this.x - this.path[this.pathIndex].x, this.y - this.path[this.pathIndex].y) < 34) {
       this.pathIndex++;
@@ -419,16 +441,51 @@ export class Bot {
   private moveToward(target: Vec2, dt: number, blockers: Rect[]) {
     const dx = target.x - this.x, dy = target.y - this.y, d = len(dx, dy) || 1;
     const speed = this.role === "attacker" ? T.botSpeed * 1.25 : T.botSpeed * 1.08;
-    this.vx = dx / d * speed; this.vy = dy / d * speed;
+    if (this.avoidanceTimer > 0) {
+      this.vx = -dy / d * speed * .72 * this.avoidanceSign;
+      this.vy = dx / d * speed * .72 * this.avoidanceSign;
+    } else {
+      this.vx = dx / d * speed;
+      this.vy = dy / d * speed;
+    }
     const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
     if (blockers.some(r => circleRect(nx, ny, this.radius, r))) {
-      this.vx = -dy / d * speed * .65;
-      this.vy = dx / d * speed * .65;
-      const sx = this.x + this.vx * dt, sy = this.y + this.vy * dt;
-      if (!blockers.some(r => circleRect(sx, sy, this.radius, r))) { this.x = sx; this.y = sy; }
+      const left = { x: -dy / d * speed * .72, y: dx / d * speed * .72 };
+      const right = { x: -left.x, y: -left.y };
+      const leftOpen = !blockers.some(r => circleRect(this.x + left.x * dt, this.y + left.y * dt, this.radius, r));
+      const rightOpen = !blockers.some(r => circleRect(this.x + right.x * dt, this.y + right.y * dt, this.radius, r));
+      if (leftOpen || rightOpen) {
+        if (!leftOpen) this.avoidanceSign = -1;
+        else if (!rightOpen) this.avoidanceSign = 1;
+        this.avoidanceTimer = 420;
+        const side = this.avoidanceSign > 0 ? left : right;
+        this.vx = side.x;
+        this.vy = side.y;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+      } else {
+        this.vx = 0;
+        this.vy = 0;
+        this.forceRepath = true;
+      }
       return;
     }
     this.x = nx; this.y = ny;
+  }
+
+  private trackProgress(ms: number) {
+    this.progressTimer += ms;
+    if (this.progressTimer < 700) return;
+    const moved = len(this.x - this.progressPoint.x, this.y - this.progressPoint.y);
+    if (moved < 9) {
+      this.forceRepath = true;
+      this.pathTimer = 0;
+      this.avoidanceSign *= -1;
+      this.avoidanceTimer = 520;
+      this.routeIndex++;
+    }
+    this.progressPoint = { x: this.x, y: this.y };
+    this.progressTimer = 0;
   }
 }
 

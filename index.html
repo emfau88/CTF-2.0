@@ -10,6 +10,7 @@
     <div id="hud">
       <div class="score">
         <b class="score-team score-red"><span class="score-label">RED</span><span id="red-score">0</span></b>
+        <b id="match-timer">3:00</b>
         <b class="score-team score-blue"><span id="blue-score">0</span><span class="score-label">BLUE</span></b>
       </div>
       <div id="status-toast" role="status" aria-live="polite"></div>
@@ -39,8 +40,47 @@
           <button id="fullscreen-button" type="button">Fullscreen</button>
           <button id="debug-button" type="button">Debug data</button>
         </div>
+        <button id="settings-main-menu" type="button">Main menu</button>
       </div>
       <pre id="debug"></pre>
+      <div id="match-overlay" class="match-overlay">
+        <div id="match-title" class="match-title">3</div>
+        <div id="match-detail" class="match-detail">First to 3 - 3:00</div>
+        <div class="match-actions">
+          <button id="match-restart" class="is-hidden" type="button">Play again</button>
+          <button id="match-main-menu" class="is-hidden" type="button">Main menu</button>
+        </div>
+      </div>
+      <div id="main-menu" class="main-menu is-hidden">
+        <div class="main-menu-card">
+          <div class="main-menu-kicker">CAPTURE THE FLAG</div>
+          <h1>CTF ARENA</h1>
+          <p>First to 3 captures. Three-minute matches.</p>
+          <label>Map
+            <select id="menu-map">
+              <option value="training-crossing">Training Crossing</option>
+              <option value="midline-rush">Grand Archive</option>
+              <option value="flank-switch">Flank Switch</option>
+            </select>
+          </label>
+          <div class="main-menu-teams">
+            <label>Red team
+              <select id="menu-red-count">
+                <option value="1">1 player</option><option value="2">2 players</option>
+                <option value="3">3 players</option><option value="4">4 players</option>
+              </select>
+            </label>
+            <label>Blue team
+              <select id="menu-blue-count">
+                <option value="1">1 player</option><option value="2">2 players</option>
+                <option value="3">3 players</option><option value="4">4 players</option>
+              </select>
+            </label>
+          </div>
+          <button id="menu-play" type="button">Play</button>
+          <div class="main-menu-help">Move: WASD / arrows - Jump: Space - Whip: F</div>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
