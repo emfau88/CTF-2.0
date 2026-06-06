@@ -42,3 +42,39 @@ export function resolveCircleRect(pos: Vec2, radius: number, r: Rect): (Vec2 & {
   dx /= d; dy /= d;
   return { x: dx, y: dy, depth: radius - d };
 }
+
+export function rayCircleDistance(origin: Vec2, direction: Vec2, center: Vec2, radius: number) {
+  const ox = origin.x - center.x, oy = origin.y - center.y;
+  const projection = ox * direction.x + oy * direction.y;
+  const discriminant = projection * projection - (ox * ox + oy * oy - radius * radius);
+  if (discriminant < 0) return null;
+  const near = -projection - Math.sqrt(discriminant);
+  const far = -projection + Math.sqrt(discriminant);
+  return near >= 0 ? near : far >= 0 ? far : null;
+}
+
+export function rayRectDistance(origin: Vec2, direction: Vec2, rect: Rect) {
+  let near = 0, far = Infinity;
+  for (const axis of ["x", "y"] as const) {
+    const min = rect[axis];
+    const max = min + (axis === "x" ? rect.w : rect.h);
+    const value = origin[axis], delta = direction[axis];
+    if (Math.abs(delta) < .00001) {
+      if (value < min || value > max) return null;
+      continue;
+    }
+    const a = (min - value) / delta, b = (max - value) / delta;
+    near = Math.max(near, Math.min(a, b));
+    far = Math.min(far, Math.max(a, b));
+    if (near > far) return null;
+  }
+  return far >= 0 ? Math.max(0, near) : null;
+}
+
+export function pointSegmentDistance(point: Vec2, start: Vec2, end: Vec2) {
+  const dx = end.x - start.x, dy = end.y - start.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (!lengthSquared) return len(point.x - start.x, point.y - start.y);
+  const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
+  return len(point.x - (start.x + dx * t), point.y - (start.y + dy * t));
+}

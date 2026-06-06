@@ -512,11 +512,11 @@ export class Pickup {
     return this.temporary && (!this.active || this.life <= 0);
   }
   collect(actor: Actor) {
-    if (!this.active) return;
-    if (actor instanceof Player && actor.state !== "alive") return;
-    if (actor instanceof Bot && !actor.alive) return;
-    if (actor instanceof Bot && this.kind === "rail") return;
-    if (len(actor.x - this.x, actor.y - this.y) > T.pickupRadius + actor.radius) return;
+    if (!this.active) return false;
+    if (actor instanceof Player && actor.state !== "alive") return false;
+    if (actor instanceof Bot && !actor.alive) return false;
+    if (actor instanceof Bot && this.kind === "rail") return false;
+    if (len(actor.x - this.x, actor.y - this.y) > T.pickupRadius + actor.radius) return false;
     const maxHp = actor instanceof Player ? T.playerMaxHp : T.botMaxHp;
     if (this.kind === "health") actor.heal(maxHp * T.healthPackHealRatio);
     else if (this.kind === "armor") actor.addArmor(maxHp * T.armorPackRatio);
@@ -524,6 +524,7 @@ export class Pickup {
     else actor.railAmmo += this.amount;
     this.active = false;
     if (!this.temporary) this.respawnTimer = T.pickupRespawnMs;
+    return true;
   }
 }
 
@@ -541,22 +542,30 @@ export class PickupSystem {
     this.pickups.push(new Pickup("rail", x, y, amount, true));
   }
   update(ms: number, actors: Actor[]) {
+    const collected: Array<{ pickup: Pickup; actor: Actor }> = [];
     for (const pickup of this.pickups) {
       pickup.update(ms);
-      for (const actor of actors) pickup.collect(actor);
+      for (const actor of actors) {
+        if (pickup.collect(actor)) collected.push({ pickup, actor });
+      }
     }
     this.pickups = this.pickups.filter((pickup) => !pickup.expired);
+    return collected;
   }
 }
+
+export type AutoAttackResult = {
+  kind: "bullet" | "rocket";
+};
 
 export class AutoAttack {
   cooldown = 0;
   constructor(private owner: Player | Bot, private projectiles: Projectile[], private fireRate = T.fireRate) {}
-  update(ms: number, targets: Array<Player | Bot>, walls: Rect[] = []) {
+  update(ms: number, targets: Array<Player | Bot>, walls: Rect[] = []): AutoAttackResult | null {
     this.cooldown -= ms;
-    if (this.cooldown > 0) return;
-    if (this.owner instanceof Player && this.owner.state !== "alive") return;
-    if (this.owner instanceof Bot && !this.owner.alive) return;
+    if (this.cooldown > 0) return null;
+    if (this.owner instanceof Player && this.owner.state !== "alive") return null;
+    if (this.owner instanceof Bot && !this.owner.alive) return null;
 
     let best: Player | Bot | null = null, bd = Infinity, bestScore = -Infinity;
     for (const target of targets) {
@@ -571,7 +580,7 @@ export class AutoAttack {
       const score = carrierBonus + lowHpBonus - d * .12;
       if (score > bestScore) { best = target; bd = d; bestScore = score; }
     }
-    if (!best) return;
+    if (!best) return null;
     const dx = best.x - this.owner.x, dy = best.y - this.owner.y, d = len(dx, dy) || 1;
     const height = this.owner instanceof Player ? this.owner.jump.height : 0;
     let rocket = false;
@@ -588,5 +597,6 @@ export class AutoAttack {
       rocket ? "rocket" : "bullet",
     ));
     this.cooldown = this.fireRate;
+    return { kind: rocket ? "rocket" : "bullet" };
   }
 }
