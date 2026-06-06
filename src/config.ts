@@ -11,6 +11,7 @@ export const T = {
   rocketSpeed: 371, rocketDamage: 45, rocketProjectileRadius: 14, rocketAmmo: 5,
   rocketSplashRadius: 105, rocketKnockback: 230,
   railAmmo: 5, railCooldownMs: 2500, railRange: 1100, railDamageRatio: .95, railBeamLifeMs: 190,
+  whipAmmo: 8, whipCooldownMs: 800, whipRange: 120, whipHalfAngle: Math.PI * 35 / 180, whipDamage: 35,
   pickupRadius: 22, pickupRespawnMs: 20000, weaponDropLifetimeMs: 15000, healthPackHealRatio: .5, armorPackRatio: .25,
   playerMaxHp: 100, botMaxHp: 70, botSpeed: 72, respawnDelay: 900,
   trailIntervalMs: 18, trailLifeMs: 280, trailMax: 28,

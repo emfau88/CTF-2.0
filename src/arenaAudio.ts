@@ -60,6 +60,10 @@ export class ArenaAudio {
     this.scene.sound.play("railHitConfirm", { volume: .48 });
   }
 
+  playWhip(hit: boolean) {
+    this.scene.sound.play(hit ? "whipHit" : "whipSwing", { volume: hit ? .65 : .52 });
+  }
+
   playRocketFire() {
     this.scene.sound.play("rocketFire", { volume: .68 });
   }
@@ -76,7 +80,7 @@ export class ArenaAudio {
     this.playSpatial("botDeath", bot, player, 700, .55);
   }
 
-  playBotPickup(bot: Bot, player: Player, kind: "health" | "armor" | "rocket" | "rail") {
+  playBotPickup(bot: Bot, player: Player, kind: "health" | "armor" | "rocket" | "rail" | "whip") {
     if (kind === "health") {
       this.playSpatialHealthPickup(bot, player);
       return;

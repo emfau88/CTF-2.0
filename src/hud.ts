@@ -187,7 +187,7 @@ jump charge: ${Math.round(player.jump.charge() * 100)}%
 friction: ${player.movement.currentFriction.toFixed(2)}
 carried flag: ${player.carriedFlag ?? "none"}
 armor: ${Math.ceil(player.armor)}
-weapon: rocket ${player.rocketAmmo}, rail ${player.railAmmo}, rail cd ${Math.ceil(player.railCooldown)}
+weapon: rocket ${player.rocketAmmo}, rail ${player.railAmmo}, whip ${player.whipAmmo}, rail cd ${Math.ceil(player.railCooldown)}
 projectiles: ${projectiles.length}
 teams: ${redCount}v${blueCount}
 bot hp: ${bots.map((bot) => `${bot.team}-${bot.role}-${bot.state}:${Math.max(0, Math.ceil(bot.hp))}`).join(", ")}

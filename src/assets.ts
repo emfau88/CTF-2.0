@@ -25,8 +25,10 @@ export function preloadArenaAssets(scene: Phaser.Scene) {
   scene.load.image("pickupArmor", assetUrl("pickup-armor.png"));
   scene.load.image("pickupRocket", assetUrl("pickup-rocket.png"));
   scene.load.image("pickupRail", assetUrl("pickup-rail.png"));
+  scene.load.image("pickupWhip", assetUrl("pickup-whip.svg"));
   scene.load.image("uiRailButton", assetUrl("ui-rail-button.png"));
   scene.load.image("uiRailBadge", assetUrl("ui-rail-badge.png"));
+  scene.load.image("uiWhipButton", assetUrl("ui-whip-button.svg"));
   scene.load.image("railImpact", assetUrl("rail-impact.png"));
   scene.load.image("flagRed", assetUrl("flag-red.png"));
   scene.load.image("flagBlue", assetUrl("flag-blue.png"));
@@ -73,4 +75,6 @@ export function preloadArenaAssets(scene: Phaser.Scene) {
   scene.load.audio("botBulletFire", assetUrl("sounds/pistol.wav"));
   scene.load.audio("botDeath", assetUrl("sounds/imp death 2.wav"));
   scene.load.audio("railHitConfirm", assetUrl("sounds/CrowdPlay_ControllerPress.wav"));
+  scene.load.audio("whipSwing", assetUrl("sounds/slap_swing.wav"));
+  scene.load.audio("whipHit", assetUrl("sounds/slap_hit4.wav"));
 }

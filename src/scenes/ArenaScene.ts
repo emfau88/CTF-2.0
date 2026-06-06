@@ -43,10 +43,12 @@ export class ArenaScene extends Phaser.Scene {
   cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   jumpKey!: Phaser.Input.Keyboard.Key;
+  whipKey!: Phaser.Input.Keyboard.Key;
   joy = { active: false, id: -1, ox: 110, oy: 500, x: 0, y: 0, len: 0, r: 62, knobR: 22 };
   jumpBtn = { id: -1, x: 0, y: 0, r: 52, held: false, pressed: false };
   rocketBtn = { id: -1, x: 0, y: 0, r: 43, held: false, aimX: 1, aimY: 0, drag: 0, dragged: false };
   railBtn = { id: -1, x: 0, y: 0, r: 43, held: false, aimX: 1, aimY: 0, drag: 0, dragged: false };
+  whipBtn = { x: 0, y: 0, r: 43 };
   gfx!: Phaser.GameObjects.Graphics;
   uiGfx!: Phaser.GameObjects.Graphics;
   playerBody!: Phaser.GameObjects.Sprite;
@@ -64,6 +66,9 @@ export class ArenaScene extends Phaser.Scene {
   railButtonView?: Phaser.GameObjects.Image;
   railAmmoBadgeView?: Phaser.GameObjects.Image;
   railAmmoText?: Phaser.GameObjects.Text;
+  whipButtonView?: Phaser.GameObjects.Image;
+  whipAmmoBadgeView?: Phaser.GameObjects.Image;
+  whipAmmoText?: Phaser.GameObjects.Text;
   botAlive = new Map<Bot, boolean>();
   audio!: ArenaAudio;
   effects!: ArenaEffects;
@@ -127,7 +132,8 @@ export class ArenaScene extends Phaser.Scene {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys({ up: "W", down: "S", left: "A", right: "D" }) as Record<string, Phaser.Input.Keyboard.Key>;
     this.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.input.keyboard.addCapture(["SPACE", "UP", "DOWN", "LEFT", "RIGHT", "W", "A", "S", "D"]);
+    this.whipKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    this.input.keyboard.addCapture(["SPACE", "UP", "DOWN", "LEFT", "RIGHT", "W", "A", "S", "D", "F"]);
     this.input.addPointer(2);
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.pointerDown(p));
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => this.pointerMove(p));
@@ -153,6 +159,9 @@ export class ArenaScene extends Phaser.Scene {
     this.railButtonView = undefined;
     this.railAmmoBadgeView = undefined;
     this.railAmmoText = undefined;
+    this.whipButtonView = undefined;
+    this.whipAmmoBadgeView = undefined;
+    this.whipAmmoText = undefined;
     this.lastState = "alive";
     this.hud.reset();
   }
@@ -160,12 +169,14 @@ export class ArenaScene extends Phaser.Scene {
   update(_t: number, delta: number) {
     const ms = Math.min(delta, 34), dt = ms / 1000;
     this.player.railCooldown = Math.max(0, this.player.railCooldown - ms);
+    this.player.whipCooldown = Math.max(0, this.player.whipCooldown - ms);
     const input = this.inputVector();
     if (input.length > .05) this.player.lastMoveDir = { x: input.x, y: input.y };
     if ((Phaser.Input.Keyboard.JustDown(this.jumpKey) || this.jumpBtn.pressed) && this.player.jump.start()) {
       this.audio.playJump();
     }
     this.jumpBtn.pressed = false;
+    if (Phaser.Input.Keyboard.JustDown(this.whipKey)) this.firePlayerWhipAtNearest();
     if (!this.jumpKey.isDown && !this.jumpBtn.held) this.player.jump.release();
 
     this.player.prevX = this.player.x; this.player.prevY = this.player.y;
@@ -358,14 +369,19 @@ export class ArenaScene extends Phaser.Scene {
       this.pickups.dropRailAmmo(actor.x + 15, actor.y, actor.railAmmo);
       actor.railAmmo = 0;
     }
+    if (actor instanceof Player && actor.whipAmmo > 0) {
+      this.pickups.dropWhipAmmo(actor.x, actor.y + 18, actor.whipAmmo);
+      actor.whipAmmo = 0;
+    }
   }
 
   createPickupView(pickup: Pickup) {
     const container = this.add.container(pickup.x, pickup.y).setDepth(18);
     const iconKey = pickup.kind === "health" ? "pickupHealth"
       : pickup.kind === "armor" ? "pickupArmor"
-        : pickup.kind === "rocket" ? "pickupRocket" : "pickupRail";
-    const weapon = pickup.kind === "rocket" || pickup.kind === "rail";
+        : pickup.kind === "rocket" ? "pickupRocket"
+          : pickup.kind === "rail" ? "pickupRail" : "pickupWhip";
+    const weapon = pickup.kind === "rocket" || pickup.kind === "rail" || pickup.kind === "whip";
     const icon = this.add.image(0, weapon ? -3 : -5, iconKey).setName("icon").setScale(pickup.temporary ? .17 : .18).setDepth(1);
     if (!pickup.temporary) {
       container.add(this.add.image(0, 2, "spawnPad").setName("pad").setScale(.27).setAlpha(.82).setDepth(0));
@@ -462,8 +478,13 @@ export class ArenaScene extends Phaser.Scene {
     Object.assign(this.jumpBtn, layout.jump);
     Object.assign(this.rocketBtn, layout.rocket);
     Object.assign(this.railBtn, layout.rail);
+    Object.assign(this.whipBtn, layout.whip);
   }
   pointerDown(p: Phaser.Input.Pointer) {
+    if (this.player.whipAmmo > 0 && Phaser.Math.Distance.Between(p.x, p.y, this.whipBtn.x, this.whipBtn.y) <= this.whipBtn.r + 20) {
+      this.firePlayerWhipAtNearest();
+      return;
+    }
     if (this.player.railAmmo > 0 && Phaser.Math.Distance.Between(p.x, p.y, this.railBtn.x, this.railBtn.y) <= this.railBtn.r + 20 && this.railBtn.id < 0) {
       this.railBtn.id = p.id;
       this.railBtn.held = true;
@@ -531,6 +552,7 @@ export class ArenaScene extends Phaser.Scene {
     this.uiGfx.fillStyle(this.jumpBtn.held ? 0xffd86b : 0xffffff, this.jumpBtn.held ? .84 : .52).lineStyle(3, this.jumpBtn.held ? 0xb77516 : 0x17302d, .28).fillCircle(this.jumpBtn.x, this.jumpBtn.y, this.jumpBtn.r).strokeCircle(this.jumpBtn.x, this.jumpBtn.y, this.jumpBtn.r);
     this.drawRocketButton();
     this.drawRailButton();
+    this.drawWhipButton();
   }
 
   updateRocketAim(p: Phaser.Input.Pointer) {
@@ -651,6 +673,49 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
+  drawWhipButton() {
+    const hasAmmo = this.player.state === "alive" && this.player.whipAmmo > 0;
+    const ready = hasAmmo && this.player.whipCooldown <= 0;
+    const compact = this.whipBtn.r <= 36;
+    const buttonScale = compact ? .42 : .54;
+    const badgeOffset = compact ? 24 : 31;
+    if (!this.whipButtonView) {
+      this.whipButtonView = this.add.image(this.whipBtn.x, this.whipBtn.y, "uiWhipButton").setScrollFactor(0).setDepth(1001).setScale(.38);
+    }
+    if (!this.whipAmmoBadgeView) {
+      this.whipAmmoBadgeView = this.add.image(this.whipBtn.x + 30, this.whipBtn.y + 30, "uiAmmoBadge").setScrollFactor(0).setDepth(1002).setScale(.16);
+    }
+    if (!this.whipAmmoText) {
+      this.whipAmmoText = this.add.text(this.whipBtn.x + 30, this.whipBtn.y + 30, "0", {
+        fontFamily: "Arial",
+        fontSize: "17px",
+        color: "#ffffff",
+        stroke: "#2b1c36",
+        strokeThickness: 5,
+      }).setOrigin(.5).setScrollFactor(0).setDepth(1003);
+    }
+    this.whipButtonView
+      .setPosition(this.whipBtn.x, this.whipBtn.y)
+      .setScale(buttonScale)
+      .setAlpha(ready ? 1 : hasAmmo ? .58 : .35)
+      .setVisible(hasAmmo);
+    this.whipAmmoBadgeView
+      .setPosition(this.whipBtn.x + badgeOffset, this.whipBtn.y + badgeOffset)
+      .setScale(compact ? .12 : .16)
+      .setVisible(hasAmmo);
+    this.whipAmmoText
+      .setPosition(this.whipBtn.x + badgeOffset, this.whipBtn.y + badgeOffset)
+      .setFontSize(compact ? 14 : 17)
+      .setText(String(this.player.whipAmmo))
+      .setVisible(hasAmmo);
+    if (hasAmmo && !ready) {
+      const cooldownRatio = Phaser.Math.Clamp(this.player.whipCooldown / T.whipCooldownMs, 0, 1);
+      this.uiGfx.lineStyle(5, 0xf4b35d, .72).beginPath()
+        .arc(this.whipBtn.x, this.whipBtn.y, this.whipBtn.r + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - cooldownRatio))
+        .strokePath();
+    }
+  }
+
   drawDigit(digit: string, x: number, y: number) {
     const segments: Record<string, number[]> = {
       "0": [0, 1, 2, 3, 4, 5],
@@ -704,6 +769,48 @@ export class ArenaScene extends Phaser.Scene {
     if (!result) return;
     this.audio.playRailFire();
     if (result === "hit") this.audio.playRailHitConfirm();
+  }
+
+  firePlayerWhipAtNearest() {
+    let target: Bot | null = null;
+    let bestDistance = Infinity;
+    for (const bot of this.bots) {
+      if (!bot.alive || bot.team === this.player.team) continue;
+      const distance = len(bot.x - this.player.x, bot.y - this.player.y);
+      if (distance > T.whipRange + bot.radius || distance >= bestDistance) continue;
+      if (this.level.walls.some((wall) => lineIntersectsRect(this.player, bot, wall))) continue;
+      target = bot;
+      bestDistance = distance;
+    }
+    const direction = target
+      ? { x: target.x - this.player.x, y: target.y - this.player.y }
+      : this.player.lastMoveDir;
+    this.firePlayerWhip(direction);
+  }
+
+  firePlayerWhip(direction: Vec2) {
+    if (this.player.state !== "alive" || this.player.whipAmmo <= 0 || this.player.whipCooldown > 0) return;
+    const magnitude = len(direction.x, direction.y);
+    if (magnitude < .001) return;
+    const normalized = { x: direction.x / magnitude, y: direction.y / magnitude };
+    const minimumDot = Math.cos(T.whipHalfAngle);
+    let hit: Bot | null = null;
+    let bestDistance = Infinity;
+    for (const bot of this.bots) {
+      if (!bot.alive || bot.team === this.player.team) continue;
+      const dx = bot.x - this.player.x, dy = bot.y - this.player.y;
+      const distance = len(dx, dy);
+      if (distance > T.whipRange + bot.radius || distance >= bestDistance) continue;
+      if ((dx * normalized.x + dy * normalized.y) / (distance || 1) < minimumDot) continue;
+      if (this.level.walls.some((wall) => lineIntersectsRect(this.player, bot, wall))) continue;
+      hit = bot;
+      bestDistance = distance;
+    }
+    this.player.whipAmmo--;
+    this.player.whipCooldown = T.whipCooldownMs;
+    if (hit) hit.damage(T.whipDamage);
+    this.effects.addWhipSwing(this.player.x, this.player.y - this.player.jump.height, normalized, Boolean(hit));
+    this.audio.playWhip(Boolean(hit));
   }
   setupHudButtons() {
     this.hud.bindSettings({

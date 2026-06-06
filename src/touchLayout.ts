@@ -25,5 +25,10 @@ export function calculateTouchLayout(width: number, height: number) {
       x: jumpX - (compact ? 55 : 190),
       y: jumpY - (compact ? 68 : -10),
     },
+    whip: {
+      r: compact ? 35 : 43,
+      x: jumpX - (compact ? 128 : 112),
+      y: jumpY - (compact ? 62 : 84),
+    },
   };
 }

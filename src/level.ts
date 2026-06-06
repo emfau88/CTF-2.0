@@ -1,6 +1,6 @@
 import type { Rect } from "./math";
 
-export type PickupKind = "health" | "armor" | "rocket" | "rail";
+export type PickupKind = "health" | "armor" | "rocket" | "rail" | "whip";
 export type PickupSpawn = { kind: PickupKind; x: number; y: number };
 export type LevelTheme = "ruins" | "library" | "sports";
 export type WallVisual = "stone-wall" | "bookshelf" | "bookshelf-damaged" | "reading-table" | "sports-barrier";
@@ -63,6 +63,7 @@ const trainingCrossing: LevelData = {
   pickups: [
     { kind: "health", x: 120, y: 320 }, { kind: "armor", x: 220, y: 320 }, { kind: "rocket", x: 130, y: 500 }, { kind: "rail", x: 215, y: 500 },
     { kind: "health", x: 1290, y: 320 }, { kind: "armor", x: 1390, y: 320 }, { kind: "rocket", x: 1370, y: 500 }, { kind: "rail", x: 1285, y: 500 },
+    { kind: "whip", x: 285, y: 410 }, { kind: "whip", x: 1215, y: 410 },
     { kind: "armor", x: 750, y: 410 },
   ],
   botRoutes: {
@@ -110,6 +111,7 @@ const midlineRush: LevelData = {
   pickups: [
     { kind: "health", x: 112, y: 325 }, { kind: "armor", x: 215, y: 325 }, { kind: "rocket", x: 125, y: 500 }, { kind: "rail", x: 215, y: 500 },
     { kind: "health", x: 1285, y: 325 }, { kind: "armor", x: 1388, y: 325 }, { kind: "rocket", x: 1375, y: 500 }, { kind: "rail", x: 1285, y: 500 },
+    { kind: "whip", x: 285, y: 410 }, { kind: "whip", x: 1215, y: 410 },
     { kind: "health", x: 750, y: 410 },
   ],
   botRoutes: {
@@ -145,6 +147,7 @@ const flankSwitch: LevelData = {
   pickups: [
     { kind: "health", x: 125, y: 315 }, { kind: "armor", x: 220, y: 315 }, { kind: "rocket", x: 125, y: 505 }, { kind: "rail", x: 215, y: 505 },
     { kind: "health", x: 1280, y: 315 }, { kind: "armor", x: 1375, y: 315 }, { kind: "rocket", x: 1375, y: 505 }, { kind: "rail", x: 1285, y: 505 },
+    { kind: "whip", x: 285, y: 410 }, { kind: "whip", x: 1215, y: 410 },
   ],
   botRoutes: {
     attacker: [{ x: 1180, y: 720 }, { x: 930, y: 720 }, { x: 750, y: 720 }, { x: 520, y: 720 }, { x: 150, y: 410 }],

@@ -493,7 +493,7 @@ export class Pickup {
     public kind: PickupKind,
     public x: number,
     public y: number,
-    public amount = kind === "rocket" ? T.rocketAmmo : kind === "rail" ? T.railAmmo : 1,
+    public amount = kind === "rocket" ? T.rocketAmmo : kind === "rail" ? T.railAmmo : kind === "whip" ? T.whipAmmo : 1,
     public temporary = false,
   ) {
     this.life = temporary ? T.weaponDropLifetimeMs : 0;
@@ -515,13 +515,14 @@ export class Pickup {
     if (!this.active) return false;
     if (actor instanceof Player && actor.state !== "alive") return false;
     if (actor instanceof Bot && !actor.alive) return false;
-    if (actor instanceof Bot && this.kind === "rail") return false;
+    if (actor instanceof Bot && (this.kind === "rail" || this.kind === "whip")) return false;
     if (len(actor.x - this.x, actor.y - this.y) > T.pickupRadius + actor.radius) return false;
     const maxHp = actor instanceof Player ? T.playerMaxHp : T.botMaxHp;
     if (this.kind === "health") actor.heal(maxHp * T.healthPackHealRatio);
     else if (this.kind === "armor") actor.addArmor(maxHp * T.armorPackRatio);
     else if (this.kind === "rocket") actor.rocketAmmo += this.amount;
-    else actor.railAmmo += this.amount;
+    else if (this.kind === "rail") actor.railAmmo += this.amount;
+    else if (actor instanceof Player) actor.whipAmmo += this.amount;
     this.active = false;
     if (!this.temporary) this.respawnTimer = T.pickupRespawnMs;
     return true;
@@ -540,6 +541,10 @@ export class PickupSystem {
   dropRailAmmo(x: number, y: number, amount: number) {
     if (amount <= 0) return;
     this.pickups.push(new Pickup("rail", x, y, amount, true));
+  }
+  dropWhipAmmo(x: number, y: number, amount: number) {
+    if (amount <= 0) return;
+    this.pickups.push(new Pickup("whip", x, y, amount, true));
   }
   update(ms: number, actors: Actor[]) {
     const collected: Array<{ pickup: Pickup; actor: Actor }> = [];

@@ -39,6 +39,7 @@ type RailBeamFx = {
   hit: boolean;
   impact?: Phaser.GameObjects.Image;
 };
+type WhipSwingFx = { x: number; y: number; angle: number; life: number; max: number; hit: boolean };
 
 export class ArenaEffects {
   private readonly trailGfx: Phaser.GameObjects.Graphics;
@@ -48,6 +49,7 @@ export class ArenaEffects {
   private rocketSmokeTimers = new Map<Projectile, number>();
   private explosions: ExplosionFx[] = [];
   private railBeams: RailBeamFx[] = [];
+  private whipSwings: WhipSwingFx[] = [];
   private spawnPadParticles: SpawnPadParticle[] = [];
   private spawnPadParticleTimer = 0;
   private deathParticles: DeathParticle[] = [];
@@ -64,6 +66,7 @@ export class ArenaEffects {
     this.updateRocketSmoke(ms);
     this.updateExplosions(ms);
     this.updateRailBeams(ms);
+    this.updateWhipSwings(ms);
     this.updateSpawnPadParticles(ms, pickups);
     this.updateDeathBursts(ms);
   }
@@ -83,6 +86,17 @@ export class ArenaEffects {
       y2: end.y,
       life: T.railBeamLifeMs,
       max: T.railBeamLifeMs,
+      hit,
+    });
+  }
+
+  addWhipSwing(x: number, y: number, direction: Vec2, hit: boolean) {
+    this.whipSwings.push({
+      x,
+      y,
+      angle: Math.atan2(direction.y, direction.x),
+      life: 210,
+      max: 210,
       hit,
     });
   }
@@ -115,6 +129,7 @@ export class ArenaEffects {
     this.renderTrail();
     this.renderExplosions(gfx);
     this.renderRailBeams(gfx, now);
+    this.renderWhipSwings(gfx);
     this.renderDeathBursts(gfx);
   }
 
@@ -237,6 +252,11 @@ export class ArenaEffects {
     this.railBeams = this.railBeams.filter((beam) => beam.life > 0);
   }
 
+  private updateWhipSwings(ms: number) {
+    for (const swing of this.whipSwings) swing.life -= ms;
+    this.whipSwings = this.whipSwings.filter((swing) => swing.life > 0);
+  }
+
   private renderRailBeams(gfx: Phaser.GameObjects.Graphics, now: number) {
     for (const beam of this.railBeams) {
       const alpha = Phaser.Math.Clamp(beam.life / beam.max, 0, 1);
@@ -254,6 +274,20 @@ export class ArenaEffects {
           .setScale(.13 + (1 - alpha) * .1)
           .setAlpha(alpha);
       }
+    }
+  }
+
+  private renderWhipSwings(gfx: Phaser.GameObjects.Graphics) {
+    for (const swing of this.whipSwings) {
+      const alpha = Phaser.Math.Clamp(swing.life / swing.max, 0, 1);
+      const progress = 1 - alpha;
+      const startAngle = swing.angle - T.whipHalfAngle;
+      const endAngle = swing.angle + T.whipHalfAngle;
+      const radius = T.whipRange * (.72 + progress * .28);
+      gfx.lineStyle(13, swing.hit ? 0xffd36c : 0x8d5a3a, .12 * alpha)
+        .beginPath().arc(swing.x, swing.y, radius, startAngle, endAngle).strokePath();
+      gfx.lineStyle(5, swing.hit ? 0xfff0b2 : 0xe2ad70, .9 * alpha)
+        .beginPath().arc(swing.x, swing.y, radius, startAngle, endAngle).strokePath();
     }
   }
 
