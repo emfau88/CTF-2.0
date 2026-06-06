@@ -117,6 +117,13 @@ export class ArenaScene extends Phaser.Scene {
     this.load.image("flagRed", assetUrl("flag-red.png"));
     this.load.image("flagBlue", assetUrl("flag-blue.png"));
     this.load.image("spawnPad", assetUrl("spawn-pad.png"));
+    this.load.image("ruinsFloorStone", assetUrl("ruins/floor-stone.png"));
+    this.load.image("ruinsWallHorizontal", assetUrl("ruins/wall-horizontal.png"));
+    this.load.image("ruinsWallVertical", assetUrl("ruins/wall-vertical.png"));
+    this.load.image("ruinsGapChasm", assetUrl("ruins/gap-chasm.png"));
+    this.load.image("ruinsBaseRed", assetUrl("ruins/base-red.png"));
+    this.load.image("ruinsBaseBlue", assetUrl("ruins/base-blue.png"));
+    this.load.image("ruinsCombatCourt", assetUrl("ruins/combat-court.png"));
     this.load.image("libraryFloorStone", assetUrl("library/floor-stone.png"));
     this.load.image("libraryFloorWood", assetUrl("library/floor-wood.png"));
     this.load.image("libraryFloorCarpet", assetUrl("library/floor-carpet.png"));
@@ -697,25 +704,53 @@ export class ArenaScene extends Phaser.Scene {
         .setAlpha(.78)
         .setDepth(-1.8);
     }
-    this.drawObjectSprite(this.level.redBase, visuals.redBase, .92);
-    this.drawObjectSprite(this.level.blueBase, visuals.blueBase, .92);
+    if (this.level.theme === "ruins") {
+      if (this.level.combatZone) {
+        const r = this.level.combatZone;
+        this.add.image(r.x + r.w / 2, r.y + r.h / 2, "ruinsCombatCourt")
+          .setDisplaySize(r.w, r.h)
+          .setDepth(-1.7);
+      }
+      this.drawRuinsBase(this.level.redBase, "ruinsBaseRed");
+      this.drawRuinsBase(this.level.blueBase, "ruinsBaseBlue");
+    } else {
+      this.drawObjectSprite(this.level.redBase, visuals.redBase, .92);
+      this.drawObjectSprite(this.level.blueBase, visuals.blueBase, .92);
+    }
     if (this.level.theme === "library") {
       for (const decoration of this.level.decorations ?? []) this.drawLibraryDecoration(g, decoration);
       for (const gap of this.level.gaps) this.drawLibraryGap(g, gap);
       for (const wall of this.level.walls) this.drawLibraryWall(g, wall);
+    } else if (this.level.theme === "ruins") {
+      for (const gap of this.level.gaps) this.drawRuinsGap(gap);
+      for (const wall of this.level.walls) this.drawRuinsWall(g, wall);
     } else {
       for (const gap of this.level.gaps) this.drawObjectSprite(gap, visuals.gap, 1);
       for (const wall of this.level.walls) this.drawObjectSprite(wall, wall.w > wall.h ? visuals.wallHorizontal : visuals.wallVertical, 1);
     }
 
-    g.lineStyle(1, 0xcadbd4, .28);
-    for (let x = 0; x <= T.worldWidth; x += 50) g.beginPath().moveTo(x, 0).lineTo(x, T.worldHeight).strokePath();
-    for (let y = 0; y <= T.worldHeight; y += 50) g.beginPath().moveTo(0, y).lineTo(T.worldWidth, y).strokePath();
-    this.zone(g, this.level.redBase, TEAM.red.base, TEAM.red.dark); this.zone(g, this.level.blueBase, TEAM.blue.base, TEAM.blue.dark);
-    if (this.level.combatZone) this.combatZone(g, this.level.combatZone);
-    g.lineStyle(3, 0x9dafaa, .45).beginPath().moveTo(T.worldWidth / 2, 40).lineTo(T.worldWidth / 2, T.worldHeight - 40).strokePath();
+    if (this.level.theme !== "ruins") {
+      g.lineStyle(1, 0xcadbd4, .28);
+      for (let x = 0; x <= T.worldWidth; x += 50) g.beginPath().moveTo(x, 0).lineTo(x, T.worldHeight).strokePath();
+      for (let y = 0; y <= T.worldHeight; y += 50) g.beginPath().moveTo(0, y).lineTo(T.worldWidth, y).strokePath();
+      this.zone(g, this.level.redBase, TEAM.red.base, TEAM.red.dark);
+      this.zone(g, this.level.blueBase, TEAM.blue.base, TEAM.blue.dark);
+      if (this.level.combatZone) this.combatZone(g, this.level.combatZone);
+      g.lineStyle(3, 0x9dafaa, .45).beginPath().moveTo(T.worldWidth / 2, 40).lineTo(T.worldWidth / 2, T.worldHeight - 40).strokePath();
+    }
   }
   drawFloorTiles() {
+    if (this.level.theme === "ruins") {
+      const size = 160;
+      for (let y = 0; y < T.worldHeight; y += size) {
+        for (let x = 0; x < T.worldWidth; x += size) {
+          this.add.image(x + size / 2, y + size / 2, "ruinsFloorStone")
+            .setDisplaySize(size, size)
+            .setDepth(-2);
+        }
+      }
+      return;
+    }
     const size = 50;
     const visuals = LEVEL_THEME_VISUALS[this.level.theme];
     for (let y = 0; y < T.worldHeight; y += size) {
@@ -740,6 +775,28 @@ export class ArenaScene extends Phaser.Scene {
     g.fillStyle(library ? 0x7a2736 : 0xdff6ef, library ? .08 : .13).fillRoundedRect(r.x, r.y, r.w, r.h, 24);
     g.lineStyle(2, library ? 0xb58b58 : 0x4d887d, library ? .3 : .34).strokeRoundedRect(r.x, r.y, r.w, r.h, 24);
     g.lineStyle(1, 0xffffff, .3).strokeCircle(r.x + r.w / 2, r.y + r.h / 2, 76);
+  }
+  drawRuinsWall(g: Phaser.GameObjects.Graphics, wall: LevelWall) {
+    const horizontal = wall.w > wall.h;
+    g.fillStyle(0x18201d, .2)
+      .fillRoundedRect(wall.x + 5, wall.y + 8, wall.w, wall.h, 7);
+    this.add.image(
+      wall.x + wall.w / 2,
+      wall.y + wall.h / 2,
+      horizontal ? "ruinsWallHorizontal" : "ruinsWallVertical",
+    )
+      .setDisplaySize(wall.w + (horizontal ? 14 : 18), wall.h + (horizontal ? 18 : 14))
+      .setDepth(2);
+  }
+  drawRuinsGap(gap: LevelGap) {
+    this.add.image(gap.x + gap.w / 2, gap.y + gap.h / 2, "ruinsGapChasm")
+      .setDisplaySize(gap.w, gap.h)
+      .setDepth(1);
+  }
+  drawRuinsBase(base: Rect, key: "ruinsBaseRed" | "ruinsBaseBlue") {
+    this.add.image(base.x + base.w / 2, base.y + base.h / 2, key)
+      .setDisplaySize(base.w + 8, base.h + 8)
+      .setDepth(-1);
   }
   drawLibraryWall(g: Phaser.GameObjects.Graphics, wall: LevelWall) {
     const table = wall.visual === "reading-table";

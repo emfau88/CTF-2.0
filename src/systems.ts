@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { T, type TeamId } from "./config";
 import type { LevelData, PickupKind, PickupSpawn } from "./level";
-import { circleRect, len, lineIntersectsRect, pointInRect, resolveCircleRect, type Rect, type Vec2 } from "./math";
+import { circleRect, insetRect, len, lineIntersectsRect, pointInRect, resolveCircleRect, type Rect, type Vec2 } from "./math";
 import { Player } from "./player";
 
 export type FlagCarrier = {
@@ -152,7 +152,11 @@ class BotNavigator {
 }
 
 export class CollisionSystem {
-  constructor(private level: LevelData) {}
+  private gapDangerZones: Rect[];
+
+  constructor(private level: LevelData) {
+    this.gapDangerZones = level.gaps.map(g => insetRect(g, T.gapDangerInsetRatio));
+  }
 
   update(p: Player, ms: number) {
     if (p.state !== "alive") return;
@@ -174,8 +178,8 @@ export class CollisionSystem {
       }
       p.x = pos.x; p.y = pos.y;
     }
-    p.overGap = this.level.gaps.some(g => circleRect(p.x, p.y, p.radius * .68, g));
-    if (this.level.gaps.some(g => pointInRect(p.x, p.y, g)) && !p.jump.clearsGap()) p.fall();
+    p.overGap = this.gapDangerZones.some(g => circleRect(p.x, p.y, p.radius * .68, g));
+    if (this.gapDangerZones.some(g => pointInRect(p.x, p.y, g)) && !p.jump.clearsGap()) p.fall();
     p.safeTimer += ms;
     if (p.safeTimer >= T.safePointInterval && p.jump.grounded() && !p.overGap) { p.safeTimer = 0; p.lastSafe = { x: p.x, y: p.y }; }
   }

@@ -3,6 +3,12 @@ export type Rect = { x: number; y: number; w: number; h: number };
 export type InputVector = Vec2 & { length: number };
 export const len = (x: number, y: number) => Math.hypot(x, y);
 export const pointInRect = (x: number, y: number, r: Rect) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+export function insetRect(r: Rect, ratio: number): Rect {
+  const safeRatio = Math.max(0, Math.min(ratio, .49));
+  const insetX = r.w * safeRatio;
+  const insetY = r.h * safeRatio;
+  return { x: r.x + insetX, y: r.y + insetY, w: r.w - insetX * 2, h: r.h - insetY * 2 };
+}
 export function segmentsIntersect(a: Vec2, b: Vec2, c: Vec2, d: Vec2) {
   const ccw = (p1: Vec2, p2: Vec2, p3: Vec2) => (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
   return ccw(a, c, d) !== ccw(b, c, d) && ccw(a, b, c) !== ccw(a, b, d);

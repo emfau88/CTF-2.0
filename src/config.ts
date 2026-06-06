@@ -6,7 +6,7 @@ export const T = {
   jumpMinDuration: 180, jumpMaxDuration: 620, jumpHoldExtendRate: 1.18,
   jumpCooldown: 540, jumpHeight: 62, jumpClearHeightRatio: 0.34,
   jumpDistanceInfluence: 0.93, lowSpeedJumpBoost: 100,
-  fallRespawnMs: 420, safePointInterval: 120,
+  fallRespawnMs: 420, safePointInterval: 120, gapDangerInsetRatio: .2,
   projectileSpeed: 260, fireRate: 800, botFireRate: 1000, attackRange: 520, projectileDamage: 18, projectileRadius: 9,
   rocketSpeed: 371, rocketDamage: 45, rocketProjectileRadius: 14, rocketAmmo: 5,
   rocketSplashRadius: 105, rocketKnockback: 230,
