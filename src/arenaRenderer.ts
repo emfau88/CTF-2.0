@@ -70,13 +70,8 @@ export function renderArena(
   }
 
   if (level.theme === "library") {
-    g.lineStyle(1, 0xcadbd4, .28);
-    for (let x = 0; x <= level.width; x += 50) g.beginPath().moveTo(x, 0).lineTo(x, level.height).strokePath();
-    for (let y = 0; y <= level.height; y += 50) g.beginPath().moveTo(0, y).lineTo(level.width, y).strokePath();
     drawZone(g, level.redBase, TEAM.red.base, TEAM.red.dark);
     drawZone(g, level.blueBase, TEAM.blue.base, TEAM.blue.dark);
-    if (level.combatZone) drawCombatZone(g, level.combatZone, level.theme === "library");
-    g.lineStyle(3, 0x9dafaa, .45).beginPath().moveTo(level.width / 2, 40).lineTo(level.width / 2, level.height - 40).strokePath();
   }
 }
 
@@ -133,12 +128,6 @@ function drawZone(g: Phaser.GameObjects.Graphics, r: Rect, fill: number, stroke:
     .fillRoundedRect(r.x, r.y, r.w, r.h, 8)
     .lineStyle(3, stroke, .62)
     .strokeRoundedRect(r.x, r.y, r.w, r.h, 8);
-}
-
-function drawCombatZone(g: Phaser.GameObjects.Graphics, r: Rect, library: boolean) {
-  g.fillStyle(library ? 0x7a2736 : 0xdff6ef, library ? .08 : .13).fillRoundedRect(r.x, r.y, r.w, r.h, 24);
-  g.lineStyle(2, library ? 0xb58b58 : 0x4d887d, library ? .3 : .34).strokeRoundedRect(r.x, r.y, r.w, r.h, 24);
-  g.lineStyle(1, 0xffffff, .3).strokeCircle(r.x + r.w / 2, r.y + r.h / 2, 76);
 }
 
 function drawRuinsWall(scene: Phaser.Scene, g: Phaser.GameObjects.Graphics, wall: LevelWall) {
