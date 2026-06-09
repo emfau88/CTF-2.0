@@ -8,11 +8,17 @@ export type {
 } from "./actors";
 export type { GameEvent } from "./events";
 export type {
+  CoreActionIntent,
+  CoreActionPhase,
+  CoreInputFrame,
+} from "./input";
+export type {
   GameMode,
   GameModeId,
   ModeHudState,
 } from "./modes";
 export type { Objective, ObjectiveState } from "./objectives";
+export type { CoreFrameResult, CoreRuntime } from "./runtime";
 export type { ScoreBoard, ScoreEntry } from "./scoring";
 export type {
   SpawnPoint,

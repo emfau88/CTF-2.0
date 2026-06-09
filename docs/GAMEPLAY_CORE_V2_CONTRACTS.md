@@ -128,3 +128,23 @@ Phaser and DOM are adapters around the gameplay core:
 5. Audio and effects react to emitted `GameEvent` values.
 
 No Phaser scene or adapter is implemented in this phase.
+
+## Phase 3 Adapter Contracts
+
+Phase 3 adds contracts only for the future adapter flow:
+
+```text
+InputAdapterPort
+  -> CoreInputFrame
+  -> CoreRuntime
+  -> CoreFrameResult
+  -> RendererPort / AudioPort / EffectsPort / HudPort
+```
+
+`CoreFrameResult` contains the latest `WorldSnapshot`, newly emitted
+`GameEvent` values, and `ModeHudState`. `AssetLoaderPort` defines a generic
+asset-registration boundary.
+
+These contracts contain no Phaser, DOM, browser, `ArenaScene`, `FlagSystem`,
+V1 `Player`, or V1 `Bot` dependencies. No adapter implementation, bridge
+runtime, scene, or gameplay connection exists yet.
