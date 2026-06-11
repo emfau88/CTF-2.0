@@ -226,6 +226,28 @@ actor. The core updates position and velocity, clamps the actor to fixed
 diagnostic bounds, and emits a serializable `diagnostic.actorMoved` event when
 the position changes. The HUD displays the resulting position and velocity.
 
-This is not final movement and does not attempt V1 movement parity. There is no
-acceleration, friction, jumping, collision, map logic, combat, or mode logic.
-V1 movement migration remains pending.
+At this phase the diagnostic movement was not final and did not attempt V1
+movement parity. It had no acceleration, friction, jumping, collision, map
+logic, combat, or mode logic. V1 movement migration remained pending.
+
+## Phase 10 V2 Ground Movement Parity
+
+Phase 10 replaces constant-speed diagnostic movement with a framework-neutral
+ground movement module based on the V1 playable reference:
+
+- `src/player.ts`, `MovementController.update()` supplies acceleration,
+  direction-change penalty, strafe bonus, friction, and speed limiting.
+- `src/config.ts`, `T` supplies acceleration `1580`, max speed `335`, ground
+  friction `7`, input friction `1.25`, turn penalty `.68`, turn dot `-.28`,
+  and strafe bonus `1.12`.
+- `src/scenes/ArenaScene.ts`, `update()` caps movement delta at `34 ms` and
+  integrates velocity with the V1 ground distance factor `.93`.
+- `src/scenes/ArenaScene.ts`, `inputVector()` normalizes diagonal keyboard and
+  touch-stick directions. Desktop and mobile use the same movement controller
+  after this normalization.
+
+The V2 module mirrors those ground formulas using plain position, velocity,
+facing, input direction, input magnitude, delta time, and movement config.
+Temporary diagnostic bounds remain, but map collision and gaps do not exist.
+Jumping, including short and held jumps, is still not implemented. V1 remains
+the playable movement reference.

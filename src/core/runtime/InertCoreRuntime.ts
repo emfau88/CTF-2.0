@@ -6,7 +6,9 @@ import {
   type WorldSnapshot,
   type WorldState,
 } from "../world";
-import { applyDiagnosticMovement } from "./applyDiagnosticMovement";
+import {
+  applyDiagnosticGroundMovement,
+} from "./applyDiagnosticGroundMovement";
 import type { CoreFrameResult, CoreRuntime } from "./coreRuntime";
 import { createDiagnosticWorldState } from "./createDiagnosticWorldState";
 
@@ -31,7 +33,7 @@ export class InertCoreRuntime implements CoreRuntime {
     this.world.timeMs += Math.max(0, input.deltaMs);
     const actor = this.world.actors[0];
     const movementEvent = actor
-      ? applyDiagnosticMovement(actor, input, this.world.timeMs)
+      ? applyDiagnosticGroundMovement(actor, input, this.world.timeMs)
       : null;
     this.currentEvents = movementEvent ? [movementEvent] : [];
     return this.createFrameResult();

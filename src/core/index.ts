@@ -21,6 +21,14 @@ export type {
   GameModeId,
   ModeHudState,
 } from "./modes";
+export {
+  applyGroundMovement,
+  V2_GROUND_PARITY_CONFIG,
+  type GroundMovementConfig,
+  type GroundMovementInput,
+  type GroundMovementResult,
+  type GroundMovementState,
+} from "./movement";
 export type { Objective, ObjectiveState } from "./objectives";
 export {
   InertCoreRuntime,

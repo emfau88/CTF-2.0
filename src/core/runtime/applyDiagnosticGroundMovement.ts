@@ -1,8 +1,11 @@
 import type { ActorState, WorldPosition } from "../actors";
 import type { GameEvent } from "../events";
 import type { CoreInputFrame } from "../input";
+import {
+  applyGroundMovement,
+  V2_GROUND_PARITY_CONFIG,
+} from "../movement";
 
-const DIAGNOSTIC_SPEED = 160;
 const DIAGNOSTIC_BOUNDS = {
   minX: 100,
   maxX: 560,
@@ -11,45 +14,30 @@ const DIAGNOSTIC_BOUNDS = {
 } as const;
 
 interface ActorMovedPayload {
+  readonly movementMode: "v2-ground-parity";
   readonly position: WorldPosition;
   readonly velocity: WorldPosition;
 }
 
-export function applyDiagnosticMovement(
+export function applyDiagnosticGroundMovement(
   actor: ActorState,
   input: CoreInputFrame,
   timeMs: number,
 ): GameEvent<"diagnostic.actorMoved", ActorMovedPayload> | null {
   const move = input.actions.find((intent) => intent.action === "move");
-  const direction = move?.direction ?? { x: 0, y: 0 };
-  const deltaSeconds = Math.max(0, input.deltaMs) / 1000;
   const previousX = actor.position.x;
   const previousY = actor.position.y;
-
-  const requestedVelocityX = direction.x * DIAGNOSTIC_SPEED;
-  const requestedVelocityY = direction.y * DIAGNOSTIC_SPEED;
-  actor.position.x = clamp(
-    actor.position.x + requestedVelocityX * deltaSeconds,
-    DIAGNOSTIC_BOUNDS.minX,
-    DIAGNOSTIC_BOUNDS.maxX,
+  applyGroundMovement(
+    actor,
+    {
+      direction: move?.direction ?? { x: 0, y: 0 },
+      magnitude: move?.magnitude ?? 0,
+    },
+    input.deltaMs,
+    V2_GROUND_PARITY_CONFIG,
   );
-  actor.position.y = clamp(
-    actor.position.y + requestedVelocityY * deltaSeconds,
-    DIAGNOSTIC_BOUNDS.minY,
-    DIAGNOSTIC_BOUNDS.maxY,
-  );
-  actor.velocity.x = deltaSeconds > 0
-    ? (actor.position.x - previousX) / deltaSeconds
-    : 0;
-  actor.velocity.y = deltaSeconds > 0
-    ? (actor.position.y - previousY) / deltaSeconds
-    : 0;
 
-  if (direction.x !== 0 || direction.y !== 0) {
-    actor.facing.x = direction.x;
-    actor.facing.y = direction.y;
-  }
-
+  clampActorToDiagnosticBounds(actor);
   if (actor.position.x === previousX && actor.position.y === previousY) {
     return null;
   }
@@ -61,10 +49,33 @@ export function applyDiagnosticMovement(
     sourceActorId: actor.id,
     teamId: actor.teamId ?? undefined,
     payload: {
+      movementMode: "v2-ground-parity",
       position: { ...actor.position },
       velocity: { ...actor.velocity },
     },
   };
+}
+
+function clampActorToDiagnosticBounds(actor: ActorState): void {
+  const clampedX = clamp(
+    actor.position.x,
+    DIAGNOSTIC_BOUNDS.minX,
+    DIAGNOSTIC_BOUNDS.maxX,
+  );
+  const clampedY = clamp(
+    actor.position.y,
+    DIAGNOSTIC_BOUNDS.minY,
+    DIAGNOSTIC_BOUNDS.maxY,
+  );
+
+  if (clampedX !== actor.position.x) {
+    actor.velocity.x = 0;
+    actor.position.x = clampedX;
+  }
+  if (clampedY !== actor.position.y) {
+    actor.velocity.y = 0;
+    actor.position.y = clampedY;
+  }
 }
 
 function clamp(value: number, min: number, max: number): number {
