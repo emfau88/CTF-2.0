@@ -56,6 +56,7 @@ implements HudPort, FrameDiagnosticsPort {
 
     const move = this.directionFor("move");
     const aim = this.directionFor("aim");
+    const actor = this.snapshot.actors[0];
     this.text.setText([
       "Gameplay Core V2 Shell",
       `mode: ${this.hudState.modeId}`,
@@ -65,6 +66,10 @@ implements HudPort, FrameDiagnosticsPort {
       `runtime: ${Math.floor(this.snapshot.timeMs)} ms`,
       `actors: ${this.snapshot.actors.length}`,
       `events: ${this.eventCount}`,
+      `positionX: ${this.formatNumber(actor?.position.x ?? 0)}`,
+      `positionY: ${this.formatNumber(actor?.position.y ?? 0)}`,
+      `velocityX: ${this.formatNumber(actor?.velocity.x ?? 0)}`,
+      `velocityY: ${this.formatNumber(actor?.velocity.y ?? 0)}`,
       "",
       `moveX: ${this.formatNumber(move.x)}`,
       `moveY: ${this.formatNumber(move.y)}`,

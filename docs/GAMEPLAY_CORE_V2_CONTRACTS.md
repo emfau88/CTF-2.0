@@ -209,5 +209,23 @@ aim, fire, and separate jump pressed, held, and released diagnostics.
 
 The bridge also reports frame count, last delta time, accumulated runtime time,
 actor count, and event count through a dedicated diagnostic adapter port.
-Inputs are observed only: the static actor does not move, fire, jump, or change
-state. Movement, combat, modes, maps, and V1 gameplay remain unconnected.
+At this phase inputs were observed only: the static actor did not move, fire,
+jump, or change state. Movement, combat, modes, maps, and V1 gameplay remained
+unconnected.
+
+## Phase 9 Controllable Diagnostic Actor
+
+Phase 9 completes the temporary diagnostic data loop:
+
+```text
+CoreInputFrame -> InertCoreRuntime -> WorldState -> WorldSnapshot -> adapters
+```
+
+WASD input now applies constant, delta-time-based velocity to the diagnostic
+actor. The core updates position and velocity, clamps the actor to fixed
+diagnostic bounds, and emits a serializable `diagnostic.actorMoved` event when
+the position changes. The HUD displays the resulting position and velocity.
+
+This is not final movement and does not attempt V1 movement parity. There is no
+acceleration, friction, jumping, collision, map logic, combat, or mode logic.
+V1 movement migration remains pending.
