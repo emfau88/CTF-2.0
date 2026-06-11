@@ -34,7 +34,7 @@ export class GameplayV2Scene extends Phaser.Scene {
         align: "center",
         lineSpacing: 8,
       },
-    ).setOrigin(.5);
+    ).setOrigin(.5).setScrollFactor(0).setDepth(1000);
 
     const diagnosticHud = new PhaserDiagnosticHudPort(this.diagnosticText);
     this.inputAdapter = new PhaserDiagnosticInputAdapter(this);

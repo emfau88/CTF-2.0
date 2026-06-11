@@ -69,6 +69,15 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   if (initial.snapshot.timeMs !== 0) {
     throw new Error("Inert bridge must initialize at time zero.");
   }
+  if (
+    initial.snapshot.map?.id !== "training-crossing-v2" ||
+    initial.snapshot.geometry.bounds.maxX !== 1500 ||
+    initial.snapshot.geometry.bounds.maxY !== 820 ||
+    initial.snapshot.geometry.solids.length !== 10 ||
+    initial.snapshot.geometry.gaps.length !== 2
+  ) {
+    throw new Error("V2 shell must initialize Training Crossing geometry.");
+  }
   if (next.snapshot.timeMs !== 34) {
     throw new Error("Inert bridge must advance by the input delta.");
   }
@@ -85,6 +94,8 @@ export function runPhaserGameBridgeSmokeCheck(): void {
     !initialActor ||
     !nextActor ||
     initialActor.id !== "diagnostic-actor-1" ||
+    initialActor.position.x !== 150 ||
+    initialActor.position.y !== 410 ||
     nextActor.position.x <= initialActor.position.x ||
     nextActor.position.y !== initialActor.position.y ||
     nextActor.velocity.x <= 0 ||

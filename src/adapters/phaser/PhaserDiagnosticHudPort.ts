@@ -60,6 +60,8 @@ implements HudPort, FrameDiagnosticsPort {
     this.text.setText([
       "Gameplay Core V2 Shell",
       `mode: ${this.hudState.modeId}`,
+      `map: ${this.snapshot.map?.id ?? "none"}`,
+      `mapName: ${this.snapshot.map?.displayName ?? "none"}`,
       `phase: ${this.hudState.phase}`,
       `frame: ${this.frameCount}`,
       `last dt: ${this.formatNumber(this.input?.deltaMs ?? 0)} ms`,

@@ -307,3 +307,26 @@ falling, waiting to respawn, and where its last safe position is.
 This remains diagnostic groundwork rather than full map migration or final
 physics. V1 maps, bots, combat, pickups, objectives, and game modes are not
 connected. V1 remains the default playable reference.
+
+## Phase 13 Training Crossing Geometry
+
+Phase 13 introduces a plain-data V2 map content contract and migrates only the
+authored geometry of V1 Training Crossing from `src/level.ts`:
+
+- map bounds `1500 x 820`
+- ten solid wall rectangles
+- two gap rectangles
+- the red-side reference spawn at `(150, 410)` as the V2 diagnostic spawn
+
+The V2 map is identified as `training-crossing-v2` and is defined independently
+under `src/core/world/maps/`. The diagnostic runtime copies its geometry into
+`WorldState`; it does not import or retain the V1 `LevelData` object.
+
+The V2 renderer displays the real Training Crossing wall and gap coordinates
+and keeps the camera centered around the diagnostic actor within the authored
+world bounds. The HUD displays the active V2 map id and name.
+
+Only geometry and a diagnostic start position are migrated. V1 bases, flags,
+decorations, pickups, combat zone, bot routes, bots, weapons, score, match
+flow, objectives, and modes remain unconnected. V1 remains the default
+playable reference.

@@ -10,3 +10,8 @@ export {
   type WorldGeometry,
   type WorldRect,
 } from "./worldGeometry";
+export {
+  TRAINING_CROSSING_V2,
+  type WorldMapData,
+  type WorldMapInfo,
+} from "./maps";

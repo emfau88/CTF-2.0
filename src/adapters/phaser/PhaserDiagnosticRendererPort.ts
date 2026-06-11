@@ -20,6 +20,7 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
 
   render(snapshot: WorldSnapshot): void {
     this.renderGeometry(snapshot);
+    this.updateCamera(snapshot);
     const visibleActorIds = new Set(snapshot.actors.map((actor) => actor.id));
 
     for (const [actorId, view] of this.actorViews) {
@@ -134,6 +135,21 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
     for (const gap of snapshot.geometry.gaps) {
       graphics.fillRect(gap.x, gap.y, gap.width, gap.height);
       graphics.strokeRect(gap.x, gap.y, gap.width, gap.height);
+    }
+  }
+
+  private updateCamera(snapshot: WorldSnapshot): void {
+    const bounds = snapshot.geometry.bounds;
+    const camera = this.scene.cameras.main;
+    camera.setBounds(
+      bounds.minX,
+      bounds.minY,
+      bounds.maxX - bounds.minX,
+      bounds.maxY - bounds.minY,
+    );
+    const actor = snapshot.actors[0];
+    if (actor) {
+      camera.centerOn(actor.position.x, actor.position.y);
     }
   }
 }

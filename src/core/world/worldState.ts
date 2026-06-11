@@ -6,6 +6,7 @@ import {
   createEmptyWorldGeometry,
   type WorldGeometry,
 } from "./worldGeometry";
+import type { WorldMapInfo } from "./maps";
 
 export interface WorldState {
   timeMs: number;
@@ -14,6 +15,7 @@ export interface WorldState {
   objectives: Objective[];
   scores: ScoreEntry[];
   geometry: WorldGeometry;
+  map: WorldMapInfo | null;
 }
 
 export interface WorldSnapshot {
@@ -23,6 +25,7 @@ export interface WorldSnapshot {
   readonly objectives: readonly Readonly<Objective>[];
   readonly scores: readonly ScoreEntry[];
   readonly geometry: WorldGeometry;
+  readonly map: WorldMapInfo | null;
 }
 
 export function createEmptyWorldState(
@@ -35,6 +38,7 @@ export function createEmptyWorldState(
     objectives: [],
     scores: [],
     geometry: createEmptyWorldGeometry(),
+    map: null,
   };
 }
 
@@ -63,5 +67,6 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       solids: world.geometry.solids.map((solid) => ({ ...solid })),
       gaps: world.geometry.gaps.map((gap) => ({ ...gap })),
     },
+    map: world.map ? { ...world.map } : null,
   };
 }
