@@ -18,6 +18,7 @@ implements HudPort, FrameDiagnosticsPort {
   private eventCount = 0;
   private lastLifecycleEvent = "none";
   private lastProjectileEvent = "none";
+  private lastPickupEvent = "none";
 
   constructor(private readonly text: Phaser.GameObjects.Text) {}
 
@@ -51,6 +52,13 @@ implements HudPort, FrameDiagnosticsPort {
     if (projectileEvent) {
       this.lastProjectileEvent = projectileEvent.type;
     }
+    const pickupEvent = [...result.events].reverse().find((event) =>
+      event.type === "pickup.collected" ||
+      event.type === "pickup.respawned"
+    );
+    if (pickupEvent) {
+      this.lastPickupEvent = pickupEvent.type;
+    }
     this.refresh();
   }
 
@@ -62,6 +70,7 @@ implements HudPort, FrameDiagnosticsPort {
     this.eventCount = 0;
     this.lastLifecycleEvent = "none";
     this.lastProjectileEvent = "none";
+    this.lastPickupEvent = "none";
     this.text.setText("Gameplay Core V2 Shell");
   }
 
@@ -93,6 +102,11 @@ implements HudPort, FrameDiagnosticsPort {
       "jump: V2 short/held parity",
       `actors: ${this.snapshot.actors.length}`,
       `projectiles: ${this.snapshot.projectiles.length}`,
+      `pickups: ${
+        this.snapshot.pickups.filter((pickup) =>
+          pickup.lifeState === "active"
+        ).length
+      }/${this.snapshot.pickups.length}`,
       `events: ${this.eventCount}`,
       `positionX: ${this.formatNumber(actor?.position.x ?? 0)}`,
       `positionY: ${this.formatNumber(actor?.position.y ?? 0)}`,
@@ -120,6 +134,13 @@ implements HudPort, FrameDiagnosticsPort {
       `respawnReason: ${actor?.respawn?.reason ?? "none"}`,
       `lastLifecycleEvent: ${this.lastLifecycleEvent}`,
       `lastProjectileEvent: ${this.lastProjectileEvent}`,
+      `lastPickupEvent: ${this.lastPickupEvent}`,
+      `pickupRespawns: ${this.snapshot.pickups
+        .filter((pickup) => pickup.lifeState === "inactive")
+        .map((pickup) =>
+          `${pickup.type}:${this.formatNumber(pickup.respawnRemainingMs)}`
+        )
+        .join(", ") || "none"}`,
       `primaryCooldown: ${this.formatNumber(
         actor?.primaryFireCooldownMs ?? 0,
       )} ms`,
@@ -140,6 +161,7 @@ implements HudPort, FrameDiagnosticsPort {
       "status: inert / non-playable",
       "debug: press K to apply 35 damage",
       "weapon: hold J or left pointer to fire diagnostic blaster",
+      "pickups: green health / blue armor",
     ]);
   }
 

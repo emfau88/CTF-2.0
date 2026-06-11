@@ -60,6 +60,18 @@ export {
 } from "./movement";
 export type { Objective, ObjectiveState } from "./objectives";
 export {
+  createPickupState,
+  updatePickups,
+  V2_DIAGNOSTIC_PICKUP_CONFIG,
+  type CreatePickupStateInput,
+  type PickupConfig,
+  type PickupId,
+  type PickupLifeState,
+  type PickupState,
+  type PickupType,
+  type PickupUpdateResult,
+} from "./pickups";
+export {
   InertCoreRuntime,
   type CoreFrameResult,
   type CoreRuntime,

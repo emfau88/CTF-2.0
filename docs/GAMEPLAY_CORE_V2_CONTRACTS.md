@@ -389,3 +389,28 @@ valid hit targets and cannot be damaged repeatedly.
 This is not V1 weapon migration. Autoshoot, rockets, railgun, whip, pickups,
 ammo, inventory, bots, objectives, flags, scoring, modes, and multiplayer
 remain unimplemented. V1 remains the default playable reference.
+
+## Phase 16 Diagnostic Pickup Pipeline
+
+Phase 16 adds plain serializable `PickupState` data and a generic overlap,
+collection, resource, and respawn pipeline. Each pickup stores identity, type,
+position, radius, value, active state, respawn delay, and remaining respawn
+time.
+
+The Training Crossing V2 diagnostic world contains:
+
+- one green health pickup at `(150, 480)` worth `30`
+- one blue armor pickup at `(240, 480)` worth `20`
+
+An active controllable actor collects a pickup on circle overlap when the
+corresponding resource is below its cap. Health and armor are clamped to the
+actor maximum. Collection emits `pickup.collected`, hides the pickup, and
+starts an `1800 ms` timer. Reactivation emits `pickup.respawned`. Full health
+or armor does not consume the corresponding pickup.
+
+No extra inventory or ammo map is added because the single diagnostic blaster
+does not require one. This is not a migration of the V1 `Pickup` or
+`PickupSystem` classes, their complete authored placements, weapon pickups,
+ammo balancing, or inventory rules. Bots, flags, objectives, scoring, modes,
+and multiplayer remain unimplemented. V1 remains the default playable
+reference.

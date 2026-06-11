@@ -4,6 +4,8 @@ import type {
   ActorState,
   ProjectileId,
   ProjectileState,
+  PickupId,
+  PickupState,
   WorldSnapshot,
 } from "../../core";
 import type { RendererPort } from "../rendering";
@@ -20,6 +22,8 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
   private readonly actorViews = new Map<ActorId, DiagnosticActorView>();
   private readonly projectileViews =
     new Map<ProjectileId, Phaser.GameObjects.Arc>();
+  private readonly pickupViews =
+    new Map<PickupId, Phaser.GameObjects.Container>();
   private readonly geometryGraphics: Phaser.GameObjects.Graphics;
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -43,18 +47,21 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       this.renderActor(actor);
     }
     this.renderProjectiles(snapshot);
+    this.renderPickups(snapshot);
   }
 
   reset(): void {
     this.geometryGraphics.clear();
     this.destroyActorViews();
     this.destroyProjectileViews();
+    this.destroyPickupViews();
   }
 
   dispose(): void {
     this.geometryGraphics.destroy();
     this.destroyActorViews();
     this.destroyProjectileViews();
+    this.destroyPickupViews();
   }
 
   private renderActor(actor: Readonly<ActorState>): void {
@@ -158,6 +165,66 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       view.destroy();
     }
     this.projectileViews.clear();
+  }
+
+  private renderPickups(snapshot: WorldSnapshot): void {
+    const activePickups = snapshot.pickups.filter((pickup) =>
+      pickup.lifeState === "active"
+    );
+    const visibleIds = new Set(activePickups.map((pickup) => pickup.id));
+    for (const [pickupId, view] of this.pickupViews) {
+      if (!visibleIds.has(pickupId)) {
+        view.destroy();
+        this.pickupViews.delete(pickupId);
+      }
+    }
+    for (const pickup of activePickups) {
+      this.renderPickup(pickup);
+    }
+  }
+
+  private renderPickup(pickup: Readonly<PickupState>): void {
+    const view = this.pickupViews.get(pickup.id) ??
+      this.createPickupView(pickup);
+    view.setPosition(pickup.position.x, pickup.position.y);
+  }
+
+  private createPickupView(
+    pickup: Readonly<PickupState>,
+  ): Phaser.GameObjects.Container {
+    const color = pickup.type === "health" ? 0x48a868 : 0x4e78c4;
+    const body = this.scene.add.circle(0, 0, pickup.radius, color, .9)
+      .setStrokeStyle(3, 0x17302d);
+    const symbol = this.scene.add.text(
+      0,
+      0,
+      pickup.type === "health" ? "+" : "A",
+      {
+        fontFamily: "Consolas, monospace",
+        fontSize: "18px",
+        color: "#ffffff",
+        fontStyle: "bold",
+      },
+    ).setOrigin(.5);
+    const label = this.scene.add.text(0, pickup.radius + 5, pickup.type, {
+      fontFamily: "Consolas, monospace",
+      fontSize: "12px",
+      color: "#17302d",
+    }).setOrigin(.5, 0);
+    const view = this.scene.add.container(
+      pickup.position.x,
+      pickup.position.y,
+      [body, symbol, label],
+    ).setDepth(10);
+    this.pickupViews.set(pickup.id, view);
+    return view;
+  }
+
+  private destroyPickupViews(): void {
+    for (const view of this.pickupViews.values()) {
+      view.destroy();
+    }
+    this.pickupViews.clear();
   }
 
   private renderGeometry(snapshot: WorldSnapshot): void {

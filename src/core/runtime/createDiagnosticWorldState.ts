@@ -1,5 +1,9 @@
 import { createActorState } from "../actors";
 import {
+  createPickupState,
+  V2_DIAGNOSTIC_PICKUP_CONFIG,
+} from "../pickups";
+import {
   createEmptyWorldState,
   TRAINING_CROSSING_V2,
   type WorldState,
@@ -48,5 +52,23 @@ export function createDiagnosticWorldState(): WorldState {
     armor: 20,
     maxArmor: 20,
   }));
+  world.pickups.push(
+    createPickupState(
+      {
+        id: "diagnostic-health-1",
+        type: "health",
+        position: { x: 150, y: 480 },
+      },
+      V2_DIAGNOSTIC_PICKUP_CONFIG,
+    ),
+    createPickupState(
+      {
+        id: "diagnostic-armor-1",
+        type: "armor",
+        position: { x: 240, y: 480 },
+      },
+      V2_DIAGNOSTIC_PICKUP_CONFIG,
+    ),
+  );
   return world;
 }

@@ -1,0 +1,32 @@
+import type { WorldPosition } from "../actors";
+import type { PickupConfig } from "./PickupConfig";
+import type { PickupId, PickupState, PickupType } from "./pickup";
+
+export interface CreatePickupStateInput {
+  readonly id: PickupId;
+  readonly type: PickupType;
+  readonly position: WorldPosition;
+  readonly radius?: number;
+  readonly value?: number;
+  readonly respawnDelayMs?: number;
+}
+
+export function createPickupState(
+  input: CreatePickupStateInput,
+  config: PickupConfig,
+): PickupState {
+  const defaultValue = input.type === "health"
+    ? config.healthValue
+    : config.armorValue;
+  return {
+    id: input.id,
+    type: input.type,
+    position: { ...input.position },
+    radius: input.radius ?? config.defaultRadius,
+    value: input.value ?? defaultValue,
+    respawnDelayMs: input.respawnDelayMs ??
+      config.defaultRespawnDelayMs,
+    lifeState: "active",
+    respawnRemainingMs: 0,
+  };
+}

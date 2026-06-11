@@ -1,10 +1,17 @@
 import {
   applyWorldCollision,
   createActorState,
+  createPickupState,
   InertCoreRuntime,
+  updatePickups,
   V2_COLLISION_GROUNDWORK_CONFIG,
+  V2_DIAGNOSTIC_PICKUP_CONFIG,
 } from "../../core";
-import type { ActorState, CoreActionIntent } from "../../core";
+import type {
+  ActorState,
+  CoreActionIntent,
+  PickupState,
+} from "../../core";
 import type { WorldGeometry } from "../../core";
 import { PhaserGameBridge } from "./PhaserGameBridge";
 
@@ -133,6 +140,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkCollisionAndGapGroundwork();
   checkActorLifecycle();
   checkProjectilePipeline();
+  checkPickupPipeline();
 }
 
 function checkJumpParity(): void {
@@ -530,4 +538,89 @@ function checkProjectilePipeline(): void {
   if (!expired) {
     throw new Error("Projectile must expire at bounds, range, or lifetime.");
   }
+}
+
+function checkPickupPipeline(): void {
+  const actor = createActorState({
+    id: "pickup-actor",
+    kind: "diagnostic",
+    position: { x: 100, y: 100 },
+    radius: 24,
+    health: 80,
+    maxHealth: 100,
+    armor: 10,
+    maxArmor: 25,
+  });
+  const health = createPickupState(
+    {
+      id: "health-smoke",
+      type: "health",
+      position: { x: 100, y: 100 },
+      value: 30,
+      respawnDelayMs: 100,
+    },
+    V2_DIAGNOSTIC_PICKUP_CONFIG,
+  );
+  const armor = createPickupState(
+    {
+      id: "armor-smoke",
+      type: "armor",
+      position: { x: 100, y: 100 },
+      value: 20,
+      respawnDelayMs: 100,
+    },
+    V2_DIAGNOSTIC_PICKUP_CONFIG,
+  );
+
+  const collected = updatePickups(
+    [health, armor],
+    [actor],
+    34,
+    34,
+  );
+  if (
+    actor.health !== 100 ||
+    actor.armor !== 25 ||
+    health.lifeState !== "inactive" ||
+    armor.lifeState !== "inactive" ||
+    collected.events.filter((event) =>
+        event.type === "pickup.collected"
+      ).length !== 2
+  ) {
+    throw new Error("Health and armor pickups must apply capped resources.");
+  }
+
+  const respawned = updatePickups(
+    [health, armor],
+    [],
+    100,
+    134,
+  );
+  if (
+    !isPickupActive(health) ||
+    !isPickupActive(armor) ||
+    respawned.events.filter((event) =>
+        event.type === "pickup.respawned"
+      ).length !== 2
+  ) {
+    throw new Error("Inactive pickups must respawn after their delay.");
+  }
+
+  const fullActorResult = updatePickups(
+    [health, armor],
+    [actor],
+    34,
+    168,
+  );
+  if (
+    fullActorResult.events.length !== 0 ||
+    !isPickupActive(health) ||
+    !isPickupActive(armor)
+  ) {
+    throw new Error("Full resources must not consume diagnostic pickups.");
+  }
+}
+
+function isPickupActive(pickup: PickupState): boolean {
+  return pickup.lifeState === "active";
 }

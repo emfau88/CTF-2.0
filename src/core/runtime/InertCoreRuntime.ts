@@ -17,6 +17,7 @@ import {
   V2_COLLISION_GROUNDWORK_CONFIG,
   V2_JUMP_PARITY_CONFIG,
 } from "../movement";
+import { updatePickups } from "../pickups";
 import {
   createWorldSnapshot,
   type WorldSnapshot,
@@ -54,6 +55,7 @@ export class InertCoreRuntime implements CoreRuntime {
     const actor = this.world.actors[0];
     if (!actor) {
       this.updateProjectileWorld(input.deltaMs, events);
+      this.updatePickupWorld(input.deltaMs, events);
       this.currentEvents = events;
       return this.createFrameResult();
     }
@@ -72,6 +74,7 @@ export class InertCoreRuntime implements CoreRuntime {
     }
 
     this.updateProjectileWorld(input.deltaMs, events);
+    this.updatePickupWorld(input.deltaMs, events);
     this.currentEvents = events;
     return this.createFrameResult();
   }
@@ -253,5 +256,19 @@ export class InertCoreRuntime implements CoreRuntime {
       V2_ACTOR_LIFECYCLE_CONFIG,
     );
     events.push(...projectiles.events);
+  }
+
+  private updatePickupWorld(
+    deltaMs: number,
+    events: GameEvent[],
+  ): void {
+    const collector = this.world.actors[0];
+    const pickups = updatePickups(
+      this.world.pickups,
+      collector ? [collector] : [],
+      deltaMs,
+      this.world.timeMs,
+    );
+    events.push(...pickups.events);
   }
 }
