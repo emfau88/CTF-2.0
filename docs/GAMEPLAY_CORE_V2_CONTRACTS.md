@@ -162,3 +162,19 @@ It can be constructed and checked without a browser or scene.
 
 No V1 gameplay is connected. No Phaser scene exists, and no movement, combat,
 mode, objective, bot, weapon, or pickup behavior is implemented.
+
+## Phase 5 Non-Playable Scene Shell
+
+Phase 5 adds an opt-in `GameplayV2Scene` that constructs the inert runtime and
+bridge inside Phaser. It sends empty input frames and displays diagnostic text
+through a Phaser HUD adapter.
+
+The shell is available with:
+
+```text
+?scene=v2
+```
+
+Normal startup still uses V1 `ArenaScene`. The V2 shell creates no actors,
+maps, objectives, bots, weapons, pickups, movement, combat, modes, multiplayer,
+or network systems.

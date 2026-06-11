@@ -1,5 +1,13 @@
 import Phaser from "phaser";
+import { GameplayV2Scene } from "./adapters/phaser";
 import { ArenaScene } from "./scenes/ArenaScene";
+
+const useGameplayV2Shell = new URLSearchParams(window.location.search)
+  .get("scene") === "v2";
+
+if (useGameplayV2Shell) {
+  document.querySelector<HTMLElement>("#hud")?.setAttribute("hidden", "");
+}
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -12,5 +20,5 @@ new Phaser.Game({
     height: window.innerHeight,
   },
   render: { antialias: true },
-  scene: [ArenaScene],
+  scene: [useGameplayV2Shell ? GameplayV2Scene : ArenaScene],
 });
