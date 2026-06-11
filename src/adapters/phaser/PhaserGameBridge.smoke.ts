@@ -131,6 +131,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   bridge.dispose();
   checkJumpParity();
   checkCollisionAndGapGroundwork();
+  checkActorLifecycle();
 }
 
 function checkJumpParity(): void {
@@ -329,4 +330,101 @@ function checkCollisionAndGapGroundwork(): void {
 
 function isActorActive(actor: ActorState): boolean {
   return actor.lifeState === "active";
+}
+
+function checkActorLifecycle(): void {
+  const runtime = new InertCoreRuntime();
+  const initial = runtime.initialize().snapshot.actors[0];
+  if (!initial) {
+    throw new Error("Lifecycle smoke check requires a diagnostic actor.");
+  }
+
+  const firstHit = runtime.advance(diagnosticDamageFrame(1, 34));
+  const firstActor = firstHit.snapshot.actors[0];
+  if (
+    !firstActor ||
+    firstActor.armor !== 0 ||
+    firstActor.health !== 65 ||
+    firstHit.events[0]?.type !== "actor.damaged"
+  ) {
+    throw new Error("Diagnostic damage must consume armor before health.");
+  }
+
+  runtime.advance(diagnosticDamageFrame(2, 68));
+  const death = runtime.advance(diagnosticDamageFrame(3, 102));
+  const deadActor = death.snapshot.actors[0];
+  if (
+    !deadActor ||
+    deadActor.lifeState !== "dead" ||
+    deadActor.health !== 0 ||
+    deadActor.respawn?.reason !== "death" ||
+    !death.events.some((event) => event.type === "actor.died")
+  ) {
+    throw new Error("Actor must enter dead state and emit actor.died.");
+  }
+
+  const deadPosition = { ...deadActor.position };
+  const blockedMovement = runtime.advance({
+    sequence: 4,
+    timeMs: 136,
+    deltaMs: 34,
+    actions: [{
+      action: "move",
+      phase: "held",
+      direction: { x: 1, y: 0 },
+      magnitude: 1,
+    }],
+  });
+  const blockedActor = blockedMovement.snapshot.actors[0];
+  if (
+    !blockedActor ||
+    blockedActor.position.x !== deadPosition.x ||
+    blockedActor.position.y !== deadPosition.y ||
+    blockedActor.velocity.x !== 0 ||
+    blockedActor.velocity.y !== 0
+  ) {
+    throw new Error("Dead actors must ignore movement input.");
+  }
+
+  let respawnEvent = false;
+  let respawnedActor = blockedActor;
+  for (let frame = 0; frame < 26; frame++) {
+    const sequence = 5 + frame;
+    const result = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: [],
+    });
+    respawnedActor = result.snapshot.actors[0] ?? respawnedActor;
+    respawnEvent = result.events.some((event) =>
+      event.type === "actor.respawned"
+    ) || respawnEvent;
+  }
+  if (
+    !respawnEvent ||
+    respawnedActor.lifeState !== "active" ||
+    respawnedActor.health !== respawnedActor.maxHealth ||
+    respawnedActor.armor !== 0 ||
+    respawnedActor.position.x !== 150 ||
+    respawnedActor.position.y !== 410
+  ) {
+    throw new Error("Dead actor must respawn healthy at the map spawn.");
+  }
+}
+
+function diagnosticDamageFrame(
+  sequence: number,
+  timeMs: number,
+): Parameters<InertCoreRuntime["advance"]>[0] {
+  return {
+    sequence,
+    timeMs,
+    deltaMs: 34,
+    actions: [{
+      action: "debugDamage",
+      phase: "pressed",
+      payload: { amount: 35 },
+    }],
+  };
 }

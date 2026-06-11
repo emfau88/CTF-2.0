@@ -49,6 +49,7 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
     actors: world.actors.map((actor) => ({
       ...actor,
       position: { ...actor.position },
+      spawnPosition: { ...actor.spawnPosition },
       velocity: { ...actor.velocity },
       facing: { ...actor.facing },
       lastMoveDirection: { ...actor.lastMoveDirection },

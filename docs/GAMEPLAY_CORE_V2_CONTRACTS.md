@@ -330,3 +330,29 @@ Only geometry and a diagnostic start position are migrated. V1 bases, flags,
 decorations, pickups, combat zone, bot routes, bots, weapons, score, match
 flow, objectives, and modes remain unconnected. V1 remains the default
 playable reference.
+
+## Phase 14 Actor Lifecycle
+
+Phase 14 adds framework-neutral V2 actor lifecycle functions for diagnostic
+damage, armor absorption, death, and timed respawn. The behavior mirrors the
+V1 player rules in `src/player.ts`, `Player.damage()` and `Player.respawn()`:
+
+- armor absorbs incoming damage before health
+- health at or below zero enters the dead state
+- death clears velocity and armor and cancels the active jump
+- respawn occurs after `900 ms`
+- respawn restores full health, zero armor, and the authored map spawn
+
+Lifecycle state remains plain serializable actor data. Damage emits
+`actor.damaged`; lethal damage also emits `actor.died`; successful respawn
+emits `actor.respawned`.
+
+The V2 diagnostic input uses `K` to apply `35` damage. While dead, the actor
+ignores movement and jump input. Gap falls remain a separate lifecycle path:
+they return to `lastSafePosition`, while death returns to `spawnPosition`.
+Diagnostic damage is ignored while falling or dead, preventing the two
+respawn paths from overlapping.
+
+This is diagnostic lifecycle groundwork only. No weapons, projectiles,
+targeting, combat system, pickups, bots, objectives, flags, scoring, or modes
+are implemented. V1 remains the default playable reference.

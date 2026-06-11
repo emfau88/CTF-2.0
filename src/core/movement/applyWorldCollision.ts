@@ -130,7 +130,10 @@ function resolveSolidCollisions(
 
 function startFalling(actor: ActorState, config: CollisionConfig): void {
   actor.lifeState = "falling";
-  actor.respawn = { remainingMs: config.fallRespawnMs };
+  actor.respawn = {
+    reason: "fall",
+    remainingMs: config.fallRespawnMs,
+  };
   actor.velocity.x *= config.fallVelocityScale;
   actor.velocity.y *= config.fallVelocityScale;
   cancelJump(actor);

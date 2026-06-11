@@ -1,7 +1,13 @@
 export {
+  applyDamage,
   createActorState,
+  updateActorLifecycle,
+  V2_ACTOR_LIFECYCLE_CONFIG,
+  type ActorDamageResult,
   type ActorJumpPhase,
   type ActorJumpState,
+  type ActorLifecycleConfig,
+  type ActorLifecycleResult,
   type ActorLifeState,
   type ActorRespawnState,
   type ActorId,

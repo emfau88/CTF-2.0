@@ -16,6 +16,7 @@ implements HudPort, FrameDiagnosticsPort {
   private input: CoreInputFrame | null = null;
   private frameCount = 0;
   private eventCount = 0;
+  private lastLifecycleEvent = "none";
 
   constructor(private readonly text: Phaser.GameObjects.Text) {}
 
@@ -33,6 +34,14 @@ implements HudPort, FrameDiagnosticsPort {
     this.frameCount = frameCount;
     this.input = input;
     this.eventCount = result.events.length;
+    const lifecycleEvent = [...result.events].reverse().find((event) =>
+      event.type === "actor.damaged" ||
+      event.type === "actor.died" ||
+      event.type === "actor.respawned"
+    );
+    if (lifecycleEvent) {
+      this.lastLifecycleEvent = lifecycleEvent.type;
+    }
     this.refresh();
   }
 
@@ -42,6 +51,7 @@ implements HudPort, FrameDiagnosticsPort {
     this.input = null;
     this.frameCount = 0;
     this.eventCount = 0;
+    this.lastLifecycleEvent = "none";
     this.text.setText("Gameplay Core V2 Shell");
   }
 
@@ -85,11 +95,16 @@ implements HudPort, FrameDiagnosticsPort {
         actor?.jump.plannedDurationMs ?? 0,
       )} ms`,
       `jumpHeight: ${this.formatNumber(actor?.jump.height ?? 0)}`,
+      `health: ${this.formatNumber(actor?.health ?? 0)}`,
+      `armor: ${this.formatNumber(actor?.armor ?? 0)}`,
+      `alive: ${actor?.lifeState === "active"}`,
       `lifeState: ${actor?.lifeState ?? "inactive"}`,
       `overGap: ${actor?.overGap ?? false}`,
       `lastSafeX: ${this.formatNumber(actor?.lastSafePosition.x ?? 0)}`,
       `lastSafeY: ${this.formatNumber(actor?.lastSafePosition.y ?? 0)}`,
       `respawn: ${this.formatNumber(actor?.respawn?.remainingMs ?? 0)} ms`,
+      `respawnReason: ${actor?.respawn?.reason ?? "none"}`,
+      `lastLifecycleEvent: ${this.lastLifecycleEvent}`,
       "",
       `moveX: ${this.formatNumber(move.x)}`,
       `moveY: ${this.formatNumber(move.y)}`,
@@ -98,9 +113,11 @@ implements HudPort, FrameDiagnosticsPort {
       `jumpReleased: ${this.hasAction("jump", "released")}`,
       `firePrimary: ${this.hasAction("firePrimary")}`,
       `fireSpecial: ${this.hasAction("fireSpecial")}`,
+      `debugDamage: ${this.hasAction("debugDamage", "pressed")}`,
       `aimX: ${this.formatNumber(aim.x)}`,
       `aimY: ${this.formatNumber(aim.y)}`,
       "status: inert / non-playable",
+      "debug: press K to apply 35 damage",
     ]);
   }
 

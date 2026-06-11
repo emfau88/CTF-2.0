@@ -2,6 +2,11 @@ import type { GameEvent } from "../events";
 import type { CoreInputFrame } from "../input";
 import type { ModeHudState } from "../modes";
 import {
+  applyDamage,
+  updateActorLifecycle,
+  V2_ACTOR_LIFECYCLE_CONFIG,
+} from "../actors";
+import {
   applyJumpMovement,
   applyWorldCollision,
   V2_COLLISION_GROUNDWORK_CONFIG,
@@ -55,6 +60,34 @@ export class InertCoreRuntime implements CoreRuntime {
       return this.createFrameResult();
     }
 
+    if (
+      actor.lifeState === "dead" ||
+      actor.lifeState === "respawning"
+    ) {
+      const lifecycle = updateActorLifecycle(
+        actor,
+        input.deltaMs,
+        this.world.timeMs,
+        V2_ACTOR_LIFECYCLE_CONFIG,
+      );
+      this.currentEvents = lifecycle.events;
+      return this.createFrameResult();
+    }
+
+    const damage = this.readDiagnosticDamage(input);
+    const damageResult = damage > 0
+      ? applyDamage(
+        actor,
+        damage,
+        this.world.timeMs,
+        V2_ACTOR_LIFECYCLE_CONFIG,
+      )
+      : null;
+    if (damageResult?.killed) {
+      this.currentEvents = damageResult.events;
+      return this.createFrameResult();
+    }
+
     this.updateLastMoveDirection(actor, input);
     applyJumpMovement(
       actor,
@@ -90,9 +123,10 @@ export class InertCoreRuntime implements CoreRuntime {
         },
       } satisfies GameEvent
       : null;
+    const lifecycleEvents = damageResult?.events ?? [];
     this.currentEvents = movementEvent
-      ? [movementEvent, ...collision.events]
-      : collision.events;
+      ? [...lifecycleEvents, movementEvent, ...collision.events]
+      : [...lifecycleEvents, ...collision.events];
     return this.createFrameResult();
   }
 
@@ -138,5 +172,20 @@ export class InertCoreRuntime implements CoreRuntime {
     return input.actions.some((intent) =>
       intent.action === action && intent.phase === phase
     );
+  }
+
+  private readDiagnosticDamage(input: CoreInputFrame): number {
+    const action = input.actions.find((intent) =>
+      intent.action === "debugDamage" && intent.phase === "pressed"
+    );
+    if (
+      !action?.payload ||
+      typeof action.payload !== "object" ||
+      !("amount" in action.payload)
+    ) {
+      return 0;
+    }
+    const amount = (action.payload as { amount?: unknown }).amount;
+    return typeof amount === "number" ? Math.max(0, amount) : 0;
   }
 }

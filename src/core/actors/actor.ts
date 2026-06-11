@@ -25,6 +25,7 @@ export type WorldFacing = {
 
 export interface ActorRespawnState {
   remainingMs: number;
+  readonly reason: "death" | "fall";
   readonly spawnPointId?: string;
 }
 
@@ -51,6 +52,7 @@ export interface ActorState {
   teamId: TeamId | null;
   lifeState: ActorLifeState;
   position: WorldPosition;
+  spawnPosition: WorldPosition;
   velocity: WorldVelocity;
   facing: WorldFacing;
   lastMoveDirection: WorldFacing;
@@ -72,6 +74,7 @@ export type CreateActorStateInput = {
   readonly teamId?: TeamId | null;
   readonly lifeState?: ActorLifeState;
   readonly position?: WorldPosition;
+  readonly spawnPosition?: WorldPosition;
   readonly velocity?: WorldVelocity;
   readonly facing?: WorldFacing;
   readonly lastMoveDirection?: WorldFacing;
@@ -97,6 +100,9 @@ export function createActorState(input: CreateActorStateInput): ActorState {
     teamId: input.teamId ?? null,
     lifeState: input.lifeState ?? "active",
     position: { ...(input.position ?? { x: 0, y: 0 }) },
+    spawnPosition: {
+      ...(input.spawnPosition ?? input.position ?? { x: 0, y: 0 }),
+    },
     velocity: { ...(input.velocity ?? { x: 0, y: 0 }) },
     facing: { ...(input.facing ?? { x: 1, y: 0 }) },
     lastMoveDirection: {
