@@ -414,3 +414,27 @@ does not require one. This is not a migration of the V1 `Pickup` or
 ammo balancing, or inventory rules. Bots, flags, objectives, scoring, modes,
 and multiplayer remain unimplemented. V1 remains the default playable
 reference.
+
+## Phase 17 Generic Match And Score Foundation
+
+Phase 17 adds plain serializable match and score state:
+
+- phases `notStarted`, `starting`, `running`, and `ended`
+- match id, mode id, duration, elapsed time, and remaining time
+- winner or draw result
+- generic score entries for teams or actors
+
+`ScoreBoardState` contains data only. Pure score functions award points and
+query entries without assuming captures, kills, flags, or any specific mode.
+Score changes are represented by `score.awarded`.
+
+`DiagnosticArenaMode` exercises the existing `GameMode` contract. It starts a
+`15 second` diagnostic match, emits `match.started`, updates the timer, resolves
+the highest generic score or a draw, and emits `match.ended`. Pressing `L`
+creates a diagnostic score request which the mode translates into a `+1`
+award for `diagnostic-team`. Score requests after the match ends are ignored.
+
+The active mode supplies `ModeHudState`, including phase, elapsed/remaining
+time, scores, and match result. This is lifecycle groundwork only: there is no
+mode selection, menu, CTF, TDM, One Flag, center objective, FFA, flags,
+objectives, bots, or multiplayer. V1 remains the default playable reference.

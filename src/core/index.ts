@@ -41,6 +41,15 @@ export type {
   ModeHudState,
 } from "./modes";
 export {
+  createMatchState,
+  DiagnosticArenaMode,
+  V2_DIAGNOSTIC_ARENA_MODE_CONFIG,
+  type DiagnosticArenaModeConfig,
+  type MatchPhase,
+  type MatchResult,
+  type MatchState,
+} from "./modes";
+export {
   applyGroundMovement,
   applyJumpMovement,
   applyWorldCollision,
@@ -76,7 +85,14 @@ export {
   type CoreFrameResult,
   type CoreRuntime,
 } from "./runtime";
-export type { ScoreBoard, ScoreEntry } from "./scoring";
+export {
+  awardScore,
+  createScoreBoardState,
+  scoreFor,
+  type ScoreBoard,
+  type ScoreBoardState,
+  type ScoreEntry,
+} from "./scoring";
 export type {
   SpawnPoint,
   SpawnProvider,

@@ -16,6 +16,7 @@ interface DiagnosticKeys {
   readonly firePrimary: Phaser.Input.Keyboard.Key;
   readonly fireSpecial: Phaser.Input.Keyboard.Key;
   readonly debugDamage: Phaser.Input.Keyboard.Key;
+  readonly debugScore: Phaser.Input.Keyboard.Key;
 }
 
 export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
@@ -23,6 +24,7 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
   private sequence = 0;
   private jumpWasHeld = false;
   private damageWasHeld = false;
+  private scoreWasHeld = false;
 
   constructor(private readonly scene: Phaser.Scene) {
     const keyboard = scene.input.keyboard;
@@ -39,6 +41,7 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
       firePrimary: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
       fireSpecial: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F),
       debugDamage: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
+      debugScore: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L),
     };
   }
 
@@ -86,9 +89,13 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
         payload: { amount: V2_ACTOR_LIFECYCLE_CONFIG.diagnosticDamage },
       });
     }
+    if (this.keys.debugScore.isDown && !this.scoreWasHeld) {
+      actions.push({ action: "debugScore", phase: "pressed" });
+    }
 
     this.jumpWasHeld = jumpHeld;
     this.damageWasHeld = this.keys.debugDamage.isDown;
+    this.scoreWasHeld = this.keys.debugScore.isDown;
     return {
       sequence: ++this.sequence,
       timeMs: this.scene.time.now,
@@ -101,6 +108,7 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
     this.sequence = 0;
     this.jumpWasHeld = false;
     this.damageWasHeld = false;
+    this.scoreWasHeld = false;
   }
 
   dispose(): void {

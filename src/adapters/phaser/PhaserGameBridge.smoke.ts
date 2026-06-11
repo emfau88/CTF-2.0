@@ -122,8 +122,11 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   ) {
     throw new Error("Diagnostic actor must decelerate without ground input.");
   }
-  if (next.hudState.phase !== "inert") {
-    throw new Error("Inert bridge must expose inert HUD state.");
+  if (
+    initial.events[0]?.type !== "match.started" ||
+    next.hudState.phase !== "running"
+  ) {
+    throw new Error("Diagnostic mode must initialize a running match.");
   }
   if (
     renders !== 3 ||
@@ -141,6 +144,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkActorLifecycle();
   checkProjectilePipeline();
   checkPickupPipeline();
+  checkMatchLifecycle();
 }
 
 function checkJumpParity(): void {
@@ -623,4 +627,76 @@ function checkPickupPipeline(): void {
 
 function isPickupActive(pickup: PickupState): boolean {
   return pickup.lifeState === "active";
+}
+
+function checkMatchLifecycle(): void {
+  const runtime = new InertCoreRuntime();
+  const initial = runtime.initialize();
+  if (
+    initial.snapshot.match?.phase !== "running" ||
+    initial.snapshot.match.remainingMs !== 15_000 ||
+    initial.snapshot.scoreBoard.entries.length !== 2 ||
+    initial.events[0]?.type !== "match.started"
+  ) {
+    throw new Error("Diagnostic mode must initialize match and score state.");
+  }
+
+  const scored = runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [{ action: "debugScore", phase: "pressed" }],
+  });
+  const playerScore = scored.snapshot.scoreBoard.entries.find((entry) =>
+    entry.id === "diagnostic-team"
+  )?.score;
+  if (
+    playerScore !== 1 ||
+    !scored.events.some((event) => event.type === "score.awarded")
+  ) {
+    throw new Error("Diagnostic score trigger must award event-based score.");
+  }
+
+  const ended = runtime.advance({
+    sequence: 2,
+    timeMs: 15_034,
+    deltaMs: 15_000,
+    actions: [],
+  });
+  if (
+    ended.snapshot.match?.phase !== "ended" ||
+    ended.snapshot.match.remainingMs !== 0 ||
+    ended.snapshot.match.result?.kind !== "winner" ||
+    ended.snapshot.match.result.winnerEntryId !== "diagnostic-team" ||
+    !ended.events.some((event) => event.type === "match.ended")
+  ) {
+    throw new Error("Diagnostic match must end by timer with a result.");
+  }
+
+  const rejectedScore = runtime.advance({
+    sequence: 3,
+    timeMs: 15_068,
+    deltaMs: 34,
+    actions: [{ action: "debugScore", phase: "pressed" }],
+  });
+  if (
+    rejectedScore.events.some((event) => event.type === "score.awarded") ||
+    rejectedScore.snapshot.scoreBoard.entries.find((entry) =>
+        entry.id === "diagnostic-team"
+      )?.score !== 1
+  ) {
+    throw new Error("Ended matches must reject further score awards.");
+  }
+
+  const drawRuntime = new InertCoreRuntime();
+  drawRuntime.initialize();
+  const draw = drawRuntime.advance({
+    sequence: 1,
+    timeMs: 15_000,
+    deltaMs: 15_000,
+    actions: [],
+  });
+  if (draw.snapshot.match?.result?.kind !== "draw") {
+    throw new Error("Tied diagnostic score boards must end in a draw.");
+  }
 }

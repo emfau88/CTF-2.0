@@ -1,9 +1,12 @@
 import type { ActorState } from "../actors";
 import type { ProjectileState } from "../combat";
-import type { GameModeId } from "../modes";
+import type { GameModeId, MatchState } from "../modes";
 import type { Objective } from "../objectives";
 import type { PickupState } from "../pickups";
-import type { ScoreEntry } from "../scoring";
+import {
+  createScoreBoardState,
+  type ScoreBoardState,
+} from "../scoring";
 import {
   createEmptyWorldGeometry,
   type WorldGeometry,
@@ -17,7 +20,8 @@ export interface WorldState {
   projectiles: ProjectileState[];
   pickups: PickupState[];
   objectives: Objective[];
-  scores: ScoreEntry[];
+  scoreBoard: ScoreBoardState;
+  match: MatchState | null;
   geometry: WorldGeometry;
   map: WorldMapInfo | null;
 }
@@ -29,7 +33,8 @@ export interface WorldSnapshot {
   readonly projectiles: readonly Readonly<ProjectileState>[];
   readonly pickups: readonly Readonly<PickupState>[];
   readonly objectives: readonly Readonly<Objective>[];
-  readonly scores: readonly ScoreEntry[];
+  readonly scoreBoard: Readonly<ScoreBoardState>;
+  readonly match: Readonly<MatchState> | null;
   readonly geometry: WorldGeometry;
   readonly map: WorldMapInfo | null;
 }
@@ -44,7 +49,8 @@ export function createEmptyWorldState(
     projectiles: [],
     pickups: [],
     objectives: [],
-    scores: [],
+    scoreBoard: createScoreBoardState(),
+    match: null,
     geometry: createEmptyWorldGeometry(),
     map: null,
   };
@@ -79,7 +85,15 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       position: { ...objective.position },
       state: { ...objective.state },
     })),
-    scores: world.scores.map((score) => ({ ...score })),
+    scoreBoard: {
+      entries: world.scoreBoard.entries.map((entry) => ({ ...entry })),
+    },
+    match: world.match
+      ? {
+        ...world.match,
+        result: world.match.result ? { ...world.match.result } : null,
+      }
+      : null,
     geometry: {
       bounds: { ...world.geometry.bounds },
       solids: world.geometry.solids.map((solid) => ({ ...solid })),

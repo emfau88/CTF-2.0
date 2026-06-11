@@ -29,10 +29,10 @@ export class GameplayV2Scene extends Phaser.Scene {
       "Gameplay Core V2 Shell",
       {
         fontFamily: "Consolas, monospace",
-        fontSize: "18px",
+        fontSize: "11px",
         color: "#17302d",
         align: "center",
-        lineSpacing: 8,
+        lineSpacing: 0,
       },
     ).setOrigin(.5).setScrollFactor(0).setDepth(1000);
 

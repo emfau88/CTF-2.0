@@ -1,6 +1,10 @@
 import type { GameEvent } from "../events";
 import type { CoreInputFrame } from "../input";
-import type { ModeHudState } from "../modes";
+import {
+  DiagnosticArenaMode,
+  type GameMode,
+  type ModeHudState,
+} from "../modes";
 import {
   applyDamage,
   updateActorLifecycle,
@@ -29,9 +33,8 @@ import {
 import type { CoreFrameResult, CoreRuntime } from "./coreRuntime";
 import { createDiagnosticWorldState } from "./createDiagnosticWorldState";
 
-const MODE_ID = "inert";
-
 export class InertCoreRuntime implements CoreRuntime {
+  private readonly mode: GameMode = new DiagnosticArenaMode();
   private world: WorldState = createDiagnosticWorldState();
   private currentSnapshot = createWorldSnapshot(this.world);
   private currentEvents: readonly GameEvent[] = [];
@@ -42,15 +45,17 @@ export class InertCoreRuntime implements CoreRuntime {
 
   initialize(): CoreFrameResult {
     this.world = createDiagnosticWorldState();
-    this.currentEvents = [];
+    this.currentEvents = this.mode.initialize(this.world);
     return this.createFrameResult();
   }
 
   advance(input: CoreInputFrame): CoreFrameResult {
     this.world.timeMs += Math.max(0, input.deltaMs);
     const events: GameEvent[] = [];
+    events.push(...this.mode.update(this.world, input.deltaMs));
     this.updateCooldowns(input.deltaMs);
     this.updateLifecycles(input.deltaMs, events);
+    this.updateDiagnosticScore(input, events);
 
     const actor = this.world.actors[0];
     if (!actor) {
@@ -163,13 +168,7 @@ export class InertCoreRuntime implements CoreRuntime {
   }
 
   private createHudState(): ModeHudState {
-    return {
-      modeId: MODE_ID,
-      phase: "inert",
-      scores: [],
-      objectives: [],
-      notices: [],
-    };
+    return this.mode.getHudState(this.currentSnapshot);
   }
 
   private updateLastMoveDirection(
@@ -270,5 +269,24 @@ export class InertCoreRuntime implements CoreRuntime {
       this.world.timeMs,
     );
     events.push(...pickups.events);
+  }
+
+  private updateDiagnosticScore(
+    input: CoreInputFrame,
+    events: GameEvent[],
+  ): void {
+    if (!this.hasAction(input, "debugScore", "pressed")) {
+      return;
+    }
+    const actor = this.world.actors[0];
+    const request: GameEvent = {
+      id: `diagnostic-score-request-${input.sequence}`,
+      type: "diagnostic.scoreRequested",
+      timeMs: this.world.timeMs,
+      sourceActorId: actor?.id,
+      teamId: actor?.teamId ?? undefined,
+      payload: { amount: 1 },
+    };
+    events.push(...this.mode.handleEvent(request, this.world));
   }
 }

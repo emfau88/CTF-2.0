@@ -19,6 +19,7 @@ implements HudPort, FrameDiagnosticsPort {
   private lastLifecycleEvent = "none";
   private lastProjectileEvent = "none";
   private lastPickupEvent = "none";
+  private lastMatchEvent = "none";
 
   constructor(private readonly text: Phaser.GameObjects.Text) {}
 
@@ -59,6 +60,14 @@ implements HudPort, FrameDiagnosticsPort {
     if (pickupEvent) {
       this.lastPickupEvent = pickupEvent.type;
     }
+    const matchEvent = [...result.events].reverse().find((event) =>
+      event.type === "match.started" ||
+      event.type === "match.ended" ||
+      event.type === "score.awarded"
+    );
+    if (matchEvent) {
+      this.lastMatchEvent = matchEvent.type;
+    }
     this.refresh();
   }
 
@@ -71,6 +80,7 @@ implements HudPort, FrameDiagnosticsPort {
     this.lastLifecycleEvent = "none";
     this.lastProjectileEvent = "none";
     this.lastPickupEvent = "none";
+    this.lastMatchEvent = "none";
     this.text.setText("Gameplay Core V2 Shell");
   }
 
@@ -95,6 +105,17 @@ implements HudPort, FrameDiagnosticsPort {
       `map: ${this.snapshot.map?.id ?? "none"}`,
       `mapName: ${this.snapshot.map?.displayName ?? "none"}`,
       `phase: ${this.hudState.phase}`,
+      `matchElapsed: ${this.formatSeconds(
+        this.hudState.elapsedTimeMs ?? 0,
+      )}`,
+      `matchRemaining: ${this.formatSeconds(
+        this.hudState.timeRemainingMs ?? 0,
+      )}`,
+      `scores: ${this.hudState.scores
+        .map((entry) => `${entry.id}=${entry.score}`)
+        .join(", ") || "none"}`,
+      `matchResult: ${this.formatMatchResult()}`,
+      `lastMatchEvent: ${this.lastMatchEvent}`,
       `frame: ${this.frameCount}`,
       `last dt: ${this.formatNumber(this.input?.deltaMs ?? 0)} ms`,
       `runtime: ${Math.floor(this.snapshot.timeMs)} ms`,
@@ -156,10 +177,12 @@ implements HudPort, FrameDiagnosticsPort {
       `firePrimary: ${this.hasAction("firePrimary")}`,
       `fireSpecial: ${this.hasAction("fireSpecial")}`,
       `debugDamage: ${this.hasAction("debugDamage", "pressed")}`,
+      `debugScore: ${this.hasAction("debugScore", "pressed")}`,
       `aimX: ${this.formatNumber(aim.x)}`,
       `aimY: ${this.formatNumber(aim.y)}`,
       "status: inert / non-playable",
       "debug: press K to apply 35 damage",
+      "match: press L to award +1 diagnostic score",
       "weapon: hold J or left pointer to fire diagnostic blaster",
       "pickups: green health / blue armor",
     ]);
@@ -181,5 +204,19 @@ implements HudPort, FrameDiagnosticsPort {
 
   private formatNumber(value: number): string {
     return value.toFixed(2);
+  }
+
+  private formatSeconds(valueMs: number): string {
+    return `${(valueMs / 1000).toFixed(1)} s`;
+  }
+
+  private formatMatchResult(): string {
+    const result = this.hudState?.matchResult;
+    if (!result) {
+      return "pending";
+    }
+    return result.kind === "draw"
+      ? "draw"
+      : `winner:${result.winnerEntryId}`;
   }
 }

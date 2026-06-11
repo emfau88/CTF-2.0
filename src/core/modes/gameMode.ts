@@ -10,6 +10,8 @@ export interface ModeHudState {
   readonly modeId: GameModeId;
   readonly phase: string;
   readonly timeRemainingMs?: number;
+  readonly elapsedTimeMs?: number;
+  readonly matchResult?: import("./matchState").MatchResult | null;
   readonly scores: readonly ScoreEntry[];
   readonly objectives: readonly Readonly<Objective>[];
   readonly notices: readonly string[];
