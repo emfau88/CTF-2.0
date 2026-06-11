@@ -3,9 +3,11 @@ import { InertCoreRuntime } from "../../../core";
 import {
   NoopAudioPort,
   NoopEffectsPort,
-  NoopRendererPort,
 } from "../../noop";
 import { PhaserDiagnosticHudPort } from "../PhaserDiagnosticHudPort";
+import {
+  PhaserDiagnosticRendererPort,
+} from "../PhaserDiagnosticRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
 
 export class GameplayV2Scene extends Phaser.Scene {
@@ -32,7 +34,7 @@ export class GameplayV2Scene extends Phaser.Scene {
     ).setOrigin(.5);
 
     this.bridge = new PhaserGameBridge(new InertCoreRuntime(), {
-      renderer: new NoopRendererPort(),
+      renderer: new PhaserDiagnosticRendererPort(this),
       audio: new NoopAudioPort(),
       effects: new NoopEffectsPort(),
       hud: new PhaserDiagnosticHudPort(this.diagnosticText),

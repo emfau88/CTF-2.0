@@ -43,8 +43,23 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   if (next.snapshot.timeMs !== 16) {
     throw new Error("Inert bridge must advance by the input delta.");
   }
-  if (next.events.length !== 0 || next.snapshot.actors.length !== 0) {
-    throw new Error("Inert bridge must not emit gameplay state.");
+  const initialActor = initial.snapshot.actors[0];
+  const nextActor = next.snapshot.actors[0];
+  if (
+    next.events.length !== 0 ||
+    initial.snapshot.actors.length !== 1 ||
+    next.snapshot.actors.length !== 1
+  ) {
+    throw new Error("Inert bridge must expose one diagnostic actor.");
+  }
+  if (
+    !initialActor ||
+    !nextActor ||
+    initialActor.id !== "diagnostic-actor-1" ||
+    nextActor.position.x !== initialActor.position.x ||
+    nextActor.position.y !== initialActor.position.y
+  ) {
+    throw new Error("Diagnostic actor must remain static.");
   }
   if (next.hudState.phase !== "inert") {
     throw new Error("Inert bridge must expose inert HUD state.");

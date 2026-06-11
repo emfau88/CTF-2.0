@@ -186,7 +186,17 @@ contain only serializable plain data, including position, velocity, facing,
 health, armor, lifecycle, and optional respawn state. Helper functions create
 empty world state, actor state, and defensive world snapshots.
 
-`InertCoreRuntime` now owns an empty `WorldState` and returns snapshots derived
-from it. The diagnostic shell displays the snapshot actor count, which remains
-zero because no gameplay, actors, movement, combat, objectives, or modes are
-connected. V1 remains the default playable scene.
+`InertCoreRuntime` owns a `WorldState` and returns snapshots derived from it.
+At this phase the state was empty and the diagnostic shell displayed an actor
+count of zero. No gameplay, movement, combat, objectives, or modes were
+connected. V1 remained the default playable scene.
+
+## Phase 7 Static Diagnostic Actor Rendering
+
+Phase 7 initializes the inert diagnostic world with one static plain-data actor.
+A Phaser renderer adapter reads that actor from each `WorldSnapshot` and draws
+only diagnostic geometry, facing, identity, health, and armor information.
+
+This proves the snapshot-to-renderer pipeline but is not gameplay. The actor
+does not react to input or move, and no combat, bots, objectives, maps, game
+modes, or V1 systems are connected. V1 remains the default playable scene.
