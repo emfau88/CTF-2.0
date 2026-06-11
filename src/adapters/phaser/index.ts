@@ -1,2 +1,5 @@
-// Phaser integration belongs here once a V2 scene bridge is introduced.
-export {};
+export {
+  PhaserGameBridge,
+  type PhaserGameBridgePorts,
+} from "./PhaserGameBridge";
+export { runPhaserGameBridgeSmokeCheck } from "./PhaserGameBridge.smoke";

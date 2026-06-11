@@ -18,7 +18,11 @@ export type {
   ModeHudState,
 } from "./modes";
 export type { Objective, ObjectiveState } from "./objectives";
-export type { CoreFrameResult, CoreRuntime } from "./runtime";
+export {
+  InertCoreRuntime,
+  type CoreFrameResult,
+  type CoreRuntime,
+} from "./runtime";
 export type { ScoreBoard, ScoreEntry } from "./scoring";
 export type {
   SpawnPoint,

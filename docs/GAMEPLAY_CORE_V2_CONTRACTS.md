@@ -148,3 +148,17 @@ asset-registration boundary.
 These contracts contain no Phaser, DOM, browser, `ArenaScene`, `FlagSystem`,
 V1 `Player`, or V1 `Bot` dependencies. No adapter implementation, bridge
 runtime, scene, or gameplay connection exists yet.
+
+## Phase 4 Inert Bridge Harness
+
+Phase 4 adds:
+
+- `InertCoreRuntime`, which returns empty snapshots, events, and HUD state
+- `PhaserGameBridge`, which forwards runtime output to optional adapter ports
+- a small exported smoke-check function for the inert flow
+
+Despite its adapter name, `PhaserGameBridge` does not import or require Phaser.
+It can be constructed and checked without a browser or scene.
+
+No V1 gameplay is connected. No Phaser scene exists, and no movement, combat,
+mode, objective, bot, weapon, or pickup behavior is implemented.
