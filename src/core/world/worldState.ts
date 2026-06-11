@@ -1,4 +1,5 @@
 import type { ActorState } from "../actors";
+import type { ProjectileState } from "../combat";
 import type { GameModeId } from "../modes";
 import type { Objective } from "../objectives";
 import type { ScoreEntry } from "../scoring";
@@ -12,6 +13,7 @@ export interface WorldState {
   timeMs: number;
   modeId: GameModeId;
   actors: ActorState[];
+  projectiles: ProjectileState[];
   objectives: Objective[];
   scores: ScoreEntry[];
   geometry: WorldGeometry;
@@ -22,6 +24,7 @@ export interface WorldSnapshot {
   readonly timeMs: number;
   readonly modeId: GameModeId;
   readonly actors: readonly Readonly<ActorState>[];
+  readonly projectiles: readonly Readonly<ProjectileState>[];
   readonly objectives: readonly Readonly<Objective>[];
   readonly scores: readonly ScoreEntry[];
   readonly geometry: WorldGeometry;
@@ -35,6 +38,7 @@ export function createEmptyWorldState(
     timeMs: 0,
     modeId,
     actors: [],
+    projectiles: [],
     objectives: [],
     scores: [],
     geometry: createEmptyWorldGeometry(),
@@ -56,6 +60,11 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       jump: { ...actor.jump },
       lastSafePosition: { ...actor.lastSafePosition },
       respawn: actor.respawn ? { ...actor.respawn } : null,
+    })),
+    projectiles: world.projectiles.map((projectile) => ({
+      ...projectile,
+      position: { ...projectile.position },
+      velocity: { ...projectile.velocity },
     })),
     objectives: world.objectives.map((objective) => ({
       ...objective,

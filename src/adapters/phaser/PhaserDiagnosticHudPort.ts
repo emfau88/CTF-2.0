@@ -17,6 +17,7 @@ implements HudPort, FrameDiagnosticsPort {
   private frameCount = 0;
   private eventCount = 0;
   private lastLifecycleEvent = "none";
+  private lastProjectileEvent = "none";
 
   constructor(private readonly text: Phaser.GameObjects.Text) {}
 
@@ -42,6 +43,14 @@ implements HudPort, FrameDiagnosticsPort {
     if (lifecycleEvent) {
       this.lastLifecycleEvent = lifecycleEvent.type;
     }
+    const projectileEvent = [...result.events].reverse().find((event) =>
+      event.type === "projectile.spawned" ||
+      event.type === "projectile.hit" ||
+      event.type === "projectile.expired"
+    );
+    if (projectileEvent) {
+      this.lastProjectileEvent = projectileEvent.type;
+    }
     this.refresh();
   }
 
@@ -52,6 +61,7 @@ implements HudPort, FrameDiagnosticsPort {
     this.frameCount = 0;
     this.eventCount = 0;
     this.lastLifecycleEvent = "none";
+    this.lastProjectileEvent = "none";
     this.text.setText("Gameplay Core V2 Shell");
   }
 
@@ -67,6 +77,9 @@ implements HudPort, FrameDiagnosticsPort {
     const move = this.directionFor("move");
     const aim = this.directionFor("aim");
     const actor = this.snapshot.actors[0];
+    const target = this.snapshot.actors.find((candidate) =>
+      candidate.kind === "diagnostic-target"
+    );
     this.text.setText([
       "Gameplay Core V2 Shell",
       `mode: ${this.hudState.modeId}`,
@@ -79,6 +92,7 @@ implements HudPort, FrameDiagnosticsPort {
       "movement: V2 ground parity",
       "jump: V2 short/held parity",
       `actors: ${this.snapshot.actors.length}`,
+      `projectiles: ${this.snapshot.projectiles.length}`,
       `events: ${this.eventCount}`,
       `positionX: ${this.formatNumber(actor?.position.x ?? 0)}`,
       `positionY: ${this.formatNumber(actor?.position.y ?? 0)}`,
@@ -105,6 +119,13 @@ implements HudPort, FrameDiagnosticsPort {
       `respawn: ${this.formatNumber(actor?.respawn?.remainingMs ?? 0)} ms`,
       `respawnReason: ${actor?.respawn?.reason ?? "none"}`,
       `lastLifecycleEvent: ${this.lastLifecycleEvent}`,
+      `lastProjectileEvent: ${this.lastProjectileEvent}`,
+      `primaryCooldown: ${this.formatNumber(
+        actor?.primaryFireCooldownMs ?? 0,
+      )} ms`,
+      `targetState: ${target?.lifeState ?? "none"}`,
+      `targetHealth: ${this.formatNumber(target?.health ?? 0)}`,
+      `targetArmor: ${this.formatNumber(target?.armor ?? 0)}`,
       "",
       `moveX: ${this.formatNumber(move.x)}`,
       `moveY: ${this.formatNumber(move.y)}`,
@@ -118,6 +139,7 @@ implements HudPort, FrameDiagnosticsPort {
       `aimY: ${this.formatNumber(aim.y)}`,
       "status: inert / non-playable",
       "debug: press K to apply 35 damage",
+      "weapon: hold J or left pointer to fire diagnostic blaster",
     ]);
   }
 

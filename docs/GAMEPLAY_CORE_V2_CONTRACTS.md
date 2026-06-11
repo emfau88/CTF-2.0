@@ -356,3 +356,36 @@ respawn paths from overlapping.
 This is diagnostic lifecycle groundwork only. No weapons, projectiles,
 targeting, combat system, pickups, bots, objectives, flags, scoring, or modes
 are implemented. V1 remains the default playable reference.
+
+## Phase 15 Diagnostic Projectile Pipeline
+
+Phase 15 adds the first plain-data V2 projectile and weapon pipeline:
+
+```text
+firePrimary
+  -> diagnostic projectile spawn
+  -> core-owned delta-time movement
+  -> solid, bounds, lifetime, range, or actor collision
+  -> projectile event
+  -> existing actor lifecycle damage
+```
+
+`ProjectileState` stores only serializable identity, ownership, team,
+position, velocity, damage, radius, remaining lifetime/range, and lifecycle
+state. Projectile spawning emits `projectile.spawned`; actor impact emits
+`projectile.hit`; solid, bounds, range, or lifetime removal emits
+`projectile.expired`.
+
+The single diagnostic blaster uses `firePrimary` (`J` or the left pointer), a
+`220 ms` cooldown, speed `620`, damage `30`, radius `6`, lifetime `1200 ms`,
+and range `720`. Invalid aim falls back to actor facing. There is no ammo or
+inventory.
+
+The V2 diagnostic world now includes one static opposing target dummy at
+`(260, 410)`. Projectile damage is routed through Phase 14 `applyDamage()`, so
+armor, health, death, and respawn rules stay centralized. Dead actors are not
+valid hit targets and cannot be damaged repeatedly.
+
+This is not V1 weapon migration. Autoshoot, rockets, railgun, whip, pickups,
+ammo, inventory, bots, objectives, flags, scoring, modes, and multiplayer
+remain unimplemented. V1 remains the default playable reference.

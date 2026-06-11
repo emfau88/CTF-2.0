@@ -19,6 +19,17 @@ export {
   type WorldVelocity,
 } from "./actors";
 export type { GameEvent } from "./events";
+export {
+  fireDiagnosticProjectile,
+  updateProjectiles,
+  V2_DIAGNOSTIC_BLASTER_CONFIG,
+  type DiagnosticFireResult,
+  type DiagnosticWeaponConfig,
+  type ProjectileId,
+  type ProjectileLifeState,
+  type ProjectileState,
+  type ProjectileUpdateResult,
+} from "./combat";
 export type {
   CoreActionIntent,
   CoreActionPhase,

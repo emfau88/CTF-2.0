@@ -34,5 +34,19 @@ export function createDiagnosticWorldState(): WorldState {
     armor: 25,
     maxArmor: 50,
   }));
+  world.actors.push(createActorState({
+    id: "diagnostic-target-1",
+    kind: "diagnostic-target",
+    teamId: "diagnostic-opponent",
+    lifeState: "active",
+    position: { x: 260, y: 410 },
+    velocity: { x: 0, y: 0 },
+    facing: { x: -1, y: 0 },
+    radius: 24,
+    health: 100,
+    maxHealth: 100,
+    armor: 20,
+    maxArmor: 20,
+  }));
   return world;
 }

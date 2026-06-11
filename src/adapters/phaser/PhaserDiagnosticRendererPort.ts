@@ -1,5 +1,11 @@
 import Phaser from "phaser";
-import type { ActorId, ActorState, WorldSnapshot } from "../../core";
+import type {
+  ActorId,
+  ActorState,
+  ProjectileId,
+  ProjectileState,
+  WorldSnapshot,
+} from "../../core";
 import type { RendererPort } from "../rendering";
 
 interface DiagnosticActorView {
@@ -12,6 +18,8 @@ interface DiagnosticActorView {
 
 export class PhaserDiagnosticRendererPort implements RendererPort {
   private readonly actorViews = new Map<ActorId, DiagnosticActorView>();
+  private readonly projectileViews =
+    new Map<ProjectileId, Phaser.GameObjects.Arc>();
   private readonly geometryGraphics: Phaser.GameObjects.Graphics;
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -34,16 +42,19 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
     for (const actor of snapshot.actors) {
       this.renderActor(actor);
     }
+    this.renderProjectiles(snapshot);
   }
 
   reset(): void {
     this.geometryGraphics.clear();
     this.destroyActorViews();
+    this.destroyProjectileViews();
   }
 
   dispose(): void {
     this.geometryGraphics.destroy();
     this.destroyActorViews();
+    this.destroyProjectileViews();
   }
 
   private renderActor(actor: Readonly<ActorState>): void {
@@ -81,7 +92,10 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       0x17302d,
       .18,
     ).setScale(1, .45);
-    const body = this.scene.add.circle(0, 0, actor.radius, 0x3a8f88)
+    const bodyColor = actor.kind === "diagnostic-target"
+      ? 0xb56f55
+      : 0x3a8f88;
+    const body = this.scene.add.circle(0, 0, actor.radius, bodyColor)
       .setStrokeStyle(3, 0x17302d);
     const facing = this.scene.add.line(0, 0, 0, 0, 1, 0, 0x17302d)
       .setOrigin(0)
@@ -109,6 +123,41 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       view.container.destroy();
     }
     this.actorViews.clear();
+  }
+
+  private renderProjectiles(snapshot: WorldSnapshot): void {
+    const visibleIds = new Set(
+      snapshot.projectiles.map((projectile) => projectile.id),
+    );
+    for (const [projectileId, view] of this.projectileViews) {
+      if (!visibleIds.has(projectileId)) {
+        view.destroy();
+        this.projectileViews.delete(projectileId);
+      }
+    }
+    for (const projectile of snapshot.projectiles) {
+      this.renderProjectile(projectile);
+    }
+  }
+
+  private renderProjectile(projectile: Readonly<ProjectileState>): void {
+    const view = this.projectileViews.get(projectile.id) ??
+      this.scene.add.circle(
+        projectile.position.x,
+        projectile.position.y,
+        projectile.radius,
+        0xf3c453,
+        1,
+      ).setStrokeStyle(2, 0x5d3b00).setDepth(20);
+    view.setPosition(projectile.position.x, projectile.position.y);
+    this.projectileViews.set(projectile.id, view);
+  }
+
+  private destroyProjectileViews(): void {
+    for (const view of this.projectileViews.values()) {
+      view.destroy();
+    }
+    this.projectileViews.clear();
   }
 
   private renderGeometry(snapshot: WorldSnapshot): void {

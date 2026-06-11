@@ -65,6 +65,7 @@ export interface ActorState {
   maxHealth: number;
   armor: number;
   maxArmor: number;
+  primaryFireCooldownMs: number;
   respawn: ActorRespawnState | null;
 }
 
@@ -87,6 +88,7 @@ export type CreateActorStateInput = {
   readonly maxHealth?: number;
   readonly armor?: number;
   readonly maxArmor?: number;
+  readonly primaryFireCooldownMs?: number;
   readonly respawn?: ActorRespawnState | null;
 };
 
@@ -130,6 +132,7 @@ export function createActorState(input: CreateActorStateInput): ActorState {
     maxHealth,
     armor: input.armor ?? maxArmor,
     maxArmor,
+    primaryFireCooldownMs: input.primaryFireCooldownMs ?? 0,
     respawn: input.respawn ? { ...input.respawn } : null,
   };
 }

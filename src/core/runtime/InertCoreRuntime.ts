@@ -7,6 +7,11 @@ import {
   V2_ACTOR_LIFECYCLE_CONFIG,
 } from "../actors";
 import {
+  fireDiagnosticProjectile,
+  updateProjectiles,
+  V2_DIAGNOSTIC_BLASTER_CONFIG,
+} from "../combat";
+import {
   applyJumpMovement,
   applyWorldCollision,
   V2_COLLISION_GROUNDWORK_CONFIG,
@@ -42,9 +47,14 @@ export class InertCoreRuntime implements CoreRuntime {
 
   advance(input: CoreInputFrame): CoreFrameResult {
     this.world.timeMs += Math.max(0, input.deltaMs);
+    const events: GameEvent[] = [];
+    this.updateCooldowns(input.deltaMs);
+    this.updateLifecycles(input.deltaMs, events);
+
     const actor = this.world.actors[0];
     if (!actor) {
-      this.currentEvents = [];
+      this.updateProjectileWorld(input.deltaMs, events);
+      this.currentEvents = events;
       return this.createFrameResult();
     }
 
@@ -56,36 +66,47 @@ export class InertCoreRuntime implements CoreRuntime {
         this.world.timeMs,
         V2_COLLISION_GROUNDWORK_CONFIG,
       );
-      this.currentEvents = collision.events;
-      return this.createFrameResult();
+      events.push(...collision.events);
+    } else if (actor.lifeState === "active") {
+      this.updateControlledActor(actor, input, events);
     }
 
-    if (
-      actor.lifeState === "dead" ||
-      actor.lifeState === "respawning"
-    ) {
-      const lifecycle = updateActorLifecycle(
-        actor,
-        input.deltaMs,
-        this.world.timeMs,
-        V2_ACTOR_LIFECYCLE_CONFIG,
-      );
-      this.currentEvents = lifecycle.events;
-      return this.createFrameResult();
-    }
+    this.updateProjectileWorld(input.deltaMs, events);
+    this.currentEvents = events;
+    return this.createFrameResult();
+  }
 
+  private updateControlledActor(
+    actor: WorldState["actors"][number],
+    input: CoreInputFrame,
+    events: GameEvent[],
+  ): void {
     const damage = this.readDiagnosticDamage(input);
-    const damageResult = damage > 0
-      ? applyDamage(
+    if (damage > 0) {
+      const damageResult = applyDamage(
         actor,
         damage,
         this.world.timeMs,
         V2_ACTOR_LIFECYCLE_CONFIG,
-      )
-      : null;
-    if (damageResult?.killed) {
-      this.currentEvents = damageResult.events;
-      return this.createFrameResult();
+      );
+      events.push(...damageResult.events);
+      if (damageResult.killed) {
+        return;
+      }
+    }
+
+    if (this.hasAction(input, "firePrimary", "held")) {
+      const fire = fireDiagnosticProjectile(
+        actor,
+        this.readAimDirection(input),
+        input.sequence,
+        this.world.timeMs,
+        V2_DIAGNOSTIC_BLASTER_CONFIG,
+      );
+      if (fire.projectile) {
+        this.world.projectiles.push(fire.projectile);
+      }
+      events.push(...fire.events);
     }
 
     this.updateLastMoveDirection(actor, input);
@@ -123,11 +144,10 @@ export class InertCoreRuntime implements CoreRuntime {
         },
       } satisfies GameEvent
       : null;
-    const lifecycleEvents = damageResult?.events ?? [];
-    this.currentEvents = movementEvent
-      ? [...lifecycleEvents, movementEvent, ...collision.events]
-      : [...lifecycleEvents, ...collision.events];
-    return this.createFrameResult();
+    if (movementEvent) {
+      events.push(movementEvent);
+    }
+    events.push(...collision.events);
   }
 
   private createFrameResult(): CoreFrameResult {
@@ -187,5 +207,51 @@ export class InertCoreRuntime implements CoreRuntime {
     }
     const amount = (action.payload as { amount?: unknown }).amount;
     return typeof amount === "number" ? Math.max(0, amount) : 0;
+  }
+
+  private readAimDirection(input: CoreInputFrame): {
+    x: number;
+    y: number;
+  } {
+    return input.actions.find((intent) => intent.action === "aim")
+      ?.direction ?? { x: 0, y: 0 };
+  }
+
+  private updateCooldowns(deltaMs: number): void {
+    const ms = Math.max(0, deltaMs);
+    for (const actor of this.world.actors) {
+      actor.primaryFireCooldownMs = Math.max(
+        0,
+        actor.primaryFireCooldownMs - ms,
+      );
+    }
+  }
+
+  private updateLifecycles(deltaMs: number, events: GameEvent[]): void {
+    for (const actor of this.world.actors) {
+      const lifecycle = updateActorLifecycle(
+        actor,
+        deltaMs,
+        this.world.timeMs,
+        V2_ACTOR_LIFECYCLE_CONFIG,
+      );
+      events.push(...lifecycle.events);
+    }
+  }
+
+  private updateProjectileWorld(
+    deltaMs: number,
+    events: GameEvent[],
+  ): void {
+    const projectiles = updateProjectiles(
+      this.world.projectiles,
+      this.world.actors,
+      this.world.geometry,
+      deltaMs,
+      this.world.timeMs,
+      V2_DIAGNOSTIC_BLASTER_CONFIG,
+      V2_ACTOR_LIFECYCLE_CONFIG,
+    );
+    events.push(...projectiles.events);
   }
 }

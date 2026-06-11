@@ -85,10 +85,10 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   const nextActor = next.snapshot.actors[0];
   if (
     next.events.length !== 1 ||
-    initial.snapshot.actors.length !== 1 ||
-    next.snapshot.actors.length !== 1
+    initial.snapshot.actors.length !== 2 ||
+    next.snapshot.actors.length !== 2
   ) {
-    throw new Error("Inert bridge must expose one diagnostic actor.");
+    throw new Error("Inert bridge must expose actor and target diagnostics.");
   }
   if (
     !initialActor ||
@@ -132,6 +132,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkJumpParity();
   checkCollisionAndGapGroundwork();
   checkActorLifecycle();
+  checkProjectilePipeline();
 }
 
 function checkJumpParity(): void {
@@ -427,4 +428,106 @@ function diagnosticDamageFrame(
       payload: { amount: 35 },
     }],
   };
+}
+
+function checkProjectilePipeline(): void {
+  const runtime = new InertCoreRuntime();
+  const initial = runtime.initialize();
+  const targetBefore = initial.snapshot.actors.find((actor) =>
+    actor.id === "diagnostic-target-1"
+  );
+  if (!targetBefore || targetBefore.armor !== 20 || targetBefore.health !== 100) {
+    throw new Error("Projectile smoke check requires the target dummy.");
+  }
+
+  const fired = runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [
+      {
+        action: "aim",
+        phase: "held",
+        direction: { x: 1, y: 0 },
+      },
+      { action: "firePrimary", phase: "held" },
+    ],
+  });
+  if (
+    fired.snapshot.projectiles.length !== 1 ||
+    !fired.events.some((event) => event.type === "projectile.spawned")
+  ) {
+    throw new Error("Primary fire must spawn one diagnostic projectile.");
+  }
+
+  let hit = false;
+  let damaged = false;
+  let targetAfter = targetBefore;
+  for (let frame = 0; frame < 8; frame++) {
+    const sequence = frame + 2;
+    const result = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: [],
+    });
+    hit = result.events.some((event) => event.type === "projectile.hit") || hit;
+    damaged = result.events.some((event) => event.type === "actor.damaged") ||
+      damaged;
+    targetAfter = result.snapshot.actors.find((actor) =>
+      actor.id === "diagnostic-target-1"
+    ) ?? targetAfter;
+    if (hit) {
+      if (result.snapshot.projectiles.length !== 0) {
+        throw new Error("Projectile must be removed after actor hit.");
+      }
+      break;
+    }
+  }
+  if (
+    !hit ||
+    !damaged ||
+    targetAfter.armor !== 0 ||
+    targetAfter.health !== 90
+  ) {
+    throw new Error("Projectile hit must damage target through lifecycle.");
+  }
+
+  const expiryRuntime = new InertCoreRuntime();
+  expiryRuntime.initialize();
+  expiryRuntime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [
+      {
+        action: "aim",
+        phase: "held",
+        direction: { x: -1, y: 0 },
+      },
+      { action: "firePrimary", phase: "held" },
+    ],
+  });
+  let expired = false;
+  for (let frame = 0; frame < 12; frame++) {
+    const sequence = frame + 2;
+    const result = expiryRuntime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: [],
+    });
+    expired = result.events.some((event) =>
+      event.type === "projectile.expired"
+    ) || expired;
+    if (expired) {
+      if (result.snapshot.projectiles.length !== 0) {
+        throw new Error("Expired projectile must be removed.");
+      }
+      break;
+    }
+  }
+  if (!expired) {
+    throw new Error("Projectile must expire at bounds, range, or lifetime.");
+  }
 }
