@@ -26,6 +26,8 @@ export type {
 export {
   applyGroundMovement,
   applyJumpMovement,
+  applyWorldCollision,
+  V2_COLLISION_GROUNDWORK_CONFIG,
   V2_GROUND_PARITY_CONFIG,
   V2_JUMP_PARITY_CONFIG,
   type GroundMovementConfig,
@@ -36,6 +38,8 @@ export {
   type JumpInput,
   type JumpMovementResult,
   type JumpMovementState,
+  type CollisionConfig,
+  type WorldCollisionResult,
 } from "./movement";
 export type { Objective, ObjectiveState } from "./objectives";
 export {
@@ -52,6 +56,10 @@ export type {
 export {
   createEmptyWorldState,
   createWorldSnapshot,
+  createEmptyWorldGeometry,
+  type WorldBounds,
+  type WorldGeometry,
+  type WorldRect,
   type WorldSnapshot,
   type WorldState,
 } from "./world";

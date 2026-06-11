@@ -3,6 +3,8 @@ import type { CoreInputFrame } from "../input";
 import type { ModeHudState } from "../modes";
 import {
   applyJumpMovement,
+  applyWorldCollision,
+  V2_COLLISION_GROUNDWORK_CONFIG,
   V2_JUMP_PARITY_CONFIG,
 } from "../movement";
 import {
@@ -36,23 +38,61 @@ export class InertCoreRuntime implements CoreRuntime {
   advance(input: CoreInputFrame): CoreFrameResult {
     this.world.timeMs += Math.max(0, input.deltaMs);
     const actor = this.world.actors[0];
-    if (actor) {
-      this.updateLastMoveDirection(actor, input);
-      applyJumpMovement(
-        actor,
-        {
-          pressed: this.hasAction(input, "jump", "pressed"),
-          held: this.hasAction(input, "jump", "held"),
-          released: this.hasAction(input, "jump", "released"),
-        },
-        input.deltaMs,
-        V2_JUMP_PARITY_CONFIG,
-      );
+    if (!actor) {
+      this.currentEvents = [];
+      return this.createFrameResult();
     }
-    const movementEvent = actor
-      ? applyDiagnosticGroundMovement(actor, input, this.world.timeMs)
+
+    if (actor.lifeState === "falling") {
+      const collision = applyWorldCollision(
+        actor,
+        this.world.geometry,
+        input.deltaMs,
+        this.world.timeMs,
+        V2_COLLISION_GROUNDWORK_CONFIG,
+      );
+      this.currentEvents = collision.events;
+      return this.createFrameResult();
+    }
+
+    this.updateLastMoveDirection(actor, input);
+    applyJumpMovement(
+      actor,
+      {
+        pressed: this.hasAction(input, "jump", "pressed"),
+        held: this.hasAction(input, "jump", "held"),
+        released: this.hasAction(input, "jump", "released"),
+      },
+      input.deltaMs,
+      V2_JUMP_PARITY_CONFIG,
+    );
+    const previousPosition = { ...actor.position };
+    applyDiagnosticGroundMovement(actor, input);
+    const collision = applyWorldCollision(
+      actor,
+      this.world.geometry,
+      input.deltaMs,
+      this.world.timeMs,
+      V2_COLLISION_GROUNDWORK_CONFIG,
+    );
+    const movementEvent = actor.position.x !== previousPosition.x ||
+        actor.position.y !== previousPosition.y
+      ? {
+        id: `diagnostic-move-${input.sequence}`,
+        type: "diagnostic.actorMoved",
+        timeMs: this.world.timeMs,
+        sourceActorId: actor.id,
+        teamId: actor.teamId ?? undefined,
+        payload: {
+          movementMode: "v2-ground-parity",
+          position: { ...actor.position },
+          velocity: { ...actor.velocity },
+        },
+      } satisfies GameEvent
       : null;
-    this.currentEvents = movementEvent ? [movementEvent] : [];
+    this.currentEvents = movementEvent
+      ? [movementEvent, ...collision.events]
+      : collision.events;
     return this.createFrameResult();
   }
 

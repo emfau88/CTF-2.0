@@ -276,3 +276,34 @@ uses jump height only as a visual vertical offset and scale above a shadow.
 Short and held jumps remain distinct. Gaps, collision, maps, fall handling,
 bots, combat, objectives, and modes are still not implemented. V1 remains the
 playable reference.
+
+## Phase 12 Collision, Bounds, And Gap Groundwork
+
+Phase 12 adds serializable V2 world geometry for bounds, solid rectangles, and
+gap rectangles. The diagnostic world contains only a small test arena; no V1
+map data is imported.
+
+The framework-neutral collision module mirrors the relevant V1 groundwork:
+
+- `src/systems.ts`, `CollisionSystem.update()` clamps actors to world bounds,
+  resolves circle-versus-rectangle collisions for up to three passes, removes
+  velocity into the collision surface, and ignores solids above half of the
+  configured jump height.
+- The same V1 function insets gap danger zones by `.2`, considers the actor
+  clear at `.34` of jump height, and records a safe position every `120 ms`
+  while grounded and outside gaps.
+- `src/player.ts`, `Player.fall()` and its update lifecycle use a `420 ms`
+  falling delay, reduce velocity to `.18`, cancel the jump, and return the
+  actor to the last safe position.
+- `src/config.ts`, `T` supplies jump height `62`, fall respawn time `420`,
+  safe-point interval `120`, and gap danger inset ratio `.2`.
+
+V2 now owns those collision decisions using plain actor and geometry data. The
+Phaser diagnostic renderer only visualizes the resulting snapshot: gray
+rectangles are solids, dark red rectangles are gaps, and the outline is the
+diagnostic world boundary. Actor state exposes whether it is over a gap,
+falling, waiting to respawn, and where its last safe position is.
+
+This remains diagnostic groundwork rather than full map migration or final
+physics. V1 maps, bots, combat, pickups, objectives, and game modes are not
+connected. V1 remains the default playable reference.

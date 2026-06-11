@@ -12,10 +12,14 @@ interface DiagnosticActorView {
 
 export class PhaserDiagnosticRendererPort implements RendererPort {
   private readonly actorViews = new Map<ActorId, DiagnosticActorView>();
+  private readonly geometryGraphics: Phaser.GameObjects.Graphics;
 
-  constructor(private readonly scene: Phaser.Scene) {}
+  constructor(private readonly scene: Phaser.Scene) {
+    this.geometryGraphics = scene.add.graphics().setDepth(-10);
+  }
 
   render(snapshot: WorldSnapshot): void {
+    this.renderGeometry(snapshot);
     const visibleActorIds = new Set(snapshot.actors.map((actor) => actor.id));
 
     for (const [actorId, view] of this.actorViews) {
@@ -32,10 +36,12 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
   }
 
   reset(): void {
+    this.geometryGraphics.clear();
     this.destroyActorViews();
   }
 
   dispose(): void {
+    this.geometryGraphics.destroy();
     this.destroyActorViews();
   }
 
@@ -102,5 +108,32 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       view.container.destroy();
     }
     this.actorViews.clear();
+  }
+
+  private renderGeometry(snapshot: WorldSnapshot): void {
+    const graphics = this.geometryGraphics;
+    const bounds = snapshot.geometry.bounds;
+    graphics.clear();
+    graphics.lineStyle(2, 0x52706c, .8);
+    graphics.strokeRect(
+      bounds.minX,
+      bounds.minY,
+      bounds.maxX - bounds.minX,
+      bounds.maxY - bounds.minY,
+    );
+
+    graphics.fillStyle(0x6b7775, .75);
+    graphics.lineStyle(2, 0x253b38, 1);
+    for (const solid of snapshot.geometry.solids) {
+      graphics.fillRect(solid.x, solid.y, solid.width, solid.height);
+      graphics.strokeRect(solid.x, solid.y, solid.width, solid.height);
+    }
+
+    graphics.fillStyle(0x6a2f45, .72);
+    graphics.lineStyle(2, 0x321420, 1);
+    for (const gap of snapshot.geometry.gaps) {
+      graphics.fillRect(gap.x, gap.y, gap.width, gap.height);
+      graphics.strokeRect(gap.x, gap.y, gap.width, gap.height);
+    }
   }
 }

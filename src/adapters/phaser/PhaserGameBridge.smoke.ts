@@ -1,5 +1,11 @@
-import { InertCoreRuntime } from "../../core";
-import type { CoreActionIntent } from "../../core";
+import {
+  applyWorldCollision,
+  createActorState,
+  InertCoreRuntime,
+  V2_COLLISION_GROUNDWORK_CONFIG,
+} from "../../core";
+import type { ActorState, CoreActionIntent } from "../../core";
+import type { WorldGeometry } from "../../core";
 import { PhaserGameBridge } from "./PhaserGameBridge";
 
 export function runPhaserGameBridgeSmokeCheck(): void {
@@ -113,6 +119,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
 
   bridge.dispose();
   checkJumpParity();
+  checkCollisionAndGapGroundwork();
 }
 
 function checkJumpParity(): void {
@@ -198,4 +205,117 @@ function runJumpSequence(heldFrames: number): {
     horizontalDistance: actor.position.x - initial.position.x,
     landed,
   };
+}
+
+function checkCollisionAndGapGroundwork(): void {
+  const geometry: WorldGeometry = {
+    bounds: { minX: 0, minY: 0, maxX: 500, maxY: 500 },
+    solids: [{
+      id: "smoke-solid",
+      x: 200,
+      y: 100,
+      width: 50,
+      height: 200,
+    }],
+    gaps: [{
+      id: "smoke-gap",
+      x: 300,
+      y: 100,
+      width: 100,
+      height: 100,
+    }],
+  };
+  const solidActor = createActorState({
+    id: "solid-actor",
+    kind: "diagnostic",
+    position: { x: 190, y: 150 },
+    velocity: { x: 100, y: 0 },
+    radius: 24,
+  });
+  const solidResult = applyWorldCollision(
+    solidActor,
+    geometry,
+    34,
+    34,
+    V2_COLLISION_GROUNDWORK_CONFIG,
+  );
+  if (
+    !solidResult.collided ||
+    solidActor.position.x > 176 ||
+    solidActor.velocity.x !== 0
+  ) {
+    throw new Error("Diagnostic solid must block and stop inward velocity.");
+  }
+
+  const gapActor = createActorState({
+    id: "gap-actor",
+    kind: "diagnostic",
+    position: { x: 350, y: 150 },
+    lastSafePosition: { x: 100, y: 100 },
+    radius: 24,
+  });
+  const fallResult = applyWorldCollision(
+    gapActor,
+    geometry,
+    34,
+    68,
+    V2_COLLISION_GROUNDWORK_CONFIG,
+  );
+  if (
+    !fallResult.fell ||
+    gapActor.lifeState !== "falling" ||
+    fallResult.events[0]?.type !== "diagnostic.actorFell"
+  ) {
+    throw new Error("Grounded actor inside a gap must start falling.");
+  }
+
+  let respawned = false;
+  for (let frame = 0; frame < 13; frame++) {
+    respawned = applyWorldCollision(
+      gapActor,
+      geometry,
+      34,
+      102 + frame * 34,
+      V2_COLLISION_GROUNDWORK_CONFIG,
+    ).respawned || respawned;
+  }
+  if (
+    !respawned ||
+    !isActorActive(gapActor) ||
+    gapActor.position.x !== 100 ||
+    gapActor.position.y !== 100
+  ) {
+    throw new Error("Falling actor must respawn at its last safe position.");
+  }
+
+  const jumpingActor = createActorState({
+    id: "jumping-gap-actor",
+    kind: "diagnostic",
+    position: { x: 350, y: 150 },
+    radius: 24,
+    jump: {
+      active: true,
+      held: true,
+      grounded: false,
+      phase: "held",
+      elapsedMs: 100,
+      plannedDurationMs: 400,
+      cooldownRemainingMs: 440,
+      height: V2_COLLISION_GROUNDWORK_CONFIG.gapClearHeight + 1,
+    },
+  });
+  const crossingResult = applyWorldCollision(
+    jumpingActor,
+    geometry,
+    34,
+    600,
+    V2_COLLISION_GROUNDWORK_CONFIG,
+  );
+  if (crossingResult.fell || jumpingActor.lifeState !== "active") {
+    throw new Error("Actor above gap clearance height must not fall.");
+  }
+}
+
+function isActorActive(actor: ActorState): boolean {
+  return actor.lifeState === "active";
 }

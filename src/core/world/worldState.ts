@@ -2,6 +2,10 @@ import type { ActorState } from "../actors";
 import type { GameModeId } from "../modes";
 import type { Objective } from "../objectives";
 import type { ScoreEntry } from "../scoring";
+import {
+  createEmptyWorldGeometry,
+  type WorldGeometry,
+} from "./worldGeometry";
 
 export interface WorldState {
   timeMs: number;
@@ -9,6 +13,7 @@ export interface WorldState {
   actors: ActorState[];
   objectives: Objective[];
   scores: ScoreEntry[];
+  geometry: WorldGeometry;
 }
 
 export interface WorldSnapshot {
@@ -17,6 +22,7 @@ export interface WorldSnapshot {
   readonly actors: readonly Readonly<ActorState>[];
   readonly objectives: readonly Readonly<Objective>[];
   readonly scores: readonly ScoreEntry[];
+  readonly geometry: WorldGeometry;
 }
 
 export function createEmptyWorldState(
@@ -28,6 +34,7 @@ export function createEmptyWorldState(
     actors: [],
     objectives: [],
     scores: [],
+    geometry: createEmptyWorldGeometry(),
   };
 }
 
@@ -42,6 +49,7 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       facing: { ...actor.facing },
       lastMoveDirection: { ...actor.lastMoveDirection },
       jump: { ...actor.jump },
+      lastSafePosition: { ...actor.lastSafePosition },
       respawn: actor.respawn ? { ...actor.respawn } : null,
     })),
     objectives: world.objectives.map((objective) => ({
@@ -50,5 +58,10 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       state: { ...objective.state },
     })),
     scores: world.scores.map((score) => ({ ...score })),
+    geometry: {
+      bounds: { ...world.geometry.bounds },
+      solids: world.geometry.solids.map((solid) => ({ ...solid })),
+      gaps: world.geometry.gaps.map((gap) => ({ ...gap })),
+    },
   };
 }

@@ -3,6 +3,7 @@ export type TeamId = string;
 
 export type ActorLifeState =
   | "active"
+  | "falling"
   | "dead"
   | "respawning"
   | "inactive";
@@ -23,7 +24,7 @@ export type WorldFacing = {
 };
 
 export interface ActorRespawnState {
-  readonly remainingMs: number;
+  remainingMs: number;
   readonly spawnPointId?: string;
 }
 
@@ -54,6 +55,9 @@ export interface ActorState {
   facing: WorldFacing;
   lastMoveDirection: WorldFacing;
   jump: ActorJumpState;
+  lastSafePosition: WorldPosition;
+  safePositionElapsedMs: number;
+  overGap: boolean;
   radius: number;
   health: number;
   maxHealth: number;
@@ -72,6 +76,9 @@ export type CreateActorStateInput = {
   readonly facing?: WorldFacing;
   readonly lastMoveDirection?: WorldFacing;
   readonly jump?: ActorJumpState;
+  readonly lastSafePosition?: WorldPosition;
+  readonly safePositionElapsedMs?: number;
+  readonly overGap?: boolean;
   readonly radius?: number;
   readonly health?: number;
   readonly maxHealth?: number;
@@ -107,6 +114,11 @@ export function createActorState(input: CreateActorStateInput): ActorState {
         height: 0,
       }),
     },
+    lastSafePosition: {
+      ...(input.lastSafePosition ?? input.position ?? { x: 0, y: 0 }),
+    },
+    safePositionElapsedMs: input.safePositionElapsedMs ?? 0,
+    overGap: input.overGap ?? false,
     radius: input.radius ?? 0,
     health: input.health ?? maxHealth,
     maxHealth,

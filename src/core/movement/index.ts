@@ -1,5 +1,9 @@
 export { applyGroundMovement } from "./applyGroundMovement";
 export { applyJumpMovement } from "./applyJumpMovement";
+export { applyWorldCollision } from "./applyWorldCollision";
+export {
+  V2_COLLISION_GROUNDWORK_CONFIG,
+} from "./CollisionConfig";
 export { V2_JUMP_PARITY_CONFIG } from "./JumpConfig";
 export { V2_GROUND_PARITY_CONFIG } from "./MovementConfig";
 export type {
@@ -14,4 +18,8 @@ export type {
   JumpMovementResult,
   JumpMovementState,
 } from "./jumpTypes";
+export type {
+  CollisionConfig,
+  WorldCollisionResult,
+} from "./collisionTypes";
 export {};
