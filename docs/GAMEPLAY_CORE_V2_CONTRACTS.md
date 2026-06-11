@@ -249,5 +249,30 @@ ground movement module based on the V1 playable reference:
 The V2 module mirrors those ground formulas using plain position, velocity,
 facing, input direction, input magnitude, delta time, and movement config.
 Temporary diagnostic bounds remain, but map collision and gaps do not exist.
-Jumping, including short and held jumps, is still not implemented. V1 remains
-the playable movement reference.
+At this phase jumping, including short and held jumps, was not implemented.
+V1 remained the playable movement reference.
+
+## Phase 11 V2 Jump Parity
+
+Phase 11 mirrors the V1 jump lifecycle from `src/player.ts`, `JumpSystem`:
+
+- `start()` rejects active/cooldown jumps, applies a `100` low-speed boost
+  below speed `34`, starts held state, and sets a `540 ms` cooldown.
+- `release()` ends hold extension without cancelling the active jump.
+- `update()` starts from a `180 ms` planned duration, extends held jumps at
+  `1.18 ms` per update millisecond up to `620 ms`, and calculates height as
+  `sin(progress * PI) * 62`.
+- Landing occurs when elapsed time reaches planned duration, resetting active
+  jump height while preserving cooldown state.
+
+`src/scenes/ArenaScene.ts`, `update()` establishes the processing order:
+jump input, jump update, movement update, then horizontal integration. The V2
+runtime mirrors that order. While airborne, `MovementController.update()` in
+`src/player.ts` uses air control `.72`, air friction `1.05`, and a max-speed
+multiplier of `1.08`; V2 ground movement now mirrors those airborne settings.
+
+Actor jump state is plain serializable data. The Phaser diagnostic renderer
+uses jump height only as a visual vertical offset and scale above a shadow.
+Short and held jumps remain distinct. Gaps, collision, maps, fall handling,
+bots, combat, objectives, and modes are still not implemented. V1 remains the
+playable reference.

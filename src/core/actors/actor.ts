@@ -27,6 +27,23 @@ export interface ActorRespawnState {
   readonly spawnPointId?: string;
 }
 
+export type ActorJumpPhase =
+  | "ready"
+  | "held"
+  | "airborne"
+  | "cooldown";
+
+export interface ActorJumpState {
+  active: boolean;
+  held: boolean;
+  grounded: boolean;
+  phase: ActorJumpPhase;
+  elapsedMs: number;
+  plannedDurationMs: number;
+  cooldownRemainingMs: number;
+  height: number;
+}
+
 export interface ActorState {
   readonly id: ActorId;
   readonly kind: string;
@@ -35,6 +52,8 @@ export interface ActorState {
   position: WorldPosition;
   velocity: WorldVelocity;
   facing: WorldFacing;
+  lastMoveDirection: WorldFacing;
+  jump: ActorJumpState;
   radius: number;
   health: number;
   maxHealth: number;
@@ -51,6 +70,8 @@ export type CreateActorStateInput = {
   readonly position?: WorldPosition;
   readonly velocity?: WorldVelocity;
   readonly facing?: WorldFacing;
+  readonly lastMoveDirection?: WorldFacing;
+  readonly jump?: ActorJumpState;
   readonly radius?: number;
   readonly health?: number;
   readonly maxHealth?: number;
@@ -71,6 +92,21 @@ export function createActorState(input: CreateActorStateInput): ActorState {
     position: { ...(input.position ?? { x: 0, y: 0 }) },
     velocity: { ...(input.velocity ?? { x: 0, y: 0 }) },
     facing: { ...(input.facing ?? { x: 1, y: 0 }) },
+    lastMoveDirection: {
+      ...(input.lastMoveDirection ?? input.facing ?? { x: 1, y: 0 }),
+    },
+    jump: {
+      ...(input.jump ?? {
+        active: false,
+        held: false,
+        grounded: true,
+        phase: "ready",
+        elapsedMs: 0,
+        plannedDurationMs: 180,
+        cooldownRemainingMs: 0,
+        height: 0,
+      }),
+    },
     radius: input.radius ?? 0,
     health: input.health ?? maxHealth,
     maxHealth,

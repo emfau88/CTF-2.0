@@ -5,6 +5,9 @@ export interface GroundMovementConfig {
   readonly maxSpeed: number;
   readonly friction: number;
   readonly inputFriction: number;
+  readonly airFriction: number;
+  readonly airControl: number;
+  readonly airMaxSpeedMultiplier: number;
   readonly turnPenalty: number;
   readonly turnPenaltyDot: number;
   readonly strafeBonus: number;
@@ -20,6 +23,7 @@ export interface GroundMovementConfig {
 export interface GroundMovementInput {
   readonly direction: WorldPosition;
   readonly magnitude: number;
+  readonly grounded: boolean;
 }
 
 export interface GroundMovementState {

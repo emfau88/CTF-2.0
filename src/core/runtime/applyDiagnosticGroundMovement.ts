@@ -32,6 +32,7 @@ export function applyDiagnosticGroundMovement(
     {
       direction: move?.direction ?? { x: 0, y: 0 },
       magnitude: move?.magnitude ?? 0,
+      grounded: actor.jump.grounded,
     },
     input.deltaMs,
     V2_GROUND_PARITY_CONFIG,

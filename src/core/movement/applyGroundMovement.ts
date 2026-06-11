@@ -22,14 +22,15 @@ export function applyGroundMovement(
   const speedBeforeInput = Math.hypot(state.velocity.x, state.velocity.y);
 
   if (hasInput) {
-    let acceleration = config.acceleration * magnitude;
+    let acceleration = config.acceleration * magnitude *
+      (input.grounded ? 1 : config.airControl);
 
     if (speedBeforeInput > config.steeringSpeedThreshold) {
       const dot =
         (state.velocity.x / speedBeforeInput) * direction.x +
         (state.velocity.y / speedBeforeInput) * direction.y;
 
-      if (dot < config.turnPenaltyDot) {
+      if (input.grounded && dot < config.turnPenaltyDot) {
         const scale = Math.max(
           config.turnVelocityFloor,
           1 - -dot * config.turnPenalty * dt,
@@ -37,6 +38,7 @@ export function applyGroundMovement(
         state.velocity.x *= scale;
         state.velocity.y *= scale;
       } else if (
+        input.grounded &&
         dot > config.strafeDotMin &&
         dot < config.strafeDotMax
       ) {
@@ -50,14 +52,19 @@ export function applyGroundMovement(
     state.facing.y = direction.y;
   }
 
-  const friction = hasInput ? config.inputFriction : config.friction;
+  const friction = input.grounded
+    ? (hasInput ? config.inputFriction : config.friction)
+    : config.airFriction;
   const drag = Math.max(0, 1 - friction * dt);
   state.velocity.x *= drag;
   state.velocity.y *= drag;
 
   const speedBeforeClamp = Math.hypot(state.velocity.x, state.velocity.y);
-  if (speedBeforeClamp > config.maxSpeed) {
-    const scale = config.maxSpeed / speedBeforeClamp;
+  const maxSpeed = input.grounded
+    ? config.maxSpeed
+    : config.maxSpeed * config.airMaxSpeedMultiplier;
+  if (speedBeforeClamp > maxSpeed) {
+    const scale = maxSpeed / speedBeforeClamp;
     state.velocity.x *= scale;
     state.velocity.y *= scale;
   }

@@ -1,5 +1,7 @@
 export {
   createActorState,
+  type ActorJumpPhase,
+  type ActorJumpState,
   type ActorLifeState,
   type ActorRespawnState,
   type ActorId,
@@ -23,11 +25,17 @@ export type {
 } from "./modes";
 export {
   applyGroundMovement,
+  applyJumpMovement,
   V2_GROUND_PARITY_CONFIG,
+  V2_JUMP_PARITY_CONFIG,
   type GroundMovementConfig,
   type GroundMovementInput,
   type GroundMovementResult,
   type GroundMovementState,
+  type JumpConfig,
+  type JumpInput,
+  type JumpMovementResult,
+  type JumpMovementState,
 } from "./movement";
 export type { Objective, ObjectiveState } from "./objectives";
 export {

@@ -1,4 +1,5 @@
 import { InertCoreRuntime } from "../../core";
+import type { CoreActionIntent } from "../../core";
 import { PhaserGameBridge } from "./PhaserGameBridge";
 
 export function runPhaserGameBridgeSmokeCheck(): void {
@@ -111,4 +112,90 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   }
 
   bridge.dispose();
+  checkJumpParity();
+}
+
+function checkJumpParity(): void {
+  const shortJump = runJumpSequence(1);
+  const heldJump = runJumpSequence(10);
+
+  if (shortJump.maxHeight <= 0 || heldJump.maxHeight <= 0) {
+    throw new Error("Short and held jumps must both produce jump height.");
+  }
+  if (heldJump.maxPlannedMs <= shortJump.maxPlannedMs) {
+    throw new Error("Held jump must extend planned duration.");
+  }
+  if (heldJump.airborneFrames <= shortJump.airborneFrames) {
+    throw new Error("Held jump must remain airborne longer than short jump.");
+  }
+  if (!shortJump.landed || !heldJump.landed) {
+    throw new Error("Short and held jumps must both land.");
+  }
+  if (heldJump.horizontalDistance <= 0) {
+    throw new Error("Air control must preserve horizontal movement.");
+  }
+}
+
+function runJumpSequence(heldFrames: number): {
+  maxHeight: number;
+  maxPlannedMs: number;
+  airborneFrames: number;
+  horizontalDistance: number;
+  landed: boolean;
+} {
+  const runtime = new InertCoreRuntime();
+  const initial = runtime.initialize().snapshot.actors[0];
+  if (!initial) {
+    throw new Error("Jump smoke check requires a diagnostic actor.");
+  }
+
+  let sequence = 0;
+  let maxHeight = 0;
+  let maxPlannedMs = 0;
+  let airborneFrames = 0;
+  let landed = false;
+  let actor = initial;
+
+  for (let frame = 0; frame < 80; frame++) {
+    const actions: CoreActionIntent[] = [{
+      action: "move",
+      phase: "held",
+      direction: { x: 1, y: 0 },
+      magnitude: 1,
+    }];
+    if (frame === 0) {
+      actions.push(
+        { action: "jump", phase: "pressed" },
+        { action: "jump", phase: "held" },
+      );
+    } else if (frame < heldFrames) {
+      actions.push({ action: "jump", phase: "held" });
+    } else if (frame === heldFrames) {
+      actions.push({ action: "jump", phase: "released" });
+    }
+
+    const result = runtime.advance({
+      sequence: ++sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions,
+    });
+    actor = result.snapshot.actors[0] ?? actor;
+    maxHeight = Math.max(maxHeight, actor.jump.height);
+    maxPlannedMs = Math.max(maxPlannedMs, actor.jump.plannedDurationMs);
+    if (!actor.jump.grounded) {
+      airborneFrames++;
+    } else if (airborneFrames > 0) {
+      landed = true;
+      break;
+    }
+  }
+
+  return {
+    maxHeight,
+    maxPlannedMs,
+    airborneFrames,
+    horizontalDistance: actor.position.x - initial.position.x,
+    landed,
+  };
 }

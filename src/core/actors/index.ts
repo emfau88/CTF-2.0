@@ -1,5 +1,7 @@
 export {
   createActorState,
+  type ActorJumpPhase,
+  type ActorJumpState,
   type ActorLifeState,
   type ActorRespawnState,
   type ActorId,

@@ -40,6 +40,8 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       position: { ...actor.position },
       velocity: { ...actor.velocity },
       facing: { ...actor.facing },
+      lastMoveDirection: { ...actor.lastMoveDirection },
+      jump: { ...actor.jump },
       respawn: actor.respawn ? { ...actor.respawn } : null,
     })),
     objectives: world.objectives.map((objective) => ({
