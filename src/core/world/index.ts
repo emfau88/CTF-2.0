@@ -1,1 +1,6 @@
-export type { WorldSnapshot, WorldState } from "./worldState";
+export {
+  createEmptyWorldState,
+  createWorldSnapshot,
+  type WorldSnapshot,
+  type WorldState,
+} from "./worldState";

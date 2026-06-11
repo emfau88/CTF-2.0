@@ -1,46 +1,41 @@
 import type { GameEvent } from "../events";
 import type { CoreInputFrame } from "../input";
 import type { ModeHudState } from "../modes";
-import type { WorldSnapshot } from "../world";
+import {
+  createEmptyWorldState,
+  createWorldSnapshot,
+  type WorldSnapshot,
+  type WorldState,
+} from "../world";
 import type { CoreFrameResult, CoreRuntime } from "./coreRuntime";
 
 const MODE_ID = "inert";
 const NO_EVENTS: readonly GameEvent[] = [];
 
 export class InertCoreRuntime implements CoreRuntime {
-  private currentTimeMs = 0;
-  private currentSnapshot = this.createSnapshot();
+  private readonly world: WorldState = createEmptyWorldState(MODE_ID);
+  private currentSnapshot = createWorldSnapshot(this.world);
 
   get snapshot(): WorldSnapshot {
     return this.currentSnapshot;
   }
 
   initialize(): CoreFrameResult {
-    this.currentTimeMs = 0;
+    this.world.timeMs = 0;
     return this.createFrameResult();
   }
 
   advance(input: CoreInputFrame): CoreFrameResult {
-    this.currentTimeMs += Math.max(0, input.deltaMs);
+    this.world.timeMs += Math.max(0, input.deltaMs);
     return this.createFrameResult();
   }
 
   private createFrameResult(): CoreFrameResult {
-    this.currentSnapshot = this.createSnapshot();
+    this.currentSnapshot = createWorldSnapshot(this.world);
     return {
       snapshot: this.currentSnapshot,
       events: NO_EVENTS,
       hudState: this.createHudState(),
-    };
-  }
-
-  private createSnapshot(): WorldSnapshot {
-    return {
-      timeMs: this.currentTimeMs,
-      modeId: MODE_ID,
-      actors: [],
-      objectives: [],
-      scores: [],
     };
   }
 

@@ -11,6 +11,7 @@ export class PhaserDiagnosticHudPort implements HudPort {
       `mode: ${state.modeId}`,
       `phase: ${state.phase}`,
       `time: ${Math.floor(snapshot.timeMs)} ms`,
+      `actors: ${snapshot.actors.length}`,
       "status: inert / non-playable",
     ]);
   }

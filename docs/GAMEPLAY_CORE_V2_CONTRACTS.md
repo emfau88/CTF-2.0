@@ -178,3 +178,15 @@ The shell is available with:
 Normal startup still uses V1 `ArenaScene`. The V2 shell creates no actors,
 maps, objectives, bots, weapons, pickups, movement, combat, modes, multiplayer,
 or network systems.
+
+## Phase 6 Plain World And Actor State
+
+Phase 6 adds the first concrete V2 state model. `WorldState` and `ActorState`
+contain only serializable plain data, including position, velocity, facing,
+health, armor, lifecycle, and optional respawn state. Helper functions create
+empty world state, actor state, and defensive world snapshots.
+
+`InertCoreRuntime` now owns an empty `WorldState` and returns snapshots derived
+from it. The diagnostic shell displays the snapshot actor count, which remains
+zero because no gameplay, actors, movement, combat, objectives, or modes are
+connected. V1 remains the default playable scene.

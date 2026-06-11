@@ -1,10 +1,14 @@
-export type {
-  Actor,
-  ActorId,
-  ActorState,
-  TeamId,
-  WorldPosition,
-  WorldVelocity,
+export {
+  createActorState,
+  type ActorLifeState,
+  type ActorRespawnState,
+  type ActorId,
+  type ActorState,
+  type CreateActorStateInput,
+  type TeamId,
+  type WorldFacing,
+  type WorldPosition,
+  type WorldVelocity,
 } from "./actors";
 export type { GameEvent } from "./events";
 export type {
@@ -29,4 +33,9 @@ export type {
   SpawnProvider,
   SpawnRequest,
 } from "./spawning";
-export type { WorldSnapshot, WorldState } from "./world";
+export {
+  createEmptyWorldState,
+  createWorldSnapshot,
+  type WorldSnapshot,
+  type WorldState,
+} from "./world";

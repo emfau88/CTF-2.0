@@ -1,7 +1,11 @@
 export type ActorId = string;
 export type TeamId = string;
 
-export type ActorState = "active" | "dead" | "respawning" | "inactive";
+export type ActorLifeState =
+  | "active"
+  | "dead"
+  | "respawning"
+  | "inactive";
 
 export type WorldPosition = {
   x: number;
@@ -13,15 +17,65 @@ export type WorldVelocity = {
   y: number;
 };
 
-export interface Actor {
+export type WorldFacing = {
+  x: number;
+  y: number;
+};
+
+export interface ActorRespawnState {
+  readonly remainingMs: number;
+  readonly spawnPointId?: string;
+}
+
+export interface ActorState {
   readonly id: ActorId;
   readonly kind: string;
   teamId: TeamId | null;
-  state: ActorState;
+  lifeState: ActorLifeState;
   position: WorldPosition;
   velocity: WorldVelocity;
+  facing: WorldFacing;
   radius: number;
   health: number;
   maxHealth: number;
   armor: number;
+  maxArmor: number;
+  respawn: ActorRespawnState | null;
+}
+
+export type CreateActorStateInput = {
+  readonly id: ActorId;
+  readonly kind: string;
+  readonly teamId?: TeamId | null;
+  readonly lifeState?: ActorLifeState;
+  readonly position?: WorldPosition;
+  readonly velocity?: WorldVelocity;
+  readonly facing?: WorldFacing;
+  readonly radius?: number;
+  readonly health?: number;
+  readonly maxHealth?: number;
+  readonly armor?: number;
+  readonly maxArmor?: number;
+  readonly respawn?: ActorRespawnState | null;
+};
+
+export function createActorState(input: CreateActorStateInput): ActorState {
+  const maxHealth = input.maxHealth ?? 100;
+  const maxArmor = input.maxArmor ?? 0;
+
+  return {
+    id: input.id,
+    kind: input.kind,
+    teamId: input.teamId ?? null,
+    lifeState: input.lifeState ?? "active",
+    position: { ...(input.position ?? { x: 0, y: 0 }) },
+    velocity: { ...(input.velocity ?? { x: 0, y: 0 }) },
+    facing: { ...(input.facing ?? { x: 1, y: 0 }) },
+    radius: input.radius ?? 0,
+    health: input.health ?? maxHealth,
+    maxHealth,
+    armor: input.armor ?? maxArmor,
+    maxArmor,
+    respawn: input.respawn ? { ...input.respawn } : null,
+  };
 }
