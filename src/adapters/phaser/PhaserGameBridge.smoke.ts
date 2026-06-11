@@ -6,6 +6,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   let audioFrames = 0;
   let effectFrames = 0;
   let hudFrames = 0;
+  let diagnosticFrames = 0;
   const bridge = new PhaserGameBridge(new InertCoreRuntime(), {
     renderer: {
       render: () => renders++,
@@ -14,6 +15,11 @@ export function runPhaserGameBridgeSmokeCheck(): void {
     },
     audio: {
       handleEvents: () => audioFrames++,
+      reset: () => {},
+      dispose: () => {},
+    },
+    diagnostics: {
+      renderFrame: () => diagnosticFrames++,
       reset: () => {},
       dispose: () => {},
     },
@@ -69,6 +75,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
     audioFrames !== 2 ||
     effectFrames !== 2 ||
     hudFrames !== 2
+    || diagnosticFrames !== 2
   ) {
     throw new Error("Inert bridge must forward every frame to provided ports.");
   }

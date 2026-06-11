@@ -6,13 +6,16 @@ import {
 } from "../../noop";
 import { PhaserDiagnosticHudPort } from "../PhaserDiagnosticHudPort";
 import {
+  PhaserDiagnosticInputAdapter,
+} from "../PhaserDiagnosticInputAdapter";
+import {
   PhaserDiagnosticRendererPort,
 } from "../PhaserDiagnosticRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
 
 export class GameplayV2Scene extends Phaser.Scene {
   private bridge?: PhaserGameBridge;
-  private inputSequence = 0;
+  private inputAdapter?: PhaserDiagnosticInputAdapter;
   private diagnosticText?: Phaser.GameObjects.Text;
 
   constructor() {
@@ -26,18 +29,21 @@ export class GameplayV2Scene extends Phaser.Scene {
       "Gameplay Core V2 Shell",
       {
         fontFamily: "Consolas, monospace",
-        fontSize: "24px",
+        fontSize: "18px",
         color: "#17302d",
         align: "center",
         lineSpacing: 8,
       },
     ).setOrigin(.5);
 
+    const diagnosticHud = new PhaserDiagnosticHudPort(this.diagnosticText);
+    this.inputAdapter = new PhaserDiagnosticInputAdapter(this);
     this.bridge = new PhaserGameBridge(new InertCoreRuntime(), {
       renderer: new PhaserDiagnosticRendererPort(this),
       audio: new NoopAudioPort(),
+      diagnostics: diagnosticHud,
       effects: new NoopEffectsPort(),
-      hud: new PhaserDiagnosticHudPort(this.diagnosticText),
+      hud: diagnosticHud,
     });
     this.bridge.initialize();
 
@@ -45,13 +51,11 @@ export class GameplayV2Scene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
   }
 
-  update(time: number, delta: number): void {
-    this.bridge?.advance({
-      sequence: ++this.inputSequence,
-      timeMs: time,
-      deltaMs: Math.max(0, delta),
-      actions: [],
-    });
+  update(_time: number, delta: number): void {
+    if (!this.bridge || !this.inputAdapter) {
+      return;
+    }
+    this.bridge.advance(this.inputAdapter.readFrame(delta));
   }
 
   private centerDiagnostic(gameSize: Phaser.Structs.Size): void {
@@ -61,7 +65,9 @@ export class GameplayV2Scene extends Phaser.Scene {
   private shutdown(): void {
     this.scale.off("resize", this.centerDiagnostic, this);
     this.bridge?.dispose();
+    this.inputAdapter?.dispose();
     this.bridge = undefined;
+    this.inputAdapter = undefined;
     this.diagnosticText = undefined;
   }
 }

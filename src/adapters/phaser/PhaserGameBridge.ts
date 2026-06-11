@@ -7,6 +7,7 @@ import type {
   WorldSnapshot,
 } from "../../core";
 import type { AudioPort } from "../audio";
+import type { FrameDiagnosticsPort } from "../debugging";
 import type { EffectsPort } from "../effects";
 import type { HudPort } from "../hud";
 import type { RendererPort } from "../rendering";
@@ -14,12 +15,19 @@ import type { RendererPort } from "../rendering";
 export interface PhaserGameBridgePorts {
   readonly renderer?: RendererPort;
   readonly audio?: AudioPort;
+  readonly diagnostics?: FrameDiagnosticsPort;
   readonly effects?: EffectsPort;
   readonly hud?: HudPort;
 }
 
+interface AdapterLifecycle {
+  reset(): void;
+  dispose(): void;
+}
+
 export class PhaserGameBridge {
   private currentResult: CoreFrameResult | null = null;
+  private frameCount = 0;
 
   constructor(
     private readonly runtime: CoreRuntime,
@@ -43,35 +51,49 @@ export class PhaserGameBridge {
   }
 
   initialize(): CoreFrameResult {
-    this.ports.renderer?.reset();
-    this.ports.audio?.reset();
-    this.ports.effects?.reset();
-    this.ports.hud?.reset();
-    return this.publish(this.runtime.initialize(), 0);
+    for (const port of this.lifecyclePorts()) {
+      port.reset();
+    }
+    this.frameCount = 0;
+    return this.publish(this.runtime.initialize(), null);
   }
 
   advance(input: CoreInputFrame): CoreFrameResult {
-    return this.publish(this.runtime.advance(input), input.deltaMs);
+    this.frameCount++;
+    return this.publish(this.runtime.advance(input), input);
   }
 
   dispose(): void {
-    this.ports.renderer?.dispose();
-    this.ports.audio?.dispose();
-    this.ports.effects?.dispose();
-    this.ports.hud?.dispose();
+    for (const port of this.lifecyclePorts()) {
+      port.dispose();
+    }
     this.currentResult = null;
   }
 
   private publish(
     result: CoreFrameResult,
-    deltaMs: number,
+    input: CoreInputFrame | null,
   ): CoreFrameResult {
     this.currentResult = result;
     this.ports.renderer?.render(result.snapshot);
     this.ports.audio?.handleEvents(result.events, result.snapshot);
     this.ports.effects?.handleEvents(result.events, result.snapshot);
-    this.ports.effects?.update(deltaMs, result.snapshot);
+    this.ports.effects?.update(input?.deltaMs ?? 0, result.snapshot);
     this.ports.hud?.render(result.hudState, result.snapshot);
+    this.ports.diagnostics?.renderFrame(this.frameCount, input, result);
     return result;
+  }
+
+  private lifecyclePorts(): readonly AdapterLifecycle[] {
+    const ports: Array<AdapterLifecycle | undefined> = [
+      this.ports.renderer,
+      this.ports.audio,
+      this.ports.diagnostics,
+      this.ports.effects,
+      this.ports.hud,
+    ];
+    return [...new Set(
+      ports.filter((port): port is AdapterLifecycle => port !== undefined),
+    )];
   }
 }

@@ -200,3 +200,14 @@ only diagnostic geometry, facing, identity, health, and armor information.
 This proves the snapshot-to-renderer pipeline but is not gameplay. The actor
 does not react to input or move, and no combat, bots, objectives, maps, game
 modes, or V1 systems are connected. V1 remains the default playable scene.
+
+## Phase 8 Diagnostic Input And Frame Data
+
+Phase 8 adds a Phaser input adapter that converts keyboard, pointer, and touch
+state into generic `CoreInputFrame` actions. The V2 shell displays movement,
+aim, fire, and separate jump pressed, held, and released diagnostics.
+
+The bridge also reports frame count, last delta time, accumulated runtime time,
+actor count, and event count through a dedicated diagnostic adapter port.
+Inputs are observed only: the static actor does not move, fire, jump, or change
+state. Movement, combat, modes, maps, and V1 gameplay remain unconnected.

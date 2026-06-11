@@ -4,6 +4,9 @@ export {
 } from "./PhaserGameBridge";
 export { PhaserDiagnosticHudPort } from "./PhaserDiagnosticHudPort";
 export {
+  PhaserDiagnosticInputAdapter,
+} from "./PhaserDiagnosticInputAdapter";
+export {
   PhaserDiagnosticRendererPort,
 } from "./PhaserDiagnosticRendererPort";
 export { runPhaserGameBridgeSmokeCheck } from "./PhaserGameBridge.smoke";
