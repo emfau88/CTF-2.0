@@ -150,7 +150,8 @@ sich wie ihre V1-Version an.
 - [x] Desktop-TDM behaelt lokale Zwei-Spieler-Steuerung.
 - [x] Training Crossing verwendet V1-Ruinenassets und Charakter-Sprites.
 - [x] Teamseiten, Health-/Armor-Pickups und Pickup-Werte entsprechen V1.
-- [ ] Ein mobiler Einzelspieler-Gegner erfordert spaeter die geplante Bot-KI.
+- [x] Mobile-TDM besitzt einen einfachen Red Bot als Einzelspieler-Gegner.
+- [ ] Bot-Jumps, Rollen und modusspezifische Taktiken folgen spaeter.
 
 ## Meilenstein 5: Classic CTF als eigener GameMode
 
@@ -211,13 +212,13 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 
 **Ziel:** Bots verwenden dieselben Regeln und Inputs wie menschliche Actors.
 
-- [ ] `BotDecisionSystem` fuer Ziele und Absichten erstellen.
-- [ ] `BotNavigationSystem` fuer Route und Jump Links erstellen.
-- [ ] Bots erzeugen dieselben Core-Action-Intents wie Spieler.
+- [x] Minimalen TDM-Zielcontroller fuer Gegnerverfolgung erstellen.
+- [x] Generische Grid-Navigation fuer Solids und Gaps erstellen.
+- [x] Bots erzeugen dieselben Core-Action-Intents wie Spieler.
 - [ ] Geschwindigkeit als Bot-Konfiguration behandeln.
 - [ ] Jump Links als Map-Daten modellieren.
 - [ ] Bot-Jump-Unterstuetzung ueber das gemeinsame Jump-System implementieren.
-- [ ] TDM-Bot-Ziele implementieren.
+- [x] Grundlegendes TDM-Bot-Ziel implementieren.
 - [ ] CTF-Rollen implementieren.
 - [ ] One-Flag-Ziele implementieren.
 - [ ] Navigation und Entscheidung getrennt testen.

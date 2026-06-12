@@ -127,7 +127,9 @@ implements HudPort, FrameDiagnosticsPort {
       `${formatTime(this.hudState.timeRemainingMs ?? 0)}  |  First to 3`,
     ]);
     this.blueText.setText(playerStatus("BLUE P1", blue));
-    this.redText.setPosition(width - 14, 14).setText(playerStatus("RED P2", red));
+    this.redText.setPosition(width - 14, 14).setText(
+      playerStatus(this.mobileControls ? "RED BOT" : "RED P2", red),
+    );
     this.controlsText.setPosition(14, height - 14);
     this.controlsText.setVisible(!this.mobileControls);
     this.resultText.setPosition(width / 2, height / 2);

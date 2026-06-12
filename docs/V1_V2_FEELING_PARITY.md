@@ -68,5 +68,7 @@ Shared-Camera-Abweichung.
   Tap auf das Resultat einen neuen Lauf.
 - Training Crossing rendert in V2 mit denselben Ruinen-, Charakter- und
   Pickup-Assets wie V1. Der autoritative Zustand bleibt trotzdem im V2-Core.
+- Mobile-TDM steuert den roten Gegner ueber normale `move`- und `aim`-Intents.
+  Navigation meidet Solids und Gaps; Bot-Jumps und Rollen sind noch offen.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf
   Desktop und Mobile.

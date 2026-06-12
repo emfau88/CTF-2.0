@@ -9,6 +9,7 @@ import {
   DiagnosticArenaMode,
   GameplayCoreRuntime,
   TeamDeathmatchMode,
+  TdmBotController,
   updatePickups,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_COLLISION_GROUNDWORK_CONFIG,
@@ -181,6 +182,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkScoreSafety();
   checkTeamDeathmatchSlice();
   checkBasicAutoShootParity();
+  checkTdmBotController();
 }
 
 function checkJumpParity(): void {
@@ -1166,5 +1168,61 @@ function checkBasicAutoShootParity(): void {
   }
   if (result.snapshot.projectiles.length !== 0) {
     throw new Error("Basic autoshoot projectiles must be removed after impact.");
+  }
+}
+
+function checkTdmBotController(): void {
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld: createTeamDeathmatchWorldState,
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  const controller = new TdmBotController("red-player", "blue-player");
+  const initialRed = runtime.snapshot.actors.find((actor) =>
+    actor.id === "red-player"
+  );
+  const initialBlue = runtime.snapshot.actors.find((actor) =>
+    actor.id === "blue-player"
+  );
+  if (!initialRed || !initialBlue) {
+    throw new Error("TDM bot smoke check requires both players.");
+  }
+  const initialDistance = Math.hypot(
+    initialBlue.position.x - initialRed.position.x,
+    initialBlue.position.y - initialRed.position.y,
+  );
+  let fell = false;
+  for (let sequence = 1; sequence <= 600; sequence++) {
+    const actions = controller.readActions(runtime.snapshot, 34);
+    const frame = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions,
+    });
+    const red = frame.snapshot.actors.find((actor) =>
+      actor.id === "red-player"
+    );
+    fell ||= red?.lifeState === "falling";
+  }
+  const finalRed = runtime.snapshot.actors.find((actor) =>
+    actor.id === "red-player"
+  );
+  const finalBlue = runtime.snapshot.actors.find((actor) =>
+    actor.id === "blue-player"
+  );
+  if (!finalRed || !finalBlue) {
+    throw new Error("TDM bot actors must remain available.");
+  }
+  const finalDistance = Math.hypot(
+    finalBlue.position.x - finalRed.position.x,
+    finalBlue.position.y - finalRed.position.y,
+  );
+  if (finalDistance >= initialDistance - 500) {
+    throw new Error("TDM bot navigation must close significant distance.");
+  }
+  if (fell) {
+    throw new Error("TDM bot navigation must avoid authored gap zones.");
   }
 }

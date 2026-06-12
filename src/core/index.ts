@@ -20,6 +20,11 @@ export {
 } from "./actors";
 export type { GameEvent } from "./events";
 export {
+  TdmBotController,
+  V2_TDM_BOT_NAVIGATION_CONFIG,
+  type BotNavigationConfig,
+} from "./bots";
+export {
   fireDiagnosticProjectile,
   updateBasicAutoAttacks,
   updateProjectiles,

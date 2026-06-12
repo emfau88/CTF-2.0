@@ -4,13 +4,17 @@ import {
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   TeamDeathmatchMode,
+  TdmBotController,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
 } from "../../../core";
 import {
   NoopAudioPort,
   NoopEffectsPort,
 } from "../../noop";
-import type { InputAdapterPort } from "../../input";
+import {
+  AugmentedInputAdapter,
+  type InputAdapterPort,
+} from "../../input";
 import { PhaserDiagnosticHudPort } from "../PhaserDiagnosticHudPort";
 import {
   PhaserDiagnosticInputAdapter,
@@ -50,12 +54,6 @@ export class GameplayV2Scene extends Phaser.Scene {
         () => mobileInput?.requestRestart(),
       )
       : this.createDiagnosticHud();
-    this.inputAdapter = useMobileControls
-      ? mobileInput
-      : new PhaserDiagnosticInputAdapter(
-        this,
-        isTeamDeathmatch ? "tdm" : "diagnostic",
-      );
     const runtime = isTeamDeathmatch
       ? new GameplayCoreRuntime({
         mode: new TeamDeathmatchMode(),
@@ -64,6 +62,16 @@ export class GameplayV2Scene extends Phaser.Scene {
         allowManualPrimaryFire: false,
       })
       : new GameplayCoreRuntime();
+    this.inputAdapter = useMobileControls && mobileInput
+      ? new AugmentedInputAdapter(
+        mobileInput,
+        () => this.bridge?.snapshot ?? runtime.snapshot,
+        new TdmBotController("red-player", "blue-player"),
+      )
+      : new PhaserDiagnosticInputAdapter(
+        this,
+        isTeamDeathmatch ? "tdm" : "diagnostic",
+      );
     this.bridge = new PhaserGameBridge(runtime, {
       renderer: isTeamDeathmatch
         ? new PhaserArenaRendererPort(
