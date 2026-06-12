@@ -438,3 +438,25 @@ The active mode supplies `ModeHudState`, including phase, elapsed/remaining
 time, scores, and match result. This is lifecycle groundwork only: there is no
 mode selection, menu, CTF, TDM, One Flag, center objective, FFA, flags,
 objectives, bots, or multiplayer. V1 remains the default playable reference.
+
+## Phase 18 Kill-Scoring Safety Pass
+
+Phase 18 routes existing `actor.died` events into `DiagnosticArenaMode`. The
+controllable diagnostic actor belongs to team `blue`, and the target dummy
+belongs to team `red`. A projectile kill awards one point to the attacker's
+known team score entry. Deaths without a valid source actor, self/team kills,
+and actors whose team has no score entry do not award points.
+
+Each actor carries a serializable `lifeId`. Death events include the victim
+life id, and score awards use `victimActorId + lifeId` as their idempotency
+key. Duplicate delivery of the same death therefore cannot score twice, while
+respawn increments `lifeId` and permits the next life to score once.
+
+`awardScore` now rejects unknown score entries, non-positive or non-integer
+amounts, empty award keys, and duplicate award keys. The mode also rejects all
+score attempts after match end. The `L` diagnostic score remains available
+and uses the same validation path.
+
+This is still not Team Deathmatch. It adds only safe kill scoring to the
+diagnostic mode; there are no bots, objectives, flags, mode selection, or new
+weapons. V1 remains the default playable reference.

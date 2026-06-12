@@ -92,6 +92,8 @@ export {
   type ScoreBoard,
   type ScoreBoardState,
   type ScoreEntry,
+  type ScoreAwardRejectionReason,
+  type ScoreAwardResult,
 } from "./scoring";
 export type {
   SpawnPoint,

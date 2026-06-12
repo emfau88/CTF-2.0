@@ -27,7 +27,7 @@ export function createDiagnosticWorldState(): WorldState {
   world.actors.push(createActorState({
     id: "diagnostic-actor-1",
     kind: "diagnostic",
-    teamId: "diagnostic-team",
+    teamId: "blue",
     lifeState: "active",
     position: { ...TRAINING_CROSSING_V2.diagnosticSpawn },
     velocity: { x: 0, y: 0 },
@@ -41,7 +41,7 @@ export function createDiagnosticWorldState(): WorldState {
   world.actors.push(createActorState({
     id: "diagnostic-target-1",
     kind: "diagnostic-target",
-    teamId: "diagnostic-opponent",
+    teamId: "red",
     lifeState: "active",
     position: { x: 260, y: 410 },
     velocity: { x: 0, y: 0 },

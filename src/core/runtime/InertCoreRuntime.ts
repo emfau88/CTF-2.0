@@ -237,7 +237,7 @@ export class InertCoreRuntime implements CoreRuntime {
         this.world.timeMs,
         V2_ACTOR_LIFECYCLE_CONFIG,
       );
-      events.push(...lifecycle.events);
+      this.appendModeEvents(events, lifecycle.events);
     }
   }
 
@@ -254,7 +254,7 @@ export class InertCoreRuntime implements CoreRuntime {
       V2_DIAGNOSTIC_BLASTER_CONFIG,
       V2_ACTOR_LIFECYCLE_CONFIG,
     );
-    events.push(...projectiles.events);
+    this.appendModeEvents(events, projectiles.events);
   }
 
   private updatePickupWorld(
@@ -268,7 +268,7 @@ export class InertCoreRuntime implements CoreRuntime {
       deltaMs,
       this.world.timeMs,
     );
-    events.push(...pickups.events);
+    this.appendModeEvents(events, pickups.events);
   }
 
   private updateDiagnosticScore(
@@ -288,5 +288,15 @@ export class InertCoreRuntime implements CoreRuntime {
       payload: { amount: 1 },
     };
     events.push(...this.mode.handleEvent(request, this.world));
+  }
+
+  private appendModeEvents(
+    frameEvents: GameEvent[],
+    coreEvents: readonly GameEvent[],
+  ): void {
+    for (const event of coreEvents) {
+      frameEvents.push(event);
+      frameEvents.push(...this.mode.handleEvent(event, this.world));
+    }
   }
 }

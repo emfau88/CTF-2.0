@@ -10,13 +10,31 @@ export interface ScoreEntry {
 
 export interface ScoreBoard {
   readonly entries: readonly ScoreEntry[];
-  award(entryId: string, amount: number, reason: GameEvent): void;
+  award(
+    entryId: string,
+    amount: number,
+    awardKey: string,
+    reason: GameEvent,
+  ): ScoreAwardResult;
   scoreFor(entryId: string): number;
   reset(): void;
 }
 
 export interface ScoreBoardState {
   entries: ScoreEntry[];
+  processedAwardKeys: string[];
+}
+
+export type ScoreAwardRejectionReason =
+  | "duplicate"
+  | "invalid-amount"
+  | "invalid-award-key"
+  | "unknown-entry";
+
+export interface ScoreAwardResult {
+  readonly awarded: boolean;
+  readonly score: number;
+  readonly rejectionReason?: ScoreAwardRejectionReason;
 }
 
 export function createScoreBoardState(
@@ -24,6 +42,7 @@ export function createScoreBoardState(
 ): ScoreBoardState {
   return {
     entries: entries.map((entry) => ({ ...entry })),
+    processedAwardKeys: [],
   };
 }
 
@@ -31,22 +50,50 @@ export function awardScore(
   scoreBoard: ScoreBoardState,
   entryId: string,
   amount: number,
-): number {
-  if (!Number.isFinite(amount) || amount === 0) {
-    return scoreFor(scoreBoard, entryId);
+  awardKey: string,
+): ScoreAwardResult {
+  const currentScore = scoreFor(scoreBoard, entryId);
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    return {
+      awarded: false,
+      score: currentScore,
+      rejectionReason: "invalid-amount",
+    };
+  }
+  if (!awardKey.trim()) {
+    return {
+      awarded: false,
+      score: currentScore,
+      rejectionReason: "invalid-award-key",
+    };
   }
   const index = scoreBoard.entries.findIndex((entry) => entry.id === entryId);
   if (index < 0) {
-    scoreBoard.entries.push({ id: entryId, score: amount });
-    return amount;
+    return {
+      awarded: false,
+      score: 0,
+      rejectionReason: "unknown-entry",
+    };
+  }
+  if (scoreBoard.processedAwardKeys.includes(awardKey)) {
+    return {
+      awarded: false,
+      score: currentScore,
+      rejectionReason: "duplicate",
+    };
   }
   const current = scoreBoard.entries[index];
   if (!current) {
-    return 0;
+    return {
+      awarded: false,
+      score: 0,
+      rejectionReason: "unknown-entry",
+    };
   }
   const nextScore = current.score + amount;
   scoreBoard.entries[index] = { ...current, score: nextScore };
-  return nextScore;
+  scoreBoard.processedAwardKeys.push(awardKey);
+  return { awarded: true, score: nextScore };
 }
 
 export function scoreFor(

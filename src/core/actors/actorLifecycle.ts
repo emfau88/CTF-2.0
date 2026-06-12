@@ -73,6 +73,8 @@ export function applyDamage(
       targetActorId: actor.id,
       teamId: actor.teamId ?? undefined,
       payload: {
+        victimActorId: actor.id,
+        victimLifeId: actor.lifeId,
         respawnDelayMs: config.respawnDelayMs,
       },
     });
@@ -116,6 +118,7 @@ export function updateActorLifecycle(
   actor.velocity.y = 0;
   actor.health = actor.maxHealth;
   actor.armor = Math.min(actor.maxArmor, config.respawnArmor);
+  actor.lifeId += 1;
   actor.lifeState = "active";
   actor.respawn = null;
   actor.overGap = false;
@@ -131,6 +134,7 @@ export function updateActorLifecycle(
       targetActorId: actor.id,
       teamId: actor.teamId ?? undefined,
       payload: {
+        lifeId: actor.lifeId,
         position: { ...actor.position },
         health: actor.health,
         armor: actor.armor,

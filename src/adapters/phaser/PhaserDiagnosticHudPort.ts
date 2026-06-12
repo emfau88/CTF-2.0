@@ -66,7 +66,7 @@ implements HudPort, FrameDiagnosticsPort {
       event.type === "score.awarded"
     );
     if (matchEvent) {
-      this.lastMatchEvent = matchEvent.type;
+      this.lastMatchEvent = this.formatMatchEvent(matchEvent);
     }
     this.refresh();
   }
@@ -168,6 +168,7 @@ implements HudPort, FrameDiagnosticsPort {
       `targetState: ${target?.lifeState ?? "none"}`,
       `targetHealth: ${this.formatNumber(target?.health ?? 0)}`,
       `targetArmor: ${this.formatNumber(target?.armor ?? 0)}`,
+      `targetLifeId: ${target?.lifeId ?? 0}`,
       "",
       `moveX: ${this.formatNumber(move.x)}`,
       `moveY: ${this.formatNumber(move.y)}`,
@@ -182,7 +183,7 @@ implements HudPort, FrameDiagnosticsPort {
       `aimY: ${this.formatNumber(aim.y)}`,
       "status: inert / non-playable",
       "debug: press K to apply 35 damage",
-      "match: press L to award +1 diagnostic score",
+      "match: kills score for the attacker team; L awards debug score",
       "weapon: hold J or left pointer to fire diagnostic blaster",
       "pickups: green health / blue armor",
     ]);
@@ -218,5 +219,20 @@ implements HudPort, FrameDiagnosticsPort {
     return result.kind === "draw"
       ? "draw"
       : `winner:${result.winnerEntryId}`;
+  }
+
+  private formatMatchEvent(event: CoreFrameResult["events"][number]): string {
+    if (
+      event.type !== "score.awarded" ||
+      !event.payload ||
+      typeof event.payload !== "object" ||
+      !("reason" in event.payload)
+    ) {
+      return event.type;
+    }
+    const reason = (event.payload as { reason?: unknown }).reason;
+    return typeof reason === "string"
+      ? `${event.type}:${reason}`
+      : event.type;
   }
 }

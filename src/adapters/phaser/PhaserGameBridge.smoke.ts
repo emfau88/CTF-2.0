@@ -1,7 +1,11 @@
 import {
   applyWorldCollision,
+  awardScore,
   createActorState,
+  createEmptyWorldState,
   createPickupState,
+  createScoreBoardState,
+  DiagnosticArenaMode,
   InertCoreRuntime,
   updatePickups,
   V2_COLLISION_GROUNDWORK_CONFIG,
@@ -145,6 +149,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkProjectilePipeline();
   checkPickupPipeline();
   checkMatchLifecycle();
+  checkScoreSafety();
 }
 
 function checkJumpParity(): void {
@@ -648,7 +653,7 @@ function checkMatchLifecycle(): void {
     actions: [{ action: "debugScore", phase: "pressed" }],
   });
   const playerScore = scored.snapshot.scoreBoard.entries.find((entry) =>
-    entry.id === "diagnostic-team"
+    entry.id === "blue"
   )?.score;
   if (
     playerScore !== 1 ||
@@ -667,7 +672,7 @@ function checkMatchLifecycle(): void {
     ended.snapshot.match?.phase !== "ended" ||
     ended.snapshot.match.remainingMs !== 0 ||
     ended.snapshot.match.result?.kind !== "winner" ||
-    ended.snapshot.match.result.winnerEntryId !== "diagnostic-team" ||
+    ended.snapshot.match.result.winnerEntryId !== "blue" ||
     !ended.events.some((event) => event.type === "match.ended")
   ) {
     throw new Error("Diagnostic match must end by timer with a result.");
@@ -682,7 +687,7 @@ function checkMatchLifecycle(): void {
   if (
     rejectedScore.events.some((event) => event.type === "score.awarded") ||
     rejectedScore.snapshot.scoreBoard.entries.find((entry) =>
-        entry.id === "diagnostic-team"
+        entry.id === "blue"
       )?.score !== 1
   ) {
     throw new Error("Ended matches must reject further score awards.");
@@ -698,5 +703,101 @@ function checkMatchLifecycle(): void {
   });
   if (draw.snapshot.match?.result?.kind !== "draw") {
     throw new Error("Tied diagnostic score boards must end in a draw.");
+  }
+}
+
+function checkScoreSafety(): void {
+  const scoreBoard = createScoreBoardState([
+    { id: "blue", teamId: "blue", score: 0 },
+  ]);
+  if (
+    awardScore(scoreBoard, "missing", 1, "unknown-entry").awarded ||
+    awardScore(scoreBoard, "blue", -1, "negative-score").awarded ||
+    awardScore(scoreBoard, "blue", Number.NaN, "invalid-score").awarded
+  ) {
+    throw new Error("Invalid score targets and amounts must be rejected.");
+  }
+
+  const firstAward = awardScore(scoreBoard, "blue", 1, "award-1");
+  const duplicateAward = awardScore(scoreBoard, "blue", 1, "award-1");
+  if (
+    !firstAward.awarded ||
+    duplicateAward.awarded ||
+    duplicateAward.rejectionReason !== "duplicate" ||
+    scoreBoard.entries[0]?.score !== 1
+  ) {
+    throw new Error("Score award keys must be idempotent.");
+  }
+
+  const mode = new DiagnosticArenaMode();
+  const world = createEmptyWorldState();
+  const attacker = createActorState({
+    id: "blue-player",
+    kind: "diagnostic",
+    teamId: "blue",
+  });
+  const victim = createActorState({
+    id: "red-target",
+    kind: "diagnostic-target",
+    teamId: "red",
+    lifeState: "dead",
+  });
+  world.actors.push(attacker, victim);
+  mode.initialize(world);
+
+  const firstDeath = {
+    id: "death-red-1",
+    type: "actor.died",
+    timeMs: 100,
+    sourceActorId: attacker.id,
+    targetActorId: victim.id,
+    teamId: victim.teamId ?? undefined,
+    payload: {
+      victimActorId: victim.id,
+      victimLifeId: victim.lifeId,
+    },
+  };
+  const firstEvents = mode.handleEvent(firstDeath, world);
+  const duplicateEvents = mode.handleEvent(firstDeath, world);
+  if (
+    firstEvents[0]?.type !== "score.awarded" ||
+    duplicateEvents.length !== 0 ||
+    world.scoreBoard.entries.find((entry) => entry.id === "blue")?.score !== 1
+  ) {
+    throw new Error("One actor life must award kill score exactly once.");
+  }
+
+  victim.lifeId += 1;
+  const secondDeath = {
+    ...firstDeath,
+    id: "death-red-2",
+    timeMs: 200,
+    payload: {
+      victimActorId: victim.id,
+      victimLifeId: victim.lifeId,
+    },
+  };
+  mode.handleEvent(secondDeath, world);
+  if (
+    world.scoreBoard.entries.find((entry) => entry.id === "blue")?.score !== 2
+  ) {
+    throw new Error("A respawned actor life must be scoreable once again.");
+  }
+
+  mode.update(world, 15_000);
+  victim.lifeId += 1;
+  mode.handleEvent({
+    ...secondDeath,
+    id: "death-red-after-end",
+    timeMs: 15_001,
+    payload: {
+      victimActorId: victim.id,
+      victimLifeId: victim.lifeId,
+    },
+  }, world);
+  if (
+    world.scoreBoard.entries.find((entry) => entry.id === "blue")?.score !== 2
+  ) {
+    throw new Error("Ended matches must reject kill score.");
   }
 }

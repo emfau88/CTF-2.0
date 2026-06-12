@@ -21,14 +21,10 @@ export interface DiagnosticArenaModeConfig {
 
 export const V2_DIAGNOSTIC_ARENA_MODE_CONFIG: DiagnosticArenaModeConfig = {
   durationMs: 15_000,
-  playerScoreEntryId: "diagnostic-team",
+  playerScoreEntryId: "blue",
   initialScores: [
-    { id: "diagnostic-team", teamId: "diagnostic-team", score: 0 },
-    {
-      id: "diagnostic-opponent",
-      teamId: "diagnostic-opponent",
-      score: 0,
-    },
+    { id: "blue", teamId: "blue", score: 0 },
+    { id: "red", teamId: "red", score: 0 },
   ],
 };
 
@@ -90,29 +86,97 @@ export class DiagnosticArenaMode implements GameMode {
   }
 
   handleEvent(event: GameEvent, world: WorldState): readonly GameEvent[] {
+    if (world.match?.phase !== "running") {
+      return [];
+    }
+
+    if (event.type === "actor.died") {
+      return this.handleActorDeath(event, world);
+    }
+    if (event.type !== "diagnostic.scoreRequested") {
+      return [];
+    }
+
+    return this.tryAwardScore(
+      world,
+      event,
+      this.config.playerScoreEntryId,
+      readScoreAmount(event.payload),
+      `diagnostic:${event.id}`,
+      "diagnostic",
+    );
+  }
+
+  private handleActorDeath(
+    event: GameEvent,
+    world: WorldState,
+  ): readonly GameEvent[] {
+    const source = world.actors.find((actor) =>
+      actor.id === event.sourceActorId
+    );
+    const victim = world.actors.find((actor) =>
+      actor.id === event.targetActorId
+    );
+    const victimLifeId = readVictimLifeId(event.payload);
     if (
-      event.type !== "diagnostic.scoreRequested" ||
-      world.match?.phase !== "running"
+      !source?.teamId ||
+      !victim?.teamId ||
+      source.id === victim.id ||
+      source.teamId === victim.teamId ||
+      victimLifeId === null ||
+      victim.lifeState !== "dead" ||
+      victim.lifeId !== victimLifeId
     ) {
       return [];
     }
-    const entryId = this.config.playerScoreEntryId;
-    const amount = readScoreAmount(event.payload);
-    if (amount === 0) {
+
+    const scoreEntry = world.scoreBoard.entries.find((entry) =>
+      entry.teamId === source.teamId
+    );
+    if (!scoreEntry) {
       return [];
     }
-    const score = awardScore(world.scoreBoard, entryId, amount);
+
+    return this.tryAwardScore(
+      world,
+      event,
+      scoreEntry.id,
+      1,
+      `kill:${victim.id}:${victimLifeId}`,
+      "kill",
+    );
+  }
+
+  private tryAwardScore(
+    world: WorldState,
+    event: GameEvent,
+    entryId: string,
+    amount: number,
+    awardKey: string,
+    reason: "diagnostic" | "kill",
+  ): readonly GameEvent[] {
+    const result = awardScore(world.scoreBoard, entryId, amount, awardKey);
+    if (!result.awarded) {
+      return [];
+    }
+    const scoreEntry = world.scoreBoard.entries.find((entry) =>
+      entry.id === entryId
+    );
+
     return [{
-      id: `score-awarded-${event.id}`,
+      id: `score-awarded-${awardKey}`,
       type: "score.awarded",
       timeMs: event.timeMs,
       sourceActorId: event.sourceActorId,
-      teamId: event.teamId,
+      targetActorId: event.targetActorId,
+      teamId: scoreEntry?.teamId,
       payload: {
         entryId,
         amount,
-        score,
+        score: result.score,
+        reason,
         reasonEventId: event.id,
+        awardKey,
       },
     }];
   }
@@ -174,4 +238,19 @@ function readScoreAmount(payload: unknown): number {
   }
   const amount = (payload as { amount?: unknown }).amount;
   return typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
+}
+
+function readVictimLifeId(payload: unknown): number | null {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("victimLifeId" in payload)
+  ) {
+    return null;
+  }
+  const lifeId = (payload as { victimLifeId?: unknown }).victimLifeId;
+  return typeof lifeId === "number" && Number.isSafeInteger(lifeId) &&
+      lifeId > 0
+    ? lifeId
+    : null;
 }

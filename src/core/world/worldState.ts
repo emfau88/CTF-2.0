@@ -87,6 +87,7 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
     })),
     scoreBoard: {
       entries: world.scoreBoard.entries.map((entry) => ({ ...entry })),
+      processedAwardKeys: [...world.scoreBoard.processedAwardKeys],
     },
     match: world.match
       ? {
