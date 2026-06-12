@@ -10,6 +10,7 @@ import {
   GameplayCoreRuntime,
   TeamDeathmatchMode,
   updatePickups,
+  V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_COLLISION_GROUNDWORK_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
 } from "../../core";
@@ -179,6 +180,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkMatchLifecycle();
   checkScoreSafety();
   checkTeamDeathmatchSlice();
+  checkBasicAutoShootParity();
 }
 
 function checkJumpParity(): void {
@@ -1054,4 +1056,80 @@ function killActorWithProjectiles(
     }
   }
   return sequence;
+}
+
+function checkBasicAutoShootParity(): void {
+  const createWorld = () => {
+    const world = createEmptyWorldState("team-deathmatch");
+    world.geometry = {
+      bounds: {
+        minX: 0,
+        minY: 0,
+        maxX: 600,
+        maxY: 400,
+      },
+      solids: [],
+      gaps: [],
+    };
+    world.actors.push(
+      createActorState({
+        id: "blue-player",
+        kind: "player",
+        teamId: "blue",
+        position: { x: 100, y: 200 },
+        spawnPosition: { x: 100, y: 200 },
+        radius: 16,
+        maxHealth: 100,
+        maxArmor: 100,
+      }),
+      createActorState({
+        id: "red-player",
+        kind: "player",
+        teamId: "red",
+        position: { x: 300, y: 200 },
+        spawnPosition: { x: 300, y: 200 },
+        radius: 16,
+        maxHealth: 100,
+        maxArmor: 100,
+      }),
+    );
+    return world;
+  };
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld,
+    basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  let result = runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [],
+  });
+  if (
+    result.snapshot.projectiles.length !== 2 ||
+    result.snapshot.projectiles.some((projectile) =>
+      projectile.damage !== 18 ||
+      projectile.radius !== 9 ||
+      Math.hypot(projectile.velocity.x, projectile.velocity.y) !== 286
+    )
+  ) {
+    throw new Error("V1 basic autoshoot must fire parity bullets for both teams.");
+  }
+  for (let sequence = 2; sequence <= 24; sequence++) {
+    result = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: [],
+    });
+  }
+  if (result.snapshot.actors.some((actor) => actor.health !== 82)) {
+    throw new Error("V1 basic autoshoot bullets must apply exactly 18 damage.");
+  }
+  if (result.snapshot.projectiles.length !== 0) {
+    throw new Error("Basic autoshoot projectiles must be removed after impact.");
+  }
 }

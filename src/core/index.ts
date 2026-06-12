@@ -21,8 +21,11 @@ export {
 export type { GameEvent } from "./events";
 export {
   fireDiagnosticProjectile,
+  updateBasicAutoAttacks,
   updateProjectiles,
+  V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_DIAGNOSTIC_BLASTER_CONFIG,
+  type BasicAutoAttackConfig,
   type DiagnosticFireResult,
   type DiagnosticWeaponConfig,
   type ProjectileId,

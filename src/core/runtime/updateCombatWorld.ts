@@ -1,4 +1,6 @@
 import {
+  type BasicAutoAttackConfig,
+  updateBasicAutoAttacks,
   updateProjectiles,
   V2_DIAGNOSTIC_BLASTER_CONFIG,
 } from "../combat";
@@ -13,7 +15,16 @@ export function updateCombatWorld(
   mode: GameMode,
   deltaMs: number,
   events: GameEvent[],
+  basicAutoAttack?: BasicAutoAttackConfig,
 ): void {
+  if (basicAutoAttack) {
+    dispatchModeEvents(
+      mode,
+      world,
+      events,
+      updateBasicAutoAttacks(world, basicAutoAttack),
+    );
+  }
   const projectiles = updateProjectiles(
     world.projectiles,
     world.actors,

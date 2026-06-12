@@ -3,6 +3,7 @@ import {
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   TeamDeathmatchMode,
+  V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
 } from "../../../core";
 import {
   NoopAudioPort,
@@ -37,7 +38,7 @@ export class GameplayV2Scene extends Phaser.Scene {
       ? new PhaserTeamDeathmatchHudPort(this, useMobileControls)
       : this.createDiagnosticHud();
     this.inputAdapter = useMobileControls
-      ? new PhaserMobileInputAdapter(this)
+      ? new PhaserMobileInputAdapter(this, "blue-player", false)
       : new PhaserDiagnosticInputAdapter(
         this,
         isTeamDeathmatch ? "tdm" : "diagnostic",
@@ -46,6 +47,8 @@ export class GameplayV2Scene extends Phaser.Scene {
       ? new GameplayCoreRuntime({
         mode: new TeamDeathmatchMode(),
         createWorld: createTeamDeathmatchWorldState,
+        basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+        allowManualPrimaryFire: false,
       })
       : new GameplayCoreRuntime();
     this.bridge = new PhaserGameBridge(runtime, {

@@ -15,3 +15,8 @@ export {
   updateProjectiles,
   type ProjectileUpdateResult,
 } from "./updateProjectiles";
+export {
+  V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+  type BasicAutoAttackConfig,
+} from "./BasicAutoAttackConfig";
+export { updateBasicAutoAttacks } from "./basicAutoAttack";

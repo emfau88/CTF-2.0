@@ -22,6 +22,7 @@ export function updateDiagnosticControlledActor(
   world: WorldState,
   actor: ActorState,
   input: CoreInputFrame,
+  allowManualPrimaryFire = true,
 ): readonly GameEvent[] {
   const events: GameEvent[] = [];
   const damage = readDiagnosticDamage(input);
@@ -38,7 +39,10 @@ export function updateDiagnosticControlledActor(
     }
   }
 
-  if (hasAction(input, "firePrimary", "held")) {
+  if (
+    allowManualPrimaryFire &&
+    hasAction(input, "firePrimary", "held")
+  ) {
     const fire = fireDiagnosticProjectile(
       actor,
       readAimDirection(input),

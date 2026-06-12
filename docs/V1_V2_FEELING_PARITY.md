@@ -34,6 +34,8 @@ in:
 - Actor-Radius: `16`
 - Leben: `100`
 - maximales Armor-Cap: `100`
+- Basic Autoshoot: Reichweite `520`, Cooldown `3000 ms`
+- Basic-Projektil: Speed `286`, Damage `18`, Radius `9`, TTL `2600 ms`
 
 ## Update-Reihenfolge
 
@@ -57,8 +59,8 @@ Shared-Camera-Abweichung.
 - V2 verwendet noch Diagnoseformen statt der V1-Sprites und Animationen.
 - Der aktuelle TDM-Slice verwendet eine gemeinsame Kamera für zwei lokale
   Spieler.
-- Waffen-Audio, Trefferfeedback, Knockback und die V1-Waffen sind noch nicht
-  migriert.
+- Basic Autoshoot ist migriert. Waffen-Audio, Trefferfeedback, Knockback und
+  Rocket/Railgun/Whip sind noch nicht migriert.
 - Mobile Input ist über dieselben Core-Actions angebunden. Touchgeräte werden
   automatisch erkannt; `&controls=mobile` erzwingt den Test auf Desktop.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf

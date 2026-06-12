@@ -47,8 +47,8 @@ implements HudPort, FrameDiagnosticsPort {
       14,
       0,
       mobileControls
-        ? "MOVE STICK     FIRE / AIM     JUMP"
-        : "P1  WASD / SPACE / J     P2  ARROWS / ENTER / SHIFT",
+        ? "MOVE STICK     AUTO-FIRE     JUMP"
+        : "P1  WASD / SPACE     P2  ARROWS / ENTER     AUTO-FIRE",
       {
         ...panelStyle,
         fontSize: "12px",

@@ -1,5 +1,6 @@
 import type { GameEvent } from "../events";
 import type { CoreInputFrame } from "../input";
+import type { BasicAutoAttackConfig } from "../combat";
 import {
   DiagnosticArenaMode,
   type GameMode,
@@ -26,11 +27,15 @@ import { updatePickupWorld } from "./updatePickupWorld";
 export interface GameplayCoreRuntimeOptions {
   readonly mode?: GameMode;
   readonly createWorld?: () => WorldState;
+  readonly basicAutoAttack?: BasicAutoAttackConfig;
+  readonly allowManualPrimaryFire?: boolean;
 }
 
 export class GameplayCoreRuntime implements CoreRuntime {
   private readonly mode: GameMode;
   private readonly createWorld: () => WorldState;
+  private readonly basicAutoAttack?: BasicAutoAttackConfig;
+  private readonly allowManualPrimaryFire: boolean;
   private world: WorldState;
   private currentSnapshot: WorldSnapshot;
   private currentEvents: readonly GameEvent[] = [];
@@ -38,6 +43,8 @@ export class GameplayCoreRuntime implements CoreRuntime {
   constructor(options: GameplayCoreRuntimeOptions = {}) {
     this.mode = options.mode ?? new DiagnosticArenaMode();
     this.createWorld = options.createWorld ?? createDiagnosticWorldState;
+    this.basicAutoAttack = options.basicAutoAttack;
+    this.allowManualPrimaryFire = options.allowManualPrimaryFire ?? true;
     this.world = this.createWorld();
     this.currentSnapshot = createWorldSnapshot(this.world);
   }
@@ -78,7 +85,13 @@ export class GameplayCoreRuntime implements CoreRuntime {
     if (isMatchEnded(this.world)) {
       return this.finishFrame(events);
     }
-    updateCombatWorld(this.world, this.mode, input.deltaMs, events);
+    updateCombatWorld(
+      this.world,
+      this.mode,
+      input.deltaMs,
+      events,
+      this.basicAutoAttack,
+    );
     if (isMatchEnded(this.world)) {
       return this.finishFrame(events);
     }
@@ -108,7 +121,12 @@ export class GameplayCoreRuntime implements CoreRuntime {
           this.mode,
           this.world,
           events,
-          updateDiagnosticControlledActor(this.world, actor, actorInput),
+          updateDiagnosticControlledActor(
+            this.world,
+            actor,
+            actorInput,
+            this.allowManualPrimaryFire,
+          ),
         );
       }
     }

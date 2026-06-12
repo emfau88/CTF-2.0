@@ -64,6 +64,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly actorId = "blue-player",
+    private readonly manualFireEnabled = true,
   ) {
     scene.input.addPointer(2);
     this.graphics = scene.add.graphics().setScrollFactor(0).setDepth(1100);
@@ -102,7 +103,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     }];
 
     this.appendJumpActions(actions);
-    if (this.fire.held) {
+    if (this.manualFireEnabled && this.fire.held) {
       actions.push({
         action: "firePrimary",
         phase: "held",
@@ -170,7 +171,11 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   private readonly handlePointerDown = (pointer: Phaser.Input.Pointer): void => {
     if (inside(pointer, this.jump) && this.jump.id < 0) {
       this.captureControl(this.jump, pointer);
-    } else if (inside(pointer, this.fire) && this.fire.id < 0) {
+    } else if (
+      this.manualFireEnabled &&
+      inside(pointer, this.fire) &&
+      this.fire.id < 0
+    ) {
       this.captureControl(this.fire, pointer);
       this.updateAim(pointer);
     } else if (
@@ -228,7 +233,8 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.fire.radius = compact ? 38 : 46;
     this.fire.x = this.jump.x - (compact ? 94 : 116);
     this.fire.y = bottom + (compact ? 4 : 8);
-    this.fireLabel.setPosition(this.fire.x, this.fire.y);
+    this.fireLabel.setPosition(this.fire.x, this.fire.y)
+      .setVisible(this.manualFireEnabled);
     this.jumpLabel.setPosition(this.jump.x, this.jump.y);
     this.draw();
   }
@@ -291,7 +297,9 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
       this.moveStick.originY + this.moveStick.direction.y * travel,
       this.moveStick.radius * .34,
     );
-    this.drawButton(this.fire, 0xf3c453);
+    if (this.manualFireEnabled) {
+      this.drawButton(this.fire, 0xf3c453);
+    }
     this.drawButton(this.jump, 0xffffff);
   }
 

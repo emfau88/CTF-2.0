@@ -120,7 +120,7 @@ nicht als anderes Spiel wahrgenommen.
 
 **Ziel:** Alle Waffen funktionieren mode-unabhaengig und mit V1-Feeling.
 
-- [ ] Basic Autoshoot migrieren.
+- [x] Basic Autoshoot migrieren.
 - [ ] Rocket Launcher migrieren.
 - [ ] Railgun migrieren.
 - [ ] Whip migrieren.
