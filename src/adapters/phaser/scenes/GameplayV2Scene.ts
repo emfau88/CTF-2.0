@@ -1,5 +1,9 @@
 import Phaser from "phaser";
-import { GameplayCoreRuntime } from "../../../core";
+import {
+  createTeamDeathmatchWorldState,
+  GameplayCoreRuntime,
+  TeamDeathmatchMode,
+} from "../../../core";
 import {
   NoopAudioPort,
   NoopEffectsPort,
@@ -12,6 +16,7 @@ import {
   PhaserDiagnosticRendererPort,
 } from "../PhaserDiagnosticRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
+import { PhaserTeamDeathmatchHudPort } from "../PhaserTeamDeathmatchHudPort";
 
 export class GameplayV2Scene extends Phaser.Scene {
   private bridge?: PhaserGameBridge;
@@ -23,6 +28,44 @@ export class GameplayV2Scene extends Phaser.Scene {
   }
 
   create(): void {
+    const isTeamDeathmatch = new URLSearchParams(window.location.search)
+      .get("mode") === "tdm";
+    const hud = isTeamDeathmatch
+      ? new PhaserTeamDeathmatchHudPort(this)
+      : this.createDiagnosticHud();
+    this.inputAdapter = new PhaserDiagnosticInputAdapter(
+      this,
+      isTeamDeathmatch ? "tdm" : "diagnostic",
+    );
+    const runtime = isTeamDeathmatch
+      ? new GameplayCoreRuntime({
+        mode: new TeamDeathmatchMode(),
+        createWorld: createTeamDeathmatchWorldState,
+      })
+      : new GameplayCoreRuntime();
+    this.bridge = new PhaserGameBridge(runtime, {
+      renderer: new PhaserDiagnosticRendererPort(this, isTeamDeathmatch),
+      audio: new NoopAudioPort(),
+      diagnostics: hud,
+      effects: new NoopEffectsPort(),
+      hud,
+    });
+    this.bridge.initialize();
+
+    if (!isTeamDeathmatch) {
+      this.scale.on("resize", this.centerDiagnostic, this);
+    }
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+  }
+
+  update(_time: number, delta: number): void {
+    if (!this.bridge || !this.inputAdapter) {
+      return;
+    }
+    this.bridge.advance(this.inputAdapter.readFrame(delta));
+  }
+
+  private createDiagnosticHud(): PhaserDiagnosticHudPort {
     this.diagnosticText = this.add.text(
       this.scale.width / 2,
       this.scale.height / 2,
@@ -35,27 +78,7 @@ export class GameplayV2Scene extends Phaser.Scene {
         lineSpacing: 0,
       },
     ).setOrigin(.5).setScrollFactor(0).setDepth(1000);
-
-    const diagnosticHud = new PhaserDiagnosticHudPort(this.diagnosticText);
-    this.inputAdapter = new PhaserDiagnosticInputAdapter(this);
-    this.bridge = new PhaserGameBridge(new GameplayCoreRuntime(), {
-      renderer: new PhaserDiagnosticRendererPort(this),
-      audio: new NoopAudioPort(),
-      diagnostics: diagnosticHud,
-      effects: new NoopEffectsPort(),
-      hud: diagnosticHud,
-    });
-    this.bridge.initialize();
-
-    this.scale.on("resize", this.centerDiagnostic, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
-  }
-
-  update(_time: number, delta: number): void {
-    if (!this.bridge || !this.inputAdapter) {
-      return;
-    }
-    this.bridge.advance(this.inputAdapter.readFrame(delta));
+    return new PhaserDiagnosticHudPort(this.diagnosticText);
   }
 
   private centerDiagnostic(gameSize: Phaser.Structs.Size): void {

@@ -14,3 +14,8 @@ export {
   type MatchResult,
   type MatchState,
 } from "./matchState";
+export {
+  TeamDeathmatchMode,
+  V2_TEAM_DEATHMATCH_CONFIG,
+  type TeamDeathmatchModeConfig,
+} from "./TeamDeathmatchMode";

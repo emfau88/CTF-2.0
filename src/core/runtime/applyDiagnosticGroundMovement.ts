@@ -10,7 +10,10 @@ export function applyDiagnosticGroundMovement(
   actor: ActorState,
   input: CoreInputFrame,
 ): GroundMovementResult {
-  const move = input.actions.find((intent) => intent.action === "move");
+  const move = input.actions.find((intent) =>
+    intent.action === "move" &&
+    (!intent.actorId || intent.actorId === actor.id)
+  );
   return applyGroundMovement(
     actor,
     {

@@ -101,7 +101,9 @@ implements HudPort, FrameDiagnosticsPort {
     );
     const target = targets[0];
     this.text.setText([
-      "Gameplay Core V2 Shell",
+      `Gameplay Core V2 ${
+        this.hudState.modeId === "team-deathmatch" ? "TDM" : "Shell"
+      }`,
       `mode: ${this.hudState.modeId}`,
       `map: ${this.snapshot.map?.id ?? "none"}`,
       `mapName: ${this.snapshot.map?.displayName ?? "none"}`,
@@ -116,6 +118,7 @@ implements HudPort, FrameDiagnosticsPort {
         .map((entry) => `${entry.id}=${entry.score}`)
         .join(", ") || "none"}`,
       `matchResult: ${this.formatMatchResult()}`,
+      `notices: ${this.hudState.notices.join(", ") || "none"}`,
       `lastMatchEvent: ${this.lastMatchEvent}`,
       `frame: ${this.frameCount}`,
       `last dt: ${this.formatNumber(this.input?.deltaMs ?? 0)} ms`,
@@ -174,6 +177,12 @@ implements HudPort, FrameDiagnosticsPort {
       `redTargets: ${targets.map((candidate) =>
         `${candidate.id}:${candidate.lifeState}:life${candidate.lifeId}`
       ).join(", ") || "none"}`,
+      `players: ${this.snapshot.actors
+        .filter((candidate) => candidate.kind === "player")
+        .map((candidate) =>
+          `${candidate.id}:${candidate.lifeState}:HP${candidate.health}`
+        )
+        .join(", ") || "none"}`,
       "",
       `moveX: ${this.formatNumber(move.x)}`,
       `moveY: ${this.formatNumber(move.y)}`,
@@ -186,11 +195,24 @@ implements HudPort, FrameDiagnosticsPort {
       `debugScore: ${this.hasAction("debugScore", "pressed")}`,
       `aimX: ${this.formatNumber(aim.x)}`,
       `aimY: ${this.formatNumber(aim.y)}`,
-      "status: inert / non-playable",
-      "debug: press K to apply 35 damage",
-      "match: kills score for the attacker team; L awards debug score",
+      `status: ${
+        this.hudState.modeId === "team-deathmatch"
+          ? "local playable TDM"
+          : "diagnostic"
+      }`,
+      ...(this.hudState.modeId === "team-deathmatch"
+        ? [
+          "match: kills score for the attacker team",
+          "TDM P1: WASD / Space / J or pointer",
+          "TDM P2: Arrows / Enter / Shift",
+        ]
+        : [
+          "debug: press K to apply 35 damage",
+          "match: kills score for the attacker team; L awards debug score",
+        ]),
       "weapon: hold J or left pointer to fire diagnostic blaster",
       "pickups: green health / blue armor",
+      "restart: press R after match end",
     ]);
   }
 

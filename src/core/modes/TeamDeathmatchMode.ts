@@ -12,49 +12,40 @@ import type { WorldSnapshot, WorldState } from "../world";
 import type { GameMode, ModeHudState } from "./gameMode";
 import { createMatchState, type MatchResult } from "./matchState";
 
-export interface DiagnosticArenaModeConfig {
+export interface TeamDeathmatchModeConfig {
   readonly durationMs: number;
-  readonly playerScoreEntryId: string;
+  readonly scoreLimit: number;
   readonly initialScores: readonly ScoreEntry[];
 }
 
-export const V2_DIAGNOSTIC_ARENA_MODE_CONFIG: DiagnosticArenaModeConfig = {
-  durationMs: 15_000,
-  playerScoreEntryId: "blue",
+export const V2_TEAM_DEATHMATCH_CONFIG: TeamDeathmatchModeConfig = {
+  durationMs: 120_000,
+  scoreLimit: 3,
   initialScores: [
     { id: "blue", teamId: "blue", score: 0 },
     { id: "red", teamId: "red", score: 0 },
   ],
 };
 
-export class DiagnosticArenaMode implements GameMode {
-  readonly id = "diagnostic-arena";
+export class TeamDeathmatchMode implements GameMode {
+  readonly id = "team-deathmatch";
   readonly spawnProvider: SpawnProvider = new AssignedSpawnProvider();
 
   constructor(
-    private readonly config: DiagnosticArenaModeConfig =
-      V2_DIAGNOSTIC_ARENA_MODE_CONFIG,
+    private readonly config: TeamDeathmatchModeConfig =
+      V2_TEAM_DEATHMATCH_CONFIG,
   ) {}
 
   initialize(world: WorldState): readonly GameEvent[] {
     world.modeId = this.id;
     world.match = createMatchState(
-      "diagnostic-match-1",
+      "team-deathmatch-match-1",
       this.id,
       this.config.durationMs,
     );
     world.match.phase = "running";
     world.scoreBoard = createScoreBoardState(this.config.initialScores);
-    return [{
-      id: `match-started-${world.match.id}`,
-      type: "match.started",
-      timeMs: world.timeMs,
-      payload: {
-        matchId: world.match.id,
-        modeId: this.id,
-        durationMs: world.match.durationMs,
-      },
-    }];
+    return [this.matchStartedEvent(world)];
   }
 
   update(world: WorldState, deltaMs: number): readonly GameEvent[] {
@@ -62,54 +53,19 @@ export class DiagnosticArenaMode implements GameMode {
     if (!match || match.phase !== "running") {
       return [];
     }
-
     const ms = Math.max(0, deltaMs);
     match.elapsedMs = Math.min(match.durationMs, match.elapsedMs + ms);
     match.remainingMs = Math.max(0, match.durationMs - match.elapsedMs);
-    if (match.remainingMs > 0) {
-      return [];
-    }
-
-    match.phase = "ended";
-    match.result = this.resolveResult(world);
-    return [{
-      id: `match-ended-${match.id}`,
-      type: "match.ended",
-      timeMs: world.timeMs,
-      payload: {
-        matchId: match.id,
-        result: match.result,
-        scores: world.scoreBoard.entries.map((entry) => ({ ...entry })),
-      },
-    }];
+    return match.remainingMs > 0 ? [] : this.endMatch(world, "time-limit");
   }
 
   handleEvent(event: GameEvent, world: WorldState): readonly GameEvent[] {
-    if (world.match?.phase !== "running") {
+    if (
+      event.type !== "actor.died" ||
+      world.match?.phase !== "running"
+    ) {
       return [];
     }
-
-    if (event.type === "actor.died") {
-      return this.handleActorDeath(event, world);
-    }
-    if (event.type !== "diagnostic.scoreRequested") {
-      return [];
-    }
-
-    return this.tryAwardScore(
-      world,
-      event,
-      this.config.playerScoreEntryId,
-      readScoreAmount(event.payload),
-      `diagnostic:${event.id}`,
-      "diagnostic",
-    );
-  }
-
-  private handleActorDeath(
-    event: GameEvent,
-    world: WorldState,
-  ): readonly GameEvent[] {
     const source = world.actors.find((actor) =>
       actor.id === event.sourceActorId
     );
@@ -122,62 +78,44 @@ export class DiagnosticArenaMode implements GameMode {
       !victim?.teamId ||
       source.id === victim.id ||
       source.teamId === victim.teamId ||
-      victimLifeId === null ||
       victim.lifeState !== "dead" ||
+      victimLifeId === null ||
       victim.lifeId !== victimLifeId
     ) {
       return [];
     }
-
     const scoreEntry = world.scoreBoard.entries.find((entry) =>
       entry.teamId === source.teamId
     );
     if (!scoreEntry) {
       return [];
     }
-
-    return this.tryAwardScore(
-      world,
-      event,
-      scoreEntry.id,
-      1,
-      `kill:${victim.id}:${victimLifeId}`,
-      "kill",
-    );
-  }
-
-  private tryAwardScore(
-    world: WorldState,
-    event: GameEvent,
-    entryId: string,
-    amount: number,
-    awardKey: string,
-    reason: "diagnostic" | "kill",
-  ): readonly GameEvent[] {
-    const result = awardScore(world.scoreBoard, entryId, amount, awardKey);
-    if (!result.awarded) {
+    const awardKey = `kill:${victim.id}:${victimLifeId}`;
+    const award = awardScore(world.scoreBoard, scoreEntry.id, 1, awardKey);
+    if (!award.awarded) {
       return [];
     }
-    const scoreEntry = world.scoreBoard.entries.find((entry) =>
-      entry.id === entryId
-    );
 
-    return [{
+    const events: GameEvent[] = [{
       id: `score-awarded-${awardKey}`,
       type: "score.awarded",
       timeMs: event.timeMs,
-      sourceActorId: event.sourceActorId,
-      targetActorId: event.targetActorId,
-      teamId: scoreEntry?.teamId,
+      sourceActorId: source.id,
+      targetActorId: victim.id,
+      teamId: source.teamId,
       payload: {
-        entryId,
-        amount,
-        score: result.score,
-        reason,
+        entryId: scoreEntry.id,
+        amount: 1,
+        score: award.score,
+        reason: "kill",
         reasonEventId: event.id,
         awardKey,
       },
     }];
+    if (award.score >= this.config.scoreLimit) {
+      events.push(...this.endMatch(world, "score-limit"));
+    }
+    return events;
   }
 
   isComplete(world: WorldSnapshot): boolean {
@@ -193,30 +131,63 @@ export class DiagnosticArenaMode implements GameMode {
       matchResult: world.match?.result ?? null,
       scores: world.scoreBoard.entries,
       objectives: [],
-      notices: [],
+      notices: [`First to ${this.config.scoreLimit}`],
     };
   }
 
-  private resolveResult(world: WorldState): MatchResult {
-    const scores = world.scoreBoard.entries;
-    const highest = Math.max(...scores.map((entry) => entry.score), 0);
-    const leaders = scores.filter((entry) => entry.score === highest);
-    return leaders.length === 1 && leaders[0]
-      ? { kind: "winner", winnerEntryId: leaders[0].id }
-      : { kind: "draw" };
+  private endMatch(
+    world: WorldState,
+    reason: "score-limit" | "time-limit",
+  ): readonly GameEvent[] {
+    const match = world.match;
+    if (!match || match.phase === "ended") {
+      return [];
+    }
+    match.phase = "ended";
+    match.result = resolveResult(world);
+    return [{
+      id: `match-ended-${match.id}-${reason}`,
+      type: "match.ended",
+      timeMs: world.timeMs,
+      payload: {
+        matchId: match.id,
+        reason,
+        result: match.result,
+        scores: world.scoreBoard.entries.map((entry) => ({ ...entry })),
+      },
+    }];
+  }
+
+  private matchStartedEvent(world: WorldState): GameEvent {
+    const match = world.match;
+    if (!match) {
+      throw new Error("TDM match state must exist before start.");
+    }
+    return {
+      id: `match-started-${match.id}`,
+      type: "match.started",
+      timeMs: world.timeMs,
+      payload: {
+        matchId: match.id,
+        modeId: this.id,
+        durationMs: match.durationMs,
+        scoreLimit: this.config.scoreLimit,
+      },
+    };
   }
 }
 
-function readScoreAmount(payload: unknown): number {
-  if (
-    !payload ||
-    typeof payload !== "object" ||
-    !("amount" in payload)
-  ) {
-    return 0;
-  }
-  const amount = (payload as { amount?: unknown }).amount;
-  return typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
+function resolveResult(world: WorldState): MatchResult {
+  const highest = Math.max(
+    ...world.scoreBoard.entries.map((entry) => entry.score),
+    0,
+  );
+  const leaders = world.scoreBoard.entries.filter((entry) =>
+    entry.score === highest
+  );
+  return leaders.length === 1 && leaders[0]
+    ? { kind: "winner", winnerEntryId: leaders[0].id }
+    : { kind: "draw" };
 }
 
 function readVictimLifeId(payload: unknown): number | null {

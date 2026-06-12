@@ -115,7 +115,10 @@ function updateLastMoveDirection(
   actor: ActorState,
   input: CoreInputFrame,
 ): void {
-  const move = input.actions.find((intent) => intent.action === "move");
+  const move = input.actions.find((intent) =>
+    intent.action === "move" &&
+    (!intent.actorId || intent.actorId === actor.id)
+  );
   if (
     (move?.magnitude ?? 0) > .05 &&
     move?.direction &&

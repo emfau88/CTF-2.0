@@ -56,6 +56,13 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
       facing: { x: -1, y: 0 },
       tags: ["target", "diagnostic"],
     },
+    {
+      id: "red-player-spawn",
+      teamId: "red",
+      position: { x: 260, y: 300 },
+      facing: { x: -1, y: 0 },
+      tags: ["player", "tdm"],
+    },
   ],
   diagnosticSpawn: { x: 150, y: 410 },
 };

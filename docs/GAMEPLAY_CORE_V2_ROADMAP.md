@@ -50,7 +50,7 @@ hinzukommen.
 
 - [x] Phase 19 pruefen und committen.
 - [x] `InertCoreRuntime` passend zur realen Verantwortung umbenennen.
-- [ ] Die Runtime in klar erkennbare Update-Systeme gliedern:
+- [x] Die Runtime in klar erkennbare Update-Systeme gliedern:
   - [x] Actor Lifecycle
   - [x] Movement und Collision
   - [x] Combat und Projectiles
@@ -73,20 +73,20 @@ Runtime ist kein wachsendes Godfile.
 
 **Ziel:** Der erste vollstaendig spielbare V2-Modus.
 
-- [ ] `TeamDeathmatchMode` implementieren.
-- [ ] Zwei menschlich kontrollierbare Actors unterstuetzen.
-- [ ] Team-Spawns verwenden.
-- [ ] Kill-Score aus generischen `actor.died`-Events ableiten.
-- [ ] Scorelimit implementieren.
-- [ ] Zeitlimit implementieren.
-- [ ] Death und Respawn vollstaendig integrieren.
-- [ ] Match-Ende stoppt die relevante Simulation.
-- [ ] Mode-neutralen HUD-Zustand verwenden.
-- [ ] Einfachen Restart oder Rematch ermoeglichen.
-- [ ] Modus vorlaeufig ueber `?scene=v2&mode=tdm` auswaehlbar machen.
-- [ ] Keine TDM-Regeln in Scene, Renderer, HUD oder allgemeinen
+- [x] `TeamDeathmatchMode` implementieren.
+- [x] Zwei menschlich kontrollierbare Actors unterstuetzen.
+- [x] Team-Spawns verwenden.
+- [x] Kill-Score aus generischen `actor.died`-Events ableiten.
+- [x] Scorelimit implementieren.
+- [x] Zeitlimit implementieren.
+- [x] Death und Respawn vollstaendig integrieren.
+- [x] Match-Ende stoppt die relevante Simulation.
+- [x] Mode-neutralen HUD-Zustand verwenden.
+- [x] Einfachen Restart oder Rematch ermoeglichen.
+- [x] Modus vorlaeufig ueber `?scene=v2&mode=tdm` auswaehlbar machen.
+- [x] Keine TDM-Regeln in Scene, Renderer, HUD oder allgemeinen
       Combat-Systemen ablegen.
-- [ ] Noch keine Bots und kein Hauptmenue implementieren.
+- [x] Noch keine Bots und kein Hauptmenue implementieren.
 
 **Abschlusskriterium:** Ein lokales TDM-Match kann gestartet, gespielt,
 gewonnen und neu gestartet werden.
@@ -279,8 +279,8 @@ Bei einem dieser Punkte wird nicht einfach weitergebaut:
 
 - [x] Phase 19 manuell abnehmen.
 - [x] Phase 19 committen.
-- [ ] Meilenstein 1: Runtime konsolidieren.
-- [ ] Meilenstein 2: spielbaren TDM-Slice erstellen.
+- [x] Meilenstein 1: Runtime konsolidieren.
+- [x] Meilenstein 2: spielbaren TDM-Slice manuell abnehmen und abschliessen.
 - [ ] Meilenstein 3: V1-Feeling systematisch abgleichen.
 - [ ] Meilenstein 4: V1-Waffen migrieren.
 - [ ] Meilenstein 5: Classic CTF als eigenen Modus implementieren.

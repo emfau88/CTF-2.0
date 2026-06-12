@@ -503,3 +503,25 @@ the frozen final snapshot.
 The runtime accepts an injected `GameMode` and world factory. Diagnostic Arena
 remains the default configuration, but future TDM and CTF modes can reuse the
 same runtime rather than creating mode-specific runtime classes.
+
+## Team Deathmatch Vertical Slice
+
+The first playable V2 mode is available at:
+
+```text
+?scene=v2&mode=tdm
+```
+
+`TeamDeathmatchMode` owns kill scoring, a three-kill score limit, a two-minute
+time limit, winner/draw resolution, and TDM HUD notices. The shared runtime,
+actors, movement, jump, collision, projectiles, damage, lifecycle, spawning,
+score board, renderer, and HUD contracts remain mode-independent.
+
+The local slice contains two human-controlled actors:
+
+- Blue: WASD, Space, J or pointer primary fire
+- Red: arrow keys, Enter, Shift primary fire
+
+Both actors use the same core movement, combat, death, respawn, and team-spawn
+systems. Pressing `R` after match end creates a clean new match. This slice has
+no bots, menu, networking, CTF objectives, or production weapon set.

@@ -48,6 +48,9 @@ export {
   type MatchPhase,
   type MatchResult,
   type MatchState,
+  TeamDeathmatchMode,
+  V2_TEAM_DEATHMATCH_CONFIG,
+  type TeamDeathmatchModeConfig,
 } from "./modes";
 export {
   applyGroundMovement,
@@ -81,6 +84,7 @@ export {
   type PickupUpdateResult,
 } from "./pickups";
 export {
+  createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   type CoreFrameResult,
   type CoreRuntime,
@@ -101,6 +105,7 @@ export type {
   SpawnProvider,
   SpawnRequest,
 } from "./spawning";
+export { AssignedSpawnProvider } from "./spawning";
 export {
   createEmptyWorldState,
   createWorldSnapshot,

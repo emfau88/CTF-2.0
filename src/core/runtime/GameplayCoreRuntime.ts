@@ -53,6 +53,9 @@ export class GameplayCoreRuntime implements CoreRuntime {
   }
 
   advance(input: CoreInputFrame): CoreFrameResult {
+    if (isMatchEnded(this.world) && hasRestartAction(input)) {
+      return this.initialize();
+    }
     if (isMatchEnded(this.world)) {
       this.currentEvents = [];
       return this.createFrameResult();
@@ -67,41 +70,47 @@ export class GameplayCoreRuntime implements CoreRuntime {
     }
 
     updateActorWorld(this.world, this.mode, input.deltaMs, events);
+    if (isMatchEnded(this.world)) {
+      return this.finishFrame(events);
+    }
     updateDiagnosticModeInput(this.world, this.mode, input, events);
     this.updateControlledActor(input, events);
+    if (isMatchEnded(this.world)) {
+      return this.finishFrame(events);
+    }
     updateCombatWorld(this.world, this.mode, input.deltaMs, events);
+    if (isMatchEnded(this.world)) {
+      return this.finishFrame(events);
+    }
     updatePickupWorld(this.world, this.mode, input.deltaMs, events);
 
-    this.currentEvents = events;
-    return this.createFrameResult();
+    return this.finishFrame(events);
   }
 
   private updateControlledActor(
     input: CoreInputFrame,
     events: GameEvent[],
   ): void {
-    const actor = this.world.actors[0];
-    if (!actor) {
-      return;
-    }
-    if (actor.lifeState === "falling") {
-      const collision = applyWorldCollision(
-        actor,
-        this.world.geometry,
-        input.deltaMs,
-        this.world.timeMs,
-        V2_COLLISION_GROUNDWORK_CONFIG,
-      );
-      dispatchModeEvents(this.mode, this.world, events, collision.events);
-      return;
-    }
-    if (actor.lifeState === "active") {
-      dispatchModeEvents(
-        this.mode,
-        this.world,
-        events,
-        updateDiagnosticControlledActor(this.world, actor, input),
-      );
+    const defaultActorId = this.world.actors[0]?.id;
+    for (const actor of this.world.actors) {
+      const actorInput = inputForActor(input, actor.id, defaultActorId);
+      if (actor.lifeState === "falling") {
+        const collision = applyWorldCollision(
+          actor,
+          this.world.geometry,
+          actorInput.deltaMs,
+          this.world.timeMs,
+          V2_COLLISION_GROUNDWORK_CONFIG,
+        );
+        dispatchModeEvents(this.mode, this.world, events, collision.events);
+      } else if (actor.lifeState === "active") {
+        dispatchModeEvents(
+          this.mode,
+          this.world,
+          events,
+          updateDiagnosticControlledActor(this.world, actor, actorInput),
+        );
+      }
     }
   }
 
@@ -114,6 +123,11 @@ export class GameplayCoreRuntime implements CoreRuntime {
     };
   }
 
+  private finishFrame(events: readonly GameEvent[]): CoreFrameResult {
+    this.currentEvents = events;
+    return this.createFrameResult();
+  }
+
   private createHudState(): ModeHudState {
     return this.mode.getHudState(this.currentSnapshot);
   }
@@ -121,4 +135,24 @@ export class GameplayCoreRuntime implements CoreRuntime {
 
 function isMatchEnded(world: WorldState): boolean {
   return world.match?.phase === "ended";
+}
+
+function hasRestartAction(input: CoreInputFrame): boolean {
+  return input.actions.some((intent) =>
+    intent.action === "restartMatch" && intent.phase === "pressed"
+  );
+}
+
+function inputForActor(
+  input: CoreInputFrame,
+  actorId: string,
+  defaultActorId: string | undefined,
+): CoreInputFrame {
+  return {
+    ...input,
+    actions: input.actions.filter((intent) =>
+      intent.actorId === actorId ||
+      (!intent.actorId && actorId === defaultActorId)
+    ),
+  };
 }

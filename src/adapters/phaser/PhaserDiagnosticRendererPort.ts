@@ -26,7 +26,10 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
     new Map<PickupId, Phaser.GameObjects.Container>();
   private readonly geometryGraphics: Phaser.GameObjects.Graphics;
 
-  constructor(private readonly scene: Phaser.Scene) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly compactActorLabels = false,
+  ) {
     this.geometryGraphics = scene.add.graphics().setDepth(-10);
   }
 
@@ -85,10 +88,17 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       actor.facing.y * radius * 1.5,
     );
     view.label.setPosition(0, radius + 10);
-    view.label.setText([
-      `${actor.id} [${actor.teamId ?? "neutral"}] life ${actor.lifeId}`,
-      `HP ${actor.health}/${actor.maxHealth}  AR ${actor.armor}/${actor.maxArmor}`,
-    ]);
+    view.label.setText(this.compactActorLabels
+      ? [
+        `${actor.teamId?.toUpperCase() ?? "NEUTRAL"} ${
+          actor.id === "blue-player" ? "P1" : "P2"
+        }`,
+        `HP ${actor.health}`,
+      ]
+      : [
+        `${actor.id} [${actor.teamId ?? "neutral"}] life ${actor.lifeId}`,
+        `HP ${actor.health}/${actor.maxHealth}  AR ${actor.armor}/${actor.maxArmor}`,
+      ]);
   }
 
   private createActorView(actor: Readonly<ActorState>): DiagnosticActorView {
@@ -99,8 +109,10 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       0x17302d,
       .18,
     ).setScale(1, .45);
-    const bodyColor = actor.kind === "diagnostic-target"
+    const bodyColor = actor.teamId === "red"
       ? 0xb56f55
+      : actor.teamId === "blue"
+      ? 0x3a70c4
       : 0x3a8f88;
     const body = this.scene.add.circle(0, 0, actor.radius, bodyColor)
       .setStrokeStyle(3, 0x17302d);
@@ -109,7 +121,7 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       .setLineWidth(4);
     const label = this.scene.add.text(0, actor.radius + 10, actor.id, {
       fontFamily: "Consolas, monospace",
-      fontSize: "14px",
+      fontSize: this.compactActorLabels ? "12px" : "14px",
       color: "#17302d",
       align: "center",
     }).setOrigin(.5, 0);
@@ -263,9 +275,22 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       bounds.maxX - bounds.minX,
       bounds.maxY - bounds.minY,
     );
-    const actor = snapshot.actors[0];
-    if (actor) {
-      camera.centerOn(actor.position.x, actor.position.y);
+    const activePlayers = snapshot.actors.filter((actor) =>
+      actor.kind === "player" && actor.lifeState === "active"
+    );
+    const followed = activePlayers.length > 0
+      ? activePlayers
+      : snapshot.actors.slice(0, 1);
+    if (followed.length > 0) {
+      const centerX = followed.reduce(
+        (sum, actor) => sum + actor.position.x,
+        0,
+      ) / followed.length;
+      const centerY = followed.reduce(
+        (sum, actor) => sum + actor.position.y,
+        0,
+      ) / followed.length;
+      camera.centerOn(centerX, centerY);
     }
   }
 }

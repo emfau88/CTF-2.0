@@ -3,3 +3,4 @@ export type {
   SpawnProvider,
   SpawnRequest,
 } from "./spawnProvider";
+export { AssignedSpawnProvider } from "./AssignedSpawnProvider";

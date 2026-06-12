@@ -5,8 +5,10 @@ import {
   createEmptyWorldState,
   createPickupState,
   createScoreBoardState,
+  createTeamDeathmatchWorldState,
   DiagnosticArenaMode,
   GameplayCoreRuntime,
+  TeamDeathmatchMode,
   updatePickups,
   V2_COLLISION_GROUNDWORK_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
@@ -86,10 +88,10 @@ export function runPhaserGameBridgeSmokeCheck(): void {
     initial.snapshot.geometry.bounds.maxY !== 820 ||
     initial.snapshot.geometry.solids.length !== 10 ||
     initial.snapshot.geometry.gaps.length !== 2 ||
-    initial.snapshot.spawnPoints.length !== 4 ||
+    initial.snapshot.spawnPoints.length !== 5 ||
     initial.snapshot.spawnPoints.filter((spawn) =>
         spawn.teamId === "red"
-      ).length !== 3
+      ).length !== 4
   ) {
     throw new Error(
       "V2 shell must initialize Training Crossing geometry and team spawns.",
@@ -176,6 +178,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkPickupPipeline();
   checkMatchLifecycle();
   checkScoreSafety();
+  checkTeamDeathmatchSlice();
 }
 
 function checkJumpParity(): void {
@@ -848,4 +851,195 @@ function checkScoreSafety(): void {
   ) {
     throw new Error("Ended matches must reject kill score.");
   }
+}
+
+function checkTeamDeathmatchSlice(): void {
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode({
+      durationMs: 120_000,
+      scoreLimit: 3,
+      initialScores: [
+        { id: "blue", teamId: "blue", score: 0 },
+        { id: "red", teamId: "red", score: 0 },
+      ],
+    }),
+    createWorld: createTeamDeathmatchWorldState,
+  });
+  const initial = runtime.initialize();
+  if (
+    initial.snapshot.modeId !== "team-deathmatch" ||
+    initial.snapshot.actors.length !== 2 ||
+    initial.snapshot.actors.some((actor) => actor.kind !== "player") ||
+    initial.hudState.notices[0] !== "First to 3"
+  ) {
+    throw new Error("TDM must initialize two local player actors.");
+  }
+
+  const moved = runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [
+      {
+        action: "move",
+        phase: "held",
+        actorId: "blue-player",
+        direction: { x: 0, y: -1 },
+        magnitude: 1,
+      },
+      {
+        action: "move",
+        phase: "held",
+        actorId: "red-player",
+        direction: { x: 0, y: 1 },
+        magnitude: 1,
+      },
+    ],
+  });
+  const blueMoved = moved.snapshot.actors.find((actor) =>
+    actor.id === "blue-player"
+  );
+  const redMoved = moved.snapshot.actors.find((actor) =>
+    actor.id === "red-player"
+  );
+  if (
+    !blueMoved ||
+    !redMoved ||
+    blueMoved.position.y >= initial.snapshot.actors[0]!.position.y ||
+    redMoved.position.y <= initial.snapshot.actors[1]!.position.y
+  ) {
+    throw new Error("TDM inputs must control both actors independently.");
+  }
+
+  let sequence = 1;
+  for (let kill = 0; kill < 3; kill++) {
+    sequence = killActorWithProjectiles(
+      runtime,
+      "blue-player",
+      "red-player",
+      sequence,
+    );
+    const score = runtime.snapshot.scoreBoard.entries.find((entry) =>
+      entry.id === "blue"
+    )?.score;
+    if (score !== kill + 1) {
+      throw new Error("Each TDM kill must award blue exactly one point.");
+    }
+    if (kill < 2) {
+      for (let wait = 0; wait < 27; wait++) {
+        sequence++;
+        runtime.advance({
+          sequence,
+          timeMs: sequence * 34,
+          deltaMs: 34,
+          actions: [],
+        });
+      }
+      const red = runtime.snapshot.actors.find((actor) =>
+        actor.id === "red-player"
+      );
+      if (red?.lifeState !== "active" || red.lifeId !== kill + 2) {
+        throw new Error("TDM target must respawn with a new life id.");
+      }
+    }
+  }
+  if (
+    runtime.snapshot.match?.phase !== "ended" ||
+    runtime.snapshot.match.result?.kind !== "winner" ||
+    runtime.snapshot.match.result.winnerEntryId !== "blue"
+  ) {
+    throw new Error("TDM score limit must end the match for blue.");
+  }
+
+  const frozenTime = runtime.snapshot.timeMs;
+  const restarted = runtime.advance({
+    sequence: sequence + 1,
+    timeMs: frozenTime + 34,
+    deltaMs: 34,
+    actions: [{ action: "restartMatch", phase: "pressed" }],
+  });
+  if (
+    restarted.snapshot.match?.phase !== "running" ||
+    restarted.snapshot.timeMs !== 0 ||
+    restarted.snapshot.scoreBoard.entries.some((entry) => entry.score !== 0) ||
+    restarted.snapshot.actors.some((actor) =>
+      actor.lifeState !== "active" || actor.lifeId !== 1
+    )
+  ) {
+    throw new Error("TDM restart must create a clean running match.");
+  }
+
+  const timedMode = new TeamDeathmatchMode({
+    durationMs: 100,
+    scoreLimit: 3,
+    initialScores: [
+      { id: "blue", teamId: "blue", score: 0 },
+      { id: "red", teamId: "red", score: 0 },
+    ],
+  });
+  const timedRuntime = new GameplayCoreRuntime({
+    mode: timedMode,
+    createWorld: createTeamDeathmatchWorldState,
+  });
+  timedRuntime.initialize();
+  const timedEnd = timedRuntime.advance({
+    sequence: 1,
+    timeMs: 100,
+    deltaMs: 100,
+    actions: [],
+  });
+  if (
+    timedEnd.snapshot.match?.phase !== "ended" ||
+    timedEnd.snapshot.match.result?.kind !== "draw"
+  ) {
+    throw new Error("TDM time limit must end tied matches as a draw.");
+  }
+}
+
+function killActorWithProjectiles(
+  runtime: GameplayCoreRuntime,
+  attackerId: string,
+  victimId: string,
+  initialSequence: number,
+): number {
+  let sequence = initialSequence;
+  for (let shot = 0; shot < 4; shot++) {
+    const attacker = runtime.snapshot.actors.find((actor) =>
+      actor.id === attackerId
+    );
+    const victim = runtime.snapshot.actors.find((actor) =>
+      actor.id === victimId
+    );
+    if (!attacker || !victim) {
+      throw new Error("TDM projectile test requires both players.");
+    }
+    const dx = victim.position.x - attacker.position.x;
+    const dy = victim.position.y - attacker.position.y;
+    const length = Math.hypot(dx, dy);
+    sequence++;
+    runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: [
+        {
+          action: "aim",
+          phase: "held",
+          actorId: attackerId,
+          direction: { x: dx / length, y: dy / length },
+        },
+        { action: "firePrimary", phase: "held", actorId: attackerId },
+      ],
+    });
+    for (let frame = 0; frame < 8; frame++) {
+      sequence++;
+      runtime.advance({
+        sequence,
+        timeMs: sequence * 34,
+        deltaMs: 34,
+        actions: [],
+      });
+    }
+  }
+  return sequence;
 }
