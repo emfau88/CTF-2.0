@@ -41,27 +41,30 @@ Neuimplementierung des V1-Spielgefuehls:
 - [x] MatchState, Timer, ScoreBoard und diagnostischer GameMode existieren.
 - [x] Kill-Scoring besitzt Teampruefung, `lifeId` und Deduplizierung.
 - [x] Ein Blue Player und mehrere Red Targets besitzen feste Team-Spawns.
-- [ ] Phase 19 ist committed.
+- [x] Phase 19 ist committed.
 
 ## Meilenstein 1: V2 stabilisieren
 
 **Ziel:** Die vorhandene Basis konsolidieren, bevor weitere Features
 hinzukommen.
 
-- [ ] Phase 19 pruefen und committen.
-- [ ] `InertCoreRuntime` passend zur realen Verantwortung umbenennen.
+- [x] Phase 19 pruefen und committen.
+- [x] `InertCoreRuntime` passend zur realen Verantwortung umbenennen.
 - [ ] Die Runtime in klar erkennbare Update-Systeme gliedern:
-  - [ ] Actor Lifecycle
-  - [ ] Movement und Collision
-  - [ ] Combat und Projectiles
-  - [ ] Pickups
-  - [ ] Match und Mode
-- [ ] Die verbindliche Update-Reihenfolge dokumentieren.
-- [ ] Die Update-Reihenfolge durch Core-Tests absichern.
-- [ ] Simulation bei Match-Ende kontrolliert stoppen.
+  - [x] Actor Lifecycle
+  - [x] Movement und Collision
+  - [x] Combat und Projectiles
+  - [x] Pickups
+  - [x] Match und Mode
+- [x] Die verbindliche Update-Reihenfolge dokumentieren.
+- [x] Die Update-Reihenfolge durch Core-Tests absichern.
+- [x] Simulation bei Match-Ende kontrolliert stoppen.
 - [ ] Diagnose-Sonderfaelle aus allgemeinen APIs entfernen.
-- [ ] Bestehende Smoke-Checks als verlaessliche Core-Regressionstests nutzen.
-- [ ] Keine sichtbare Verhaltensaenderung gegenueber dem aktuellen V2-Stand.
+- [x] Bestehende Smoke-Checks als verlaessliche Core-Regressionstests nutzen.
+- [x] Eine gemeinsame Runtime fuer injizierbare World- und Mode-Konfiguration
+      verwenden.
+- [x] Keine unbeabsichtigte sichtbare Verhaltensaenderung gegenueber dem
+      aktuellen V2-Stand.
 
 **Abschlusskriterium:** Das aktuelle V2-Verhalten bleibt erhalten, aber die
 Runtime ist kein wachsendes Godfile.
@@ -274,8 +277,8 @@ Bei einem dieser Punkte wird nicht einfach weitergebaut:
 
 ## Naechste verbindliche Schritte
 
-- [ ] Phase 19 manuell abnehmen.
-- [ ] Phase 19 committen.
+- [x] Phase 19 manuell abnehmen.
+- [x] Phase 19 committen.
 - [ ] Meilenstein 1: Runtime konsolidieren.
 - [ ] Meilenstein 2: spielbaren TDM-Slice erstellen.
 - [ ] Meilenstein 3: V1-Feeling systematisch abgleichen.
@@ -283,4 +286,3 @@ Bei einem dieser Punkte wird nicht einfach weitergebaut:
 - [ ] Meilenstein 5: Classic CTF als eigenen Modus implementieren.
 - [ ] Meilenstein 6: One Flag als Architekturtest implementieren.
 - [ ] Danach Maps, Bots, Mobile, UI und Produktionshaertung ausbauen.
-

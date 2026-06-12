@@ -81,9 +81,10 @@ export {
   type PickupUpdateResult,
 } from "./pickups";
 export {
-  InertCoreRuntime,
+  GameplayCoreRuntime,
   type CoreFrameResult,
   type CoreRuntime,
+  type GameplayCoreRuntimeOptions,
 } from "./runtime";
 export {
   awardScore,

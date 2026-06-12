@@ -6,7 +6,7 @@ import {
   createPickupState,
   createScoreBoardState,
   DiagnosticArenaMode,
-  InertCoreRuntime,
+  GameplayCoreRuntime,
   updatePickups,
   V2_COLLISION_GROUNDWORK_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
@@ -25,7 +25,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   let effectFrames = 0;
   let hudFrames = 0;
   let diagnosticFrames = 0;
-  const bridge = new PhaserGameBridge(new InertCoreRuntime(), {
+  const bridge = new PhaserGameBridge(new GameplayCoreRuntime(), {
     renderer: {
       render: () => renders++,
       reset: () => {},
@@ -206,7 +206,7 @@ function runJumpSequence(heldFrames: number): {
   horizontalDistance: number;
   landed: boolean;
 } {
-  const runtime = new InertCoreRuntime();
+  const runtime = new GameplayCoreRuntime();
   const initial = runtime.initialize().snapshot.actors[0];
   if (!initial) {
     throw new Error("Jump smoke check requires a diagnostic actor.");
@@ -377,7 +377,7 @@ function isActorActive(actor: ActorState): boolean {
 }
 
 function checkActorLifecycle(): void {
-  const runtime = new InertCoreRuntime();
+  const runtime = new GameplayCoreRuntime();
   const initial = runtime.initialize().snapshot.actors[0];
   if (!initial) {
     throw new Error("Lifecycle smoke check requires a diagnostic actor.");
@@ -460,7 +460,7 @@ function checkActorLifecycle(): void {
 function diagnosticDamageFrame(
   sequence: number,
   timeMs: number,
-): Parameters<InertCoreRuntime["advance"]>[0] {
+): Parameters<GameplayCoreRuntime["advance"]>[0] {
   return {
     sequence,
     timeMs,
@@ -474,7 +474,7 @@ function diagnosticDamageFrame(
 }
 
 function checkProjectilePipeline(): void {
-  const runtime = new InertCoreRuntime();
+  const runtime = new GameplayCoreRuntime();
   const initial = runtime.initialize();
   const targetBefore = initial.snapshot.actors.find((actor) =>
     actor.id === "diagnostic-target-1"
@@ -536,7 +536,7 @@ function checkProjectilePipeline(): void {
     throw new Error("Projectile hit must damage target through lifecycle.");
   }
 
-  const expiryRuntime = new InertCoreRuntime();
+  const expiryRuntime = new GameplayCoreRuntime();
   expiryRuntime.initialize();
   expiryRuntime.advance({
     sequence: 1,
@@ -661,7 +661,7 @@ function isPickupActive(pickup: PickupState): boolean {
 }
 
 function checkMatchLifecycle(): void {
-  const runtime = new InertCoreRuntime();
+  const runtime = new GameplayCoreRuntime();
   const initial = runtime.initialize();
   if (
     initial.snapshot.match?.phase !== "running" ||
@@ -708,18 +708,40 @@ function checkMatchLifecycle(): void {
     sequence: 3,
     timeMs: 15_068,
     deltaMs: 34,
-    actions: [{ action: "debugScore", phase: "pressed" }],
+    actions: [
+      { action: "debugScore", phase: "pressed" },
+      {
+        action: "move",
+        phase: "held",
+        direction: { x: 1, y: 0 },
+        magnitude: 1,
+      },
+      {
+        action: "aim",
+        phase: "held",
+        direction: { x: 1, y: 0 },
+      },
+      { action: "firePrimary", phase: "held" },
+    ],
   });
   if (
+    rejectedScore.events.length !== 0 ||
     rejectedScore.events.some((event) => event.type === "score.awarded") ||
     rejectedScore.snapshot.scoreBoard.entries.find((entry) =>
         entry.id === "blue"
-      )?.score !== 1
+      )?.score !== 1 ||
+    rejectedScore.snapshot.timeMs !== ended.snapshot.timeMs ||
+    rejectedScore.snapshot.projectiles.length !==
+      ended.snapshot.projectiles.length ||
+    rejectedScore.snapshot.actors[0]?.position.x !==
+      ended.snapshot.actors[0]?.position.x ||
+    rejectedScore.snapshot.actors[0]?.position.y !==
+      ended.snapshot.actors[0]?.position.y
   ) {
-    throw new Error("Ended matches must reject further score awards.");
+    throw new Error("Ended matches must freeze gameplay simulation.");
   }
 
-  const drawRuntime = new InertCoreRuntime();
+  const drawRuntime = new GameplayCoreRuntime();
   drawRuntime.initialize();
   const draw = drawRuntime.advance({
     sequence: 1,

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { InertCoreRuntime } from "../../../core";
+import { GameplayCoreRuntime } from "../../../core";
 import {
   NoopAudioPort,
   NoopEffectsPort,
@@ -38,7 +38,7 @@ export class GameplayV2Scene extends Phaser.Scene {
 
     const diagnosticHud = new PhaserDiagnosticHudPort(this.diagnosticText);
     this.inputAdapter = new PhaserDiagnosticInputAdapter(this);
-    this.bridge = new PhaserGameBridge(new InertCoreRuntime(), {
+    this.bridge = new PhaserGameBridge(new GameplayCoreRuntime(), {
       renderer: new PhaserDiagnosticRendererPort(this),
       audio: new NoopAudioPort(),
       diagnostics: diagnosticHud,

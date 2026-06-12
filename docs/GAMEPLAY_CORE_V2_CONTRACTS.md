@@ -481,3 +481,25 @@ death keys, and incremented life ids make each respawn scoreable again.
 This remains a diagnostic arena rather than Team Deathmatch. Red targets have
 no movement, decisions, weapons, or bot behavior. V1 remains the default
 playable reference.
+
+## Runtime Consolidation
+
+The former `InertCoreRuntime` is now named `GameplayCoreRuntime`. It remains
+the deterministic frame orchestrator, while focused runtime modules own:
+
+1. mode timer and match transition
+2. actor cooldown and lifecycle updates
+3. diagnostic mode input
+4. controlled-actor movement, jump, collision, and fire input
+5. projectile combat
+6. pickup collection and respawn
+
+Gameplay events are forwarded through one mode-event dispatcher, keeping score
+and match interpretation inside the active `GameMode`. When a mode ends the
+match, the runtime publishes the end event and stops further actor, combat,
+projectile, pickup, and world-time simulation. Subsequent input frames return
+the frozen final snapshot.
+
+The runtime accepts an injected `GameMode` and world factory. Diagnostic Arena
+remains the default configuration, but future TDM and CTF modes can reuse the
+same runtime rather than creating mode-specific runtime classes.
