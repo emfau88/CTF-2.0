@@ -148,6 +148,8 @@ sich wie ihre V1-Version an.
 - [x] Touch-Kamera folgt dem Blue Player.
 - [x] Match-Ende kann per Tap neu gestartet werden.
 - [x] Desktop-TDM behaelt lokale Zwei-Spieler-Steuerung.
+- [x] Training Crossing verwendet V1-Ruinenassets und Charakter-Sprites.
+- [x] Teamseiten, Health-/Armor-Pickups und Pickup-Werte entsprechen V1.
 - [ ] Ein mobiler Einzelspieler-Gegner erfordert spaeter die geplante Bot-KI.
 
 ## Meilenstein 5: Classic CTF als eigener GameMode
@@ -194,15 +196,15 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 ## Meilenstein 7: Maps und Content
 
 - [ ] Alle drei V1-Maps als Plain Data migrieren.
-- [ ] Solids und Bounds migrieren.
-- [ ] Gaps migrieren.
-- [ ] Team- und neutrale Spawns migrieren.
-- [ ] Pickup-Platzierungen migrieren.
+- [x] Training Crossing: Solids und Bounds migrieren.
+- [x] Training Crossing: Gaps migrieren.
+- [x] Training Crossing: Team-Spawns migrieren.
+- [x] Training Crossing: Health-/Armor-Pickup-Platzierungen migrieren.
 - [ ] Objective-Slots beziehungsweise Flag-Basen migrieren.
 - [ ] Map-Daten beim Laden validieren.
 - [ ] Mode-Kompatibilitaet einer Map validieren.
 - [ ] Keine Phaser-GameObjects in Map-Daten speichern.
-- [ ] V1-Optik und Platzierungen als Referenz beibehalten.
+- [x] Training Crossing: V1-Optik und Platzierungen beibehalten.
 - [ ] Neue Maps ohne Scene-Aenderung ladbar machen.
 
 ## Meilenstein 8: Bots

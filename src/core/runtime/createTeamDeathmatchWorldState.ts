@@ -1,5 +1,9 @@
 import { createActorState } from "../actors";
 import {
+  createPickupState,
+  V2_ARENA_PICKUP_PARITY_CONFIG,
+} from "../pickups";
+import {
   createEmptyWorldState,
   TRAINING_CROSSING_V2,
   type WorldState,
@@ -25,6 +29,33 @@ export function createTeamDeathmatchWorldState(): WorldState {
   world.actors.push(
     createPlayer(world, "blue-player", "blue", "blue-player-spawn"),
     createPlayer(world, "red-player", "red", "red-player-spawn"),
+  );
+  world.pickups.push(
+    createPickupState({
+      id: "health-red",
+      type: "health",
+      position: { x: 120, y: 320 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "armor-red",
+      type: "armor",
+      position: { x: 220, y: 320 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "health-blue",
+      type: "health",
+      position: { x: 1290, y: 320 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "armor-blue",
+      type: "armor",
+      position: { x: 1390, y: 320 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "armor-center",
+      type: "armor",
+      position: { x: 750, y: 410 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
   );
   return world;
 }

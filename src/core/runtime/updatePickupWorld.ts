@@ -10,10 +10,9 @@ export function updatePickupWorld(
   deltaMs: number,
   events: GameEvent[],
 ): void {
-  const collector = world.actors[0];
   const pickups = updatePickups(
     world.pickups,
-    collector ? [collector] : [],
+    world.actors,
     deltaMs,
     world.timeMs,
   );

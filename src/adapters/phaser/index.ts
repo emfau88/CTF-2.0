@@ -3,6 +3,7 @@ export {
   type PhaserGameBridgePorts,
 } from "./PhaserGameBridge";
 export { PhaserDiagnosticHudPort } from "./PhaserDiagnosticHudPort";
+export { PhaserArenaRendererPort } from "./PhaserArenaRendererPort";
 export {
   PhaserDiagnosticInputAdapter,
 } from "./PhaserDiagnosticInputAdapter";

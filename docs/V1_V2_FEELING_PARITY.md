@@ -36,6 +36,7 @@ in:
 - maximales Armor-Cap: `100`
 - Basic Autoshoot: Reichweite `520`, Cooldown `3000 ms`
 - Basic-Projektil: Speed `286`, Damage `18`, Radius `9`, TTL `2600 ms`
+- Pickups: Radius `22`, Respawn `20000 ms`, Health `50`, Armor `25`
 
 ## Update-Reihenfolge
 
@@ -65,5 +66,7 @@ Shared-Camera-Abweichung.
   automatisch erkannt; `&controls=mobile` erzwingt den Test auf Desktop.
 - Im mobilen TDM folgt die Kamera dem Blue Player. Nach Match-Ende startet ein
   Tap auf das Resultat einen neuen Lauf.
+- Training Crossing rendert in V2 mit denselben Ruinen-, Charakter- und
+  Pickup-Assets wie V1. Der autoritative Zustand bleibt trotzdem im V2-Core.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf
   Desktop und Mobile.

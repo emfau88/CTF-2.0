@@ -856,6 +856,7 @@ function checkScoreSafety(): void {
 }
 
 function checkTeamDeathmatchSlice(): void {
+  const productionWorld = createTeamDeathmatchWorldState();
   const runtime = new GameplayCoreRuntime({
     mode: new TeamDeathmatchMode({
       durationMs: 120_000,
@@ -865,16 +866,34 @@ function checkTeamDeathmatchSlice(): void {
         { id: "red", teamId: "red", score: 0 },
       ],
     }),
-    createWorld: createTeamDeathmatchWorldState,
+    createWorld: createCloseRangeTeamDeathmatchWorld,
   });
   const initial = runtime.initialize();
   if (
     initial.snapshot.modeId !== "team-deathmatch" ||
     initial.snapshot.actors.length !== 2 ||
     initial.snapshot.actors.some((actor) => actor.kind !== "player") ||
+    initial.snapshot.pickups.length !== 5 ||
     initial.hudState.notices[0] !== "First to 3"
   ) {
-    throw new Error("TDM must initialize two local player actors.");
+    throw new Error("TDM must initialize players and V1 parity pickups.");
+  }
+  const initialBlue = productionWorld.actors.find((actor) =>
+    actor.id === "blue-player"
+  );
+  const initialRed = productionWorld.actors.find((actor) =>
+    actor.id === "red-player"
+  );
+  if (
+    initialBlue?.spawnPosition.x !== 1350 ||
+    initialRed?.spawnPosition.x !== 150 ||
+    productionWorld.pickups.some((pickup) =>
+      pickup.radius !== 22 ||
+      pickup.respawnDelayMs !== 20_000 ||
+      (pickup.type === "health" ? pickup.value !== 50 : pickup.value !== 25)
+    )
+  ) {
+    throw new Error("Training Crossing TDM content must mirror V1 placement.");
   }
 
   const moved = runtime.advance({
@@ -1008,6 +1027,22 @@ function checkTeamDeathmatchSlice(): void {
   ) {
     throw new Error("TDM players must retain V1 actor size and resource caps.");
   }
+}
+
+function createCloseRangeTeamDeathmatchWorld() {
+  const world = createTeamDeathmatchWorldState();
+  const blue = world.actors.find((actor) => actor.id === "blue-player");
+  const red = world.actors.find((actor) => actor.id === "red-player");
+  if (!blue || !red) {
+    throw new Error("TDM smoke world requires both players.");
+  }
+  blue.position = { x: 180, y: 410 };
+  blue.spawnPosition = { ...blue.position };
+  blue.lastSafePosition = { ...blue.position };
+  red.position = { x: 360, y: 410 };
+  red.spawnPosition = { ...red.position };
+  red.lastSafePosition = { ...red.position };
+  return world;
 }
 
 function killActorWithProjectiles(

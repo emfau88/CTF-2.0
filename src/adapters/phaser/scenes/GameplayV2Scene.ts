@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { preloadArenaAssets } from "../../../assets";
 import {
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
@@ -17,6 +18,7 @@ import {
 import {
   PhaserDiagnosticRendererPort,
 } from "../PhaserDiagnosticRendererPort";
+import { PhaserArenaRendererPort } from "../PhaserArenaRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
 import { PhaserMobileInputAdapter } from "../PhaserMobileInputAdapter";
 import { PhaserTeamDeathmatchHudPort } from "../PhaserTeamDeathmatchHudPort";
@@ -28,6 +30,10 @@ export class GameplayV2Scene extends Phaser.Scene {
 
   constructor() {
     super("GameplayV2Scene");
+  }
+
+  preload(): void {
+    preloadArenaAssets(this);
   }
 
   create(): void {
@@ -59,11 +65,12 @@ export class GameplayV2Scene extends Phaser.Scene {
       })
       : new GameplayCoreRuntime();
     this.bridge = new PhaserGameBridge(runtime, {
-      renderer: new PhaserDiagnosticRendererPort(
-        this,
-        isTeamDeathmatch,
-        useMobileControls ? "blue-player" : undefined,
-      ),
+      renderer: isTeamDeathmatch
+        ? new PhaserArenaRendererPort(
+          this,
+          useMobileControls ? "blue-player" : undefined,
+        )
+        : new PhaserDiagnosticRendererPort(this),
       audio: new NoopAudioPort(),
       diagnostics: hud,
       effects: new NoopEffectsPort(),

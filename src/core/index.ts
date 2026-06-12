@@ -77,6 +77,7 @@ export type { Objective, ObjectiveState } from "./objectives";
 export {
   createPickupState,
   updatePickups,
+  V2_ARENA_PICKUP_PARITY_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
   type CreatePickupStateInput,
   type PickupConfig,

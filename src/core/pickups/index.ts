@@ -3,6 +3,7 @@ export {
   type CreatePickupStateInput,
 } from "./createPickupState";
 export {
+  V2_ARENA_PICKUP_PARITY_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
   type PickupConfig,
 } from "./PickupConfig";

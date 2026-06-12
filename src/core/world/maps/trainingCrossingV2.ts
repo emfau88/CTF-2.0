@@ -2,7 +2,7 @@ import type { WorldMapData } from "./worldMapData";
 
 export const TRAINING_CROSSING_V2: WorldMapData = {
   id: "training-crossing-v2",
-  displayName: "Training Crossing V2 Geometry",
+  displayName: "Training Crossing",
   geometry: {
     bounds: {
       minX: 0,
@@ -31,8 +31,8 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
     {
       id: "blue-player-spawn",
       teamId: "blue",
-      position: { x: 150, y: 410 },
-      facing: { x: 1, y: 0 },
+      position: { x: 1350, y: 410 },
+      facing: { x: -1, y: 0 },
       tags: ["player", "diagnostic"],
     },
     {
@@ -59,8 +59,8 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
     {
       id: "red-player-spawn",
       teamId: "red",
-      position: { x: 260, y: 300 },
-      facing: { x: -1, y: 0 },
+      position: { x: 150, y: 410 },
+      facing: { x: 1, y: 0 },
       tags: ["player", "tdm"],
     },
   ],
