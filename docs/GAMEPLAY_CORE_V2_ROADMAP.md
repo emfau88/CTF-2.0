@@ -141,6 +141,15 @@ Fuer jede Waffe:
 **Abschlusskriterium:** Jede V1-Waffe funktioniert bereits in TDM und fuehlt
 sich wie ihre V1-Version an.
 
+### Aktueller spielbarer Mobile-TDM-Slice
+
+- [x] Touch-Stick und Jump-Button verwenden dieselben Core-Actions wie Desktop.
+- [x] Basic Autoshoot funktioniert mit V1-Werten.
+- [x] Touch-Kamera folgt dem Blue Player.
+- [x] Match-Ende kann per Tap neu gestartet werden.
+- [x] Desktop-TDM behaelt lokale Zwei-Spieler-Steuerung.
+- [ ] Ein mobiler Einzelspieler-Gegner erfordert spaeter die geplante Bot-KI.
+
 ## Meilenstein 5: Classic CTF als eigener GameMode
 
 **Ziel:** Den V1-Hauptmodus vollstaendig in V2 abbilden.

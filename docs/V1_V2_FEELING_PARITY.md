@@ -63,5 +63,7 @@ Shared-Camera-Abweichung.
   Rocket/Railgun/Whip sind noch nicht migriert.
 - Mobile Input ist über dieselben Core-Actions angebunden. Touchgeräte werden
   automatisch erkannt; `&controls=mobile` erzwingt den Test auf Desktop.
+- Im mobilen TDM folgt die Kamera dem Blue Player. Nach Match-Ende startet ein
+  Tap auf das Resultat einen neuen Lauf.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf
   Desktop und Mobile.

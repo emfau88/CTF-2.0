@@ -30,6 +30,7 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly compactActorLabels = false,
+    private readonly followActorId?: ActorId,
   ) {
     this.geometryGraphics = scene.add.graphics().setDepth(-10);
   }
@@ -284,10 +285,17 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
       bounds.maxX - bounds.minX,
       bounds.maxY - bounds.minY,
     );
+    const requestedFollow = this.followActorId
+      ? snapshot.actors.find((actor) =>
+        actor.id === this.followActorId && actor.lifeState === "active"
+      )
+      : undefined;
     const activePlayers = snapshot.actors.filter((actor) =>
       actor.kind === "player" && actor.lifeState === "active"
     );
-    const followed = activePlayers.length > 0
+    const followed = requestedFollow
+      ? [requestedFollow]
+      : activePlayers.length > 0
       ? activePlayers
       : snapshot.actors.slice(0, 1);
     if (followed.length > 0) {

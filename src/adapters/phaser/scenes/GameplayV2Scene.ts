@@ -34,11 +34,18 @@ export class GameplayV2Scene extends Phaser.Scene {
     const isTeamDeathmatch = new URLSearchParams(window.location.search)
       .get("mode") === "tdm";
     const useMobileControls = isTeamDeathmatch && prefersMobileControls();
+    const mobileInput = useMobileControls
+      ? new PhaserMobileInputAdapter(this, "blue-player", false)
+      : undefined;
     const hud = isTeamDeathmatch
-      ? new PhaserTeamDeathmatchHudPort(this, useMobileControls)
+      ? new PhaserTeamDeathmatchHudPort(
+        this,
+        useMobileControls,
+        () => mobileInput?.requestRestart(),
+      )
       : this.createDiagnosticHud();
     this.inputAdapter = useMobileControls
-      ? new PhaserMobileInputAdapter(this, "blue-player", false)
+      ? mobileInput
       : new PhaserDiagnosticInputAdapter(
         this,
         isTeamDeathmatch ? "tdm" : "diagnostic",
@@ -52,7 +59,11 @@ export class GameplayV2Scene extends Phaser.Scene {
       })
       : new GameplayCoreRuntime();
     this.bridge = new PhaserGameBridge(runtime, {
-      renderer: new PhaserDiagnosticRendererPort(this, isTeamDeathmatch),
+      renderer: new PhaserDiagnosticRendererPort(
+        this,
+        isTeamDeathmatch,
+        useMobileControls ? "blue-player" : undefined,
+      ),
       audio: new NoopAudioPort(),
       diagnostics: hud,
       effects: new NoopEffectsPort(),

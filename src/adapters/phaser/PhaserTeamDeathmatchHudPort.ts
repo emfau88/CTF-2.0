@@ -21,6 +21,7 @@ implements HudPort, FrameDiagnosticsPort {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly mobileControls = false,
+    private readonly requestRestart?: () => void,
   ) {
     const panelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: "Consolas, monospace",
@@ -62,6 +63,10 @@ implements HudPort, FrameDiagnosticsPort {
       align: "center",
     }).setOrigin(.5).setPadding(18, 12).setScrollFactor(0).setDepth(1001)
       .setVisible(false);
+    if (mobileControls && requestRestart) {
+      this.resultText.setInteractive({ useHandCursor: true });
+      this.resultText.on("pointerup", this.handleRestart);
+    }
   }
 
   render(state: ModeHudState, snapshot: WorldSnapshot): void {
@@ -91,6 +96,12 @@ implements HudPort, FrameDiagnosticsPort {
     this.controlsText.destroy();
     this.resultText.destroy();
   }
+
+  private readonly handleRestart = (): void => {
+    if (this.hudState?.phase === "ended") {
+      this.requestRestart?.();
+    }
+  };
 
   private refresh(): void {
     if (!this.hudState || !this.snapshot) {
@@ -126,7 +137,10 @@ implements HudPort, FrameDiagnosticsPort {
       const headline = result.kind === "draw"
         ? "DRAW"
         : `${result.winnerEntryId.toUpperCase()} WINS`;
-      this.resultText.setText([headline, "Press R to restart"]).setVisible(true);
+      this.resultText.setText([
+        headline,
+        this.mobileControls ? "Tap to restart" : "Press R to restart",
+      ]).setVisible(true);
     } else {
       this.resultText.setVisible(false);
     }

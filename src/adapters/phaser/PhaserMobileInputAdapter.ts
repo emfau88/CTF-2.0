@@ -25,6 +25,7 @@ interface TouchStick extends TouchControl {
 
 export class PhaserMobileInputAdapter implements InputAdapterPort {
   private sequence = 0;
+  private restartRequested = false;
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly fireLabel: Phaser.GameObjects.Text;
   private readonly jumpLabel: Phaser.GameObjects.Text;
@@ -103,6 +104,10 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     }];
 
     this.appendJumpActions(actions);
+    if (this.restartRequested) {
+      actions.push({ action: "restartMatch", phase: "pressed" });
+      this.restartRequested = false;
+    }
     if (this.manualFireEnabled && this.fire.held) {
       actions.push({
         action: "firePrimary",
@@ -127,6 +132,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
 
   reset(): void {
     this.sequence = 0;
+    this.restartRequested = false;
     this.releaseControl(this.moveStick);
     this.releaseControl(this.fire);
     this.releaseControl(this.jump);
@@ -142,6 +148,10 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.graphics.destroy();
     this.fireLabel.destroy();
     this.jumpLabel.destroy();
+  }
+
+  requestRestart(): void {
+    this.restartRequested = true;
   }
 
   private appendJumpActions(actions: CoreActionIntent[]): void {
