@@ -26,7 +26,7 @@ interface DiagnosticKeys {
   readonly redFire: Phaser.Input.Keyboard.Key;
 }
 
-export type PhaserInputProfile = "diagnostic" | "tdm";
+export type PhaserInputProfile = "diagnostic" | "tdm" | "tdm-solo";
 
 export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
   private readonly keys: DiagnosticKeys;

@@ -1,6 +1,129 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #game { width: 100%; height: 100%; margin: 0; overflow: hidden; touch-action: none; user-select: none; background: #edf5ee; font-family: Arial, sans-serif; }
 canvas { display: block; }
+.is-hidden { display: none !important; }
+.v2-main-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  overflow-y: auto;
+  background:
+    linear-gradient(135deg, rgb(10 23 20 / .9), rgb(25 48 42 / .78)),
+    var(--v2-menu-floor);
+  background-size: cover, 320px 320px;
+  pointer-events: auto;
+}
+.v2-menu-card {
+  width: min(470px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid rgb(255 255 255 / .24);
+  border-radius: 20px;
+  background: rgb(237 245 238 / .96);
+  color: #17302d;
+  box-shadow: 0 28px 90px rgb(0 0 0 / .42);
+  backdrop-filter: blur(14px);
+}
+.v2-menu-kicker {
+  color: #b7272d;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .24em;
+}
+.v2-menu-card h1 {
+  margin: -3px 0 0;
+  font-size: clamp(42px, 10vw, 68px);
+  line-height: .86;
+  letter-spacing: -.055em;
+}
+.v2-menu-intro {
+  margin: 0;
+  color: #526963;
+  font-weight: 700;
+}
+.v2-menu-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.v2-menu-section-title {
+  grid-column: 1 / -1;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgb(23 48 45 / .14);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.v2-menu-card label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 900;
+}
+.v2-menu-card select {
+  width: 100%;
+  height: 44px;
+  border: 1px solid rgb(23 48 45 / .22);
+  border-radius: 9px;
+  background: white;
+  color: #17302d;
+  padding: 0 10px;
+  font-weight: 800;
+}
+.v2-menu-card select:disabled { opacity: .58; }
+#v2-menu-play {
+  height: 54px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #d0333b, #ad2028);
+  color: white;
+  font-size: 19px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgb(183 39 45 / .3);
+}
+#v2-menu-play:active { transform: translateY(1px); }
+.v2-menu-help {
+  color: #60736f;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.v2-menu-v1-link {
+  color: #315f56;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+.v2-menu-v1-link:hover { text-decoration: underline; }
+.v2-game-menu-button {
+  position: fixed;
+  z-index: 1900;
+  top: max(84px, calc(env(safe-area-inset-top) + 76px));
+  right: max(14px, env(safe-area-inset-right));
+  min-width: 68px;
+  height: 34px;
+  border: 1px solid rgb(255 255 255 / .2);
+  border-radius: 8px;
+  background: rgb(23 48 45 / .86);
+  color: #f5fbfa;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  box-shadow: 0 8px 22px rgb(0 0 0 / .18);
+  cursor: pointer;
+}
+.v2-game-menu-button:active { transform: translateY(1px); }
 #hud { position: fixed; inset: 0; pointer-events: none; color: #17302d; font-size: 13px; }
 .score { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); display: flex; justify-content: space-between; align-items: center; }
 .score-team, #debug, .hud-actions button, .settings-panel { background: rgb(255 255 255 / .78); border: 1px solid rgb(30 50 45 / .15); border-radius: 8px; box-shadow: 0 8px 22px rgb(20 40 34 / .12); backdrop-filter: blur(10px); }
@@ -45,6 +168,11 @@ canvas { display: block; }
 #menu-play:active { transform: translateY(1px); }
 .main-menu-help { color: #60736f; font-size: 11px; font-weight: 700; text-align: center; }
 @media (max-width: 620px), (max-height: 520px) {
+  .v2-main-menu { place-items: start center; }
+  .v2-menu-card { gap: 12px; padding: 20px; }
+  .v2-menu-card h1 { font-size: clamp(38px, 13vw, 54px); }
+  .v2-menu-section { grid-template-columns: 1fr; gap: 9px; }
+  .v2-menu-section-title { grid-column: auto; }
   #debug { display: none; }
   #debug.is-visible { display: block; }
   .score-team { min-width: 64px; height: 32px; gap: 6px; padding: 0 7px; font-size: 15px; }

@@ -8,6 +8,53 @@
   </head>
   <body>
     <div id="game"></div>
+    <div id="v2-main-menu" class="v2-main-menu is-hidden">
+      <div class="v2-menu-card">
+        <div class="v2-menu-kicker">ARENA PROTOCOL</div>
+        <h1>CORE ARENA</h1>
+        <p class="v2-menu-intro">
+          Choose a mode, arena and local play setup.
+        </p>
+
+        <div class="v2-menu-section">
+          <div class="v2-menu-section-title">Play</div>
+          <label>Mode
+            <select id="v2-menu-mode">
+              <option value="tdm">Team Deathmatch</option>
+              <option value="ctf" disabled>Classic CTF - coming soon</option>
+              <option value="one-flag" disabled>One Flag - coming soon</option>
+            </select>
+          </label>
+          <label>Arena
+            <select id="v2-menu-map">
+              <option value="training-crossing-v2">Training Crossing</option>
+            </select>
+          </label>
+          <label>Match
+            <select id="v2-menu-players">
+              <option value="bot">Solo vs Bot</option>
+              <option value="local">Local 2 Player</option>
+            </select>
+          </label>
+          <label>Controls
+            <select id="v2-menu-controls">
+              <option value="auto">Auto detect</option>
+              <option value="touch">Touch overlay + keyboard</option>
+              <option value="keyboard">Keyboard only</option>
+            </select>
+          </label>
+        </div>
+
+        <button id="v2-menu-play" type="button">Play</button>
+        <div class="v2-menu-help">
+          P1: WASD + Space &nbsp; | &nbsp; Touch controls remain keyboard-compatible
+        </div>
+        <a class="v2-menu-v1-link" href="./">Play frozen V1 Classic CTF</a>
+      </div>
+    </div>
+    <button id="v2-game-menu-button" class="v2-game-menu-button is-hidden" type="button">
+      Menu
+    </button>
     <div id="hud">
       <div class="score">
         <b class="score-team score-red"><span class="score-label">RED</span><span id="red-score">0</span></b>

@@ -23,6 +23,14 @@ interface TouchStick extends TouchControl {
   magnitude: number;
 }
 
+interface KeyboardFallbackKeys {
+  readonly up: Phaser.Input.Keyboard.Key;
+  readonly down: Phaser.Input.Keyboard.Key;
+  readonly left: Phaser.Input.Keyboard.Key;
+  readonly right: Phaser.Input.Keyboard.Key;
+  readonly jump: Phaser.Input.Keyboard.Key;
+}
+
 export class PhaserMobileInputAdapter implements InputAdapterPort {
   private sequence = 0;
   private restartRequested = false;
@@ -61,6 +69,8 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     released: false,
   };
   private aim: WorldPosition = { x: 1, y: 0 };
+  private readonly keyboardKeys?: KeyboardFallbackKeys;
+  private combinedJumpWasHeld = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -68,6 +78,16 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     private readonly manualFireEnabled = true,
   ) {
     scene.input.addPointer(2);
+    const keyboard = scene.input.keyboard;
+    if (keyboard) {
+      this.keyboardKeys = {
+        up: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+        down: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+        left: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+        right: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        jump: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+      };
+    }
     this.graphics = scene.add.graphics().setScrollFactor(0).setDepth(1100);
     const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: "Arial, sans-serif",
@@ -90,12 +110,25 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   }
 
   readFrame(deltaMs: number): CoreInputFrame {
+    const keyboardMove = this.readKeyboardMove();
+    const moveDirection = this.moveStick.magnitude > .05
+      ? { ...this.moveStick.direction }
+      : keyboardMove;
+    const moveMagnitude = this.moveStick.magnitude > .05
+      ? this.moveStick.magnitude
+      : Math.hypot(keyboardMove.x, keyboardMove.y);
+    if (
+      this.moveStick.magnitude <= .05 &&
+      (keyboardMove.x !== 0 || keyboardMove.y !== 0)
+    ) {
+      this.aim = { ...keyboardMove };
+    }
     const actions: CoreActionIntent[] = [{
       action: "move",
       phase: "held",
       actorId: this.actorId,
-      direction: { ...this.moveStick.direction },
-      magnitude: this.moveStick.magnitude,
+      direction: moveDirection,
+      magnitude: moveMagnitude,
     }, {
       action: "aim",
       phase: "held",
@@ -136,6 +169,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.releaseControl(this.moveStick);
     this.releaseControl(this.fire);
     this.releaseControl(this.jump);
+    this.combinedJumpWasHeld = false;
     this.draw();
   }
 
@@ -148,6 +182,9 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.graphics.destroy();
     this.fireLabel.destroy();
     this.jumpLabel.destroy();
+    for (const key of Object.values(this.keyboardKeys ?? {})) {
+      key.destroy();
+    }
   }
 
   requestRestart(): void {
@@ -155,27 +192,41 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   }
 
   private appendJumpActions(actions: CoreActionIntent[]): void {
-    if (this.jump.pressed) {
+    const jumpHeld = this.jump.held || Boolean(this.keyboardKeys?.jump.isDown);
+    if (jumpHeld && !this.combinedJumpWasHeld) {
       actions.push({
         action: "jump",
         phase: "pressed",
         actorId: this.actorId,
       });
     }
-    if (this.jump.held) {
+    if (jumpHeld) {
       actions.push({
         action: "jump",
         phase: "held",
         actorId: this.actorId,
       });
     }
-    if (this.jump.released) {
+    if (!jumpHeld && this.combinedJumpWasHeld) {
       actions.push({
         action: "jump",
         phase: "released",
         actorId: this.actorId,
       });
     }
+    this.combinedJumpWasHeld = jumpHeld;
+  }
+
+  private readKeyboardMove(): WorldPosition {
+    if (!this.keyboardKeys) {
+      return { x: 0, y: 0 };
+    }
+    const x = Number(this.keyboardKeys.right.isDown) -
+      Number(this.keyboardKeys.left.isDown);
+    const y = Number(this.keyboardKeys.down.isDown) -
+      Number(this.keyboardKeys.up.isDown);
+    const length = Math.hypot(x, y);
+    return length > 1 ? { x: x / length, y: y / length } : { x, y };
   }
 
   private readonly handlePointerDown = (pointer: Phaser.Input.Pointer): void => {

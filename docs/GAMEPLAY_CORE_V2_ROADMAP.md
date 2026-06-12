@@ -226,14 +226,17 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 
 ## Meilenstein 9: Mobile, UI und kompletter Spielablauf
 
-- [ ] Mode-Auswahl implementieren.
-- [ ] Map-Auswahl implementieren.
-- [ ] Matchkonfiguration implementieren.
-- [ ] Start- und Ergebnisbildschirm implementieren.
+- [x] Erste V2-Mode-Auswahl implementieren.
+- [x] Erste V2-Map-Auswahl implementieren.
+- [x] Solo-vs-Bot und lokales Zwei-Spieler-Setup konfigurierbar machen.
+- [x] Schlanken V2-Startbildschirm implementieren.
+- [x] Rueckkehr vom laufenden V2-Match zum Hauptmenue ermoeglichen.
+- [ ] Ergebnisbildschirm mit Rueckkehr ins V2-Menue vervollstaendigen.
 - [ ] Restart und Rematch implementieren.
 - [ ] Desktop-HUD finalisieren.
 - [ ] Mobile-HUD finalisieren.
 - [x] Touch-Steuerung mit V1-Paritaet anbinden.
+- [x] Touch-Overlay und WASD/Space koennen denselben P1 steuern.
 - [ ] Settings und Audiooptionen integrieren.
 - [ ] UI konfiguriert nur Matchdaten und enthaelt keine Spielregeln.
 

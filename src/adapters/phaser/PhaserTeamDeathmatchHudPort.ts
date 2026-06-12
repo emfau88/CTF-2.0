@@ -21,6 +21,7 @@ implements HudPort, FrameDiagnosticsPort {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly mobileControls = false,
+    private readonly botOpponent = false,
     private readonly requestRestart?: () => void,
   ) {
     const panelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -48,8 +49,10 @@ implements HudPort, FrameDiagnosticsPort {
       14,
       0,
       mobileControls
-        ? "MOVE STICK     AUTO-FIRE     JUMP"
-        : "P1  WASD / SPACE     P2  ARROWS / ENTER     AUTO-FIRE",
+        ? "TOUCH OR WASD     AUTO-FIRE     SPACE / JUMP"
+        : botOpponent
+          ? "P1  WASD / SPACE     AUTO-FIRE     RED BOT"
+          : "P1  WASD / SPACE     P2  ARROWS / ENTER     AUTO-FIRE",
       {
         ...panelStyle,
         fontSize: "12px",
@@ -128,7 +131,7 @@ implements HudPort, FrameDiagnosticsPort {
     ]);
     this.blueText.setText(playerStatus("BLUE P1", blue));
     this.redText.setPosition(width - 14, 14).setText(
-      playerStatus(this.mobileControls ? "RED BOT" : "RED P2", red),
+      playerStatus(this.botOpponent ? "RED BOT" : "RED P2", red),
     );
     this.controlsText.setPosition(14, height - 14);
     this.controlsText.setVisible(!this.mobileControls);

@@ -41,9 +41,11 @@ export class GameplayV2Scene extends Phaser.Scene {
   }
 
   create(): void {
-    const isTeamDeathmatch = new URLSearchParams(window.location.search)
-      .get("mode") === "tdm";
-    const useMobileControls = isTeamDeathmatch && prefersMobileControls();
+    const search = new URLSearchParams(window.location.search);
+    const isTeamDeathmatch = search.get("mode") === "tdm";
+    const useMobileControls = isTeamDeathmatch && prefersMobileControls(search);
+    const useBotOpponent = isTeamDeathmatch &&
+      prefersBotOpponent(search, useMobileControls);
     const mobileInput = useMobileControls
       ? new PhaserMobileInputAdapter(this, "blue-player", false)
       : undefined;
@@ -51,6 +53,7 @@ export class GameplayV2Scene extends Phaser.Scene {
       ? new PhaserTeamDeathmatchHudPort(
         this,
         useMobileControls,
+        useBotOpponent,
         () => mobileInput?.requestRestart(),
       )
       : this.createDiagnosticHud();
@@ -62,16 +65,21 @@ export class GameplayV2Scene extends Phaser.Scene {
         allowManualPrimaryFire: false,
       })
       : new GameplayCoreRuntime();
-    this.inputAdapter = useMobileControls && mobileInput
+    const playerInput = useMobileControls && mobileInput
+      ? mobileInput
+      : new PhaserDiagnosticInputAdapter(
+        this,
+        isTeamDeathmatch
+          ? useBotOpponent ? "tdm-solo" : "tdm"
+          : "diagnostic",
+      );
+    this.inputAdapter = useBotOpponent
       ? new AugmentedInputAdapter(
-        mobileInput,
+        playerInput,
         () => this.bridge?.snapshot ?? runtime.snapshot,
         new TdmBotController("red-player", "blue-player"),
       )
-      : new PhaserDiagnosticInputAdapter(
-        this,
-        isTeamDeathmatch ? "tdm" : "diagnostic",
-      );
+      : playerInput;
     this.bridge = new PhaserGameBridge(runtime, {
       renderer: isTeamDeathmatch
         ? new PhaserArenaRendererPort(
@@ -129,14 +137,28 @@ export class GameplayV2Scene extends Phaser.Scene {
   }
 }
 
-function prefersMobileControls(): boolean {
-  const override = new URLSearchParams(window.location.search).get("controls");
-  if (override === "mobile") {
+function prefersMobileControls(search: URLSearchParams): boolean {
+  const override = search.get("controls");
+  if (override === "mobile" || override === "touch") {
     return true;
   }
-  if (override === "desktop") {
+  if (override === "desktop" || override === "keyboard") {
     return false;
   }
   return navigator.maxTouchPoints > 0 ||
     window.matchMedia("(pointer: coarse)").matches;
+}
+
+function prefersBotOpponent(
+  search: URLSearchParams,
+  mobileControls: boolean,
+): boolean {
+  const players = search.get("players");
+  if (players === "bot") {
+    return true;
+  }
+  if (players === "local") {
+    return false;
+  }
+  return mobileControls;
 }
