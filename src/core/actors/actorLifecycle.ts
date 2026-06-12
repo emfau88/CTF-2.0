@@ -135,6 +135,7 @@ export function updateActorLifecycle(
       teamId: actor.teamId ?? undefined,
       payload: {
         lifeId: actor.lifeId,
+        spawnPointId: actor.spawnPointId,
         position: { ...actor.position },
         health: actor.health,
         armor: actor.armor,

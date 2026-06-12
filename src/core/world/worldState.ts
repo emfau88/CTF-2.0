@@ -3,6 +3,7 @@ import type { ProjectileState } from "../combat";
 import type { GameModeId, MatchState } from "../modes";
 import type { Objective } from "../objectives";
 import type { PickupState } from "../pickups";
+import type { SpawnPoint } from "../spawning";
 import {
   createScoreBoardState,
   type ScoreBoardState,
@@ -22,6 +23,7 @@ export interface WorldState {
   objectives: Objective[];
   scoreBoard: ScoreBoardState;
   match: MatchState | null;
+  spawnPoints: SpawnPoint[];
   geometry: WorldGeometry;
   map: WorldMapInfo | null;
 }
@@ -35,6 +37,7 @@ export interface WorldSnapshot {
   readonly objectives: readonly Readonly<Objective>[];
   readonly scoreBoard: Readonly<ScoreBoardState>;
   readonly match: Readonly<MatchState> | null;
+  readonly spawnPoints: readonly SpawnPoint[];
   readonly geometry: WorldGeometry;
   readonly map: WorldMapInfo | null;
 }
@@ -51,6 +54,7 @@ export function createEmptyWorldState(
     objectives: [],
     scoreBoard: createScoreBoardState(),
     match: null,
+    spawnPoints: [],
     geometry: createEmptyWorldGeometry(),
     map: null,
   };
@@ -95,6 +99,12 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
         result: world.match.result ? { ...world.match.result } : null,
       }
       : null,
+    spawnPoints: world.spawnPoints.map((spawnPoint) => ({
+      ...spawnPoint,
+      position: { ...spawnPoint.position },
+      facing: spawnPoint.facing ? { ...spawnPoint.facing } : undefined,
+      tags: spawnPoint.tags ? [...spawnPoint.tags] : undefined,
+    })),
     geometry: {
       bounds: { ...world.geometry.bounds },
       solids: world.geometry.solids.map((solid) => ({ ...solid })),

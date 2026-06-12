@@ -216,15 +216,14 @@ class DiagnosticSpawnProvider implements SpawnProvider {
     const actor = world.actors.find((candidate) =>
       candidate.id === request.actorId
     );
-    return actor
-      ? {
-        id: `${actor.id}-spawn`,
-        position: { ...actor.spawnPosition },
-        facing: { ...actor.facing },
-        teamId: actor.teamId ?? undefined,
-        tags: ["diagnostic"],
-      }
-      : null;
+    if (!actor) {
+      return null;
+    }
+    const assignedSpawn = world.spawnPoints.find((spawnPoint) =>
+      spawnPoint.id === actor.spawnPointId &&
+      spawnPoint.teamId === request.teamId
+    );
+    return assignedSpawn ?? null;
   }
 }
 

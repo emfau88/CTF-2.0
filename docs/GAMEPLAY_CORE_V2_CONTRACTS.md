@@ -460,3 +460,24 @@ and uses the same validation path.
 This is still not Team Deathmatch. It adds only safe kill scoring to the
 diagnostic mode; there are no bots, objectives, flags, mode selection, or new
 weapons. V1 remains the default playable reference.
+
+## Phase 19 Multiple Actors And Team Spawns
+
+Phase 19 adds serializable spawnpoint data to the V2 map, authoritative world
+state, and snapshots. Training Crossing V2 defines one `blue` player spawn and
+three `red` diagnostic target spawns. Each spawn contains an id, team id,
+position, optional facing, and diagnostic tags.
+
+The diagnostic world creates one controllable blue actor and three stationary
+red target actors. Every actor stores its assigned `spawnPointId` and a copied
+`spawnPosition`. The existing lifecycle returns each actor to that position,
+increments its `lifeId`, and emits the assigned spawnpoint id with the respawn
+event. No safe-spawn search or dynamic spawn selection is added.
+
+Phase 18 kill scoring remains actor- and life-based, so every red target can
+award blue one point per life. Distinct actor ids prevent targets from sharing
+death keys, and incremented life ids make each respawn scoreable again.
+
+This remains a diagnostic arena rather than Team Deathmatch. Red targets have
+no movement, decisions, weapons, or bot behavior. V1 remains the default
+playable reference.

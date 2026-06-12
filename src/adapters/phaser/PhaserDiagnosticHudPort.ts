@@ -96,9 +96,10 @@ implements HudPort, FrameDiagnosticsPort {
     const move = this.directionFor("move");
     const aim = this.directionFor("aim");
     const actor = this.snapshot.actors[0];
-    const target = this.snapshot.actors.find((candidate) =>
+    const targets = this.snapshot.actors.filter((candidate) =>
       candidate.kind === "diagnostic-target"
     );
+    const target = targets[0];
     this.text.setText([
       "Gameplay Core V2 Shell",
       `mode: ${this.hudState.modeId}`,
@@ -122,6 +123,7 @@ implements HudPort, FrameDiagnosticsPort {
       "movement: V2 ground parity",
       "jump: V2 short/held parity",
       `actors: ${this.snapshot.actors.length}`,
+      `spawns: ${this.snapshot.spawnPoints.length}`,
       `projectiles: ${this.snapshot.projectiles.length}`,
       `pickups: ${
         this.snapshot.pickups.filter((pickup) =>
@@ -169,6 +171,9 @@ implements HudPort, FrameDiagnosticsPort {
       `targetHealth: ${this.formatNumber(target?.health ?? 0)}`,
       `targetArmor: ${this.formatNumber(target?.armor ?? 0)}`,
       `targetLifeId: ${target?.lifeId ?? 0}`,
+      `redTargets: ${targets.map((candidate) =>
+        `${candidate.id}:${candidate.lifeState}:life${candidate.lifeId}`
+      ).join(", ") || "none"}`,
       "",
       `moveX: ${this.formatNumber(move.x)}`,
       `moveY: ${this.formatNumber(move.y)}`,

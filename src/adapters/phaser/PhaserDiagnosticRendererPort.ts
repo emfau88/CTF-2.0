@@ -86,7 +86,7 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
     );
     view.label.setPosition(0, radius + 10);
     view.label.setText([
-      actor.id,
+      `${actor.id} [${actor.teamId ?? "neutral"}] life ${actor.lifeId}`,
       `HP ${actor.health}/${actor.maxHealth}  AR ${actor.armor}/${actor.maxArmor}`,
     ]);
   }

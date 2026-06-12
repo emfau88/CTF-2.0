@@ -85,9 +85,15 @@ export function runPhaserGameBridgeSmokeCheck(): void {
     initial.snapshot.geometry.bounds.maxX !== 1500 ||
     initial.snapshot.geometry.bounds.maxY !== 820 ||
     initial.snapshot.geometry.solids.length !== 10 ||
-    initial.snapshot.geometry.gaps.length !== 2
+    initial.snapshot.geometry.gaps.length !== 2 ||
+    initial.snapshot.spawnPoints.length !== 4 ||
+    initial.snapshot.spawnPoints.filter((spawn) =>
+        spawn.teamId === "red"
+      ).length !== 3
   ) {
-    throw new Error("V2 shell must initialize Training Crossing geometry.");
+    throw new Error(
+      "V2 shell must initialize Training Crossing geometry and team spawns.",
+    );
   }
   if (next.snapshot.timeMs !== 34) {
     throw new Error("Inert bridge must advance by the input delta.");
@@ -96,10 +102,30 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   const nextActor = next.snapshot.actors[0];
   if (
     next.events.length !== 1 ||
-    initial.snapshot.actors.length !== 2 ||
-    next.snapshot.actors.length !== 2
+    initial.snapshot.actors.length !== 4 ||
+    next.snapshot.actors.length !== 4
   ) {
-    throw new Error("Inert bridge must expose actor and target diagnostics.");
+    throw new Error(
+      "Inert bridge must expose one player and three target diagnostics.",
+    );
+  }
+  const redTargets = initial.snapshot.actors.filter((actor) =>
+    actor.teamId === "red" && actor.kind === "diagnostic-target"
+  );
+  if (
+    redTargets.length !== 3 ||
+    new Set(redTargets.map((actor) => actor.id)).size !== 3 ||
+    redTargets.some((actor) =>
+      !actor.spawnPointId ||
+      !initial.snapshot.spawnPoints.some((spawn) =>
+        spawn.id === actor.spawnPointId &&
+        spawn.teamId === actor.teamId &&
+        spawn.position.x === actor.spawnPosition.x &&
+        spawn.position.y === actor.spawnPosition.y
+      )
+    )
+  ) {
+    throw new Error("Every red target must own a distinct red team spawn.");
   }
   if (
     !initialActor ||

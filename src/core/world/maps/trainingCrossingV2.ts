@@ -27,5 +27,35 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
       { id: "gap-02", x: 824, y: 534, width: 128, height: 72 },
     ],
   },
+  spawnPoints: [
+    {
+      id: "blue-player-spawn",
+      teamId: "blue",
+      position: { x: 150, y: 410 },
+      facing: { x: 1, y: 0 },
+      tags: ["player", "diagnostic"],
+    },
+    {
+      id: "red-target-spawn-1",
+      teamId: "red",
+      position: { x: 260, y: 410 },
+      facing: { x: -1, y: 0 },
+      tags: ["target", "diagnostic"],
+    },
+    {
+      id: "red-target-spawn-2",
+      teamId: "red",
+      position: { x: 260, y: 290 },
+      facing: { x: -1, y: 0 },
+      tags: ["target", "diagnostic"],
+    },
+    {
+      id: "red-target-spawn-3",
+      teamId: "red",
+      position: { x: 260, y: 530 },
+      facing: { x: -1, y: 0 },
+      tags: ["target", "diagnostic"],
+    },
+  ],
   diagnosticSpawn: { x: 150, y: 410 },
 };

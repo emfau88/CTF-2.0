@@ -50,6 +50,7 @@ export interface ActorState {
   readonly id: ActorId;
   readonly kind: string;
   teamId: TeamId | null;
+  spawnPointId: string | null;
   lifeId: number;
   lifeState: ActorLifeState;
   position: WorldPosition;
@@ -74,6 +75,7 @@ export type CreateActorStateInput = {
   readonly id: ActorId;
   readonly kind: string;
   readonly teamId?: TeamId | null;
+  readonly spawnPointId?: string | null;
   readonly lifeId?: number;
   readonly lifeState?: ActorLifeState;
   readonly position?: WorldPosition;
@@ -102,6 +104,7 @@ export function createActorState(input: CreateActorStateInput): ActorState {
     id: input.id,
     kind: input.kind,
     teamId: input.teamId ?? null,
+    spawnPointId: input.spawnPointId ?? null,
     lifeId: input.lifeId ?? 1,
     lifeState: input.lifeState ?? "active",
     position: { ...(input.position ?? { x: 0, y: 0 }) },
