@@ -49,10 +49,10 @@ function createPlayer(
     position: { ...spawn.position },
     spawnPosition: { ...spawn.position },
     facing: { ...(spawn.facing ?? { x: 1, y: 0 }) },
-    radius: 24,
+    radius: 16,
     health: 100,
     maxHealth: 100,
     armor: 0,
-    maxArmor: 50,
+    maxArmor: 100,
   });
 }

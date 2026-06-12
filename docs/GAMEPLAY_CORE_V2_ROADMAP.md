@@ -95,21 +95,21 @@ gewonnen und neu gestartet werden.
 
 **Ziel:** V2 fuehlt sich praktisch wie V1 an.
 
-- [ ] Beschleunigung vergleichen.
-- [ ] Brems- und Reibungsverhalten vergleichen.
-- [ ] Richtungswechsel und Strafing vergleichen.
-- [ ] Maximalgeschwindigkeit vergleichen.
-- [ ] Kurzen Sprung vergleichen.
-- [ ] Gehaltenen beziehungsweise langen Sprung vergleichen.
-- [ ] Luftkontrolle vergleichen.
-- [ ] Collision- und Gap-Crossing vergleichen.
-- [ ] Damage-, Armor- und Respawn-Verhalten vergleichen.
-- [ ] Kamera und visuelles Feedback vergleichen.
-- [ ] Desktop-Input und wahrgenommene Latenz vergleichen.
+- [x] Beschleunigung vergleichen.
+- [x] Brems- und Reibungsverhalten vergleichen.
+- [x] Richtungswechsel und Strafing vergleichen.
+- [x] Maximalgeschwindigkeit vergleichen.
+- [x] Kurzen Sprung vergleichen.
+- [x] Gehaltenen beziehungsweise langen Sprung vergleichen.
+- [x] Luftkontrolle vergleichen.
+- [x] Collision- und Gap-Crossing vergleichen.
+- [x] Damage-, Armor- und Respawn-Verhalten vergleichen.
+- [x] Kamera und visuelles Feedback vergleichen.
+- [x] Desktop-Input und wahrgenommene Latenz vergleichen.
 - [ ] Mobile-Steuerung spaeter mit derselben Core-Logik anbinden.
-- [ ] V1-Konstanten und Formeln als Referenz dokumentieren.
+- [x] V1-Konstanten und Formeln als Referenz dokumentieren.
 - [ ] Identische Startsituationen fuer V1 und V2 verwenden.
-- [ ] Abweichungen messen und gezielt korrigieren.
+- [x] Abweichungen messen und gezielt korrigieren.
 - [ ] Keine vermeintlichen Verbesserungen einbauen, solange Paritaet das Ziel
       ist.
 

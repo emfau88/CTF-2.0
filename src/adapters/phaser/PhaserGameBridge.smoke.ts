@@ -994,6 +994,18 @@ function checkTeamDeathmatchSlice(): void {
   ) {
     throw new Error("TDM time limit must end tied matches as a draw.");
   }
+  const parityPlayers = timedRuntime.snapshot.actors.filter((actor) =>
+    actor.kind === "player"
+  );
+  if (
+    parityPlayers.some((actor) =>
+      actor.radius !== 16 ||
+      actor.maxHealth !== 100 ||
+      actor.maxArmor !== 100
+    )
+  ) {
+    throw new Error("TDM players must retain V1 actor size and resource caps.");
+  }
 }
 
 function killActorWithProjectiles(

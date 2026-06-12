@@ -25,6 +25,7 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
   private readonly pickupViews =
     new Map<PickupId, Phaser.GameObjects.Container>();
   private readonly geometryGraphics: Phaser.GameObjects.Graphics;
+  private cameraInitialized = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -55,6 +56,7 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
 
   reset(): void {
     this.geometryGraphics.clear();
+    this.cameraInitialized = false;
     this.destroyActorViews();
     this.destroyProjectileViews();
     this.destroyPickupViews();
@@ -71,9 +73,16 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
     const view = this.actorViews.get(actor.id) ?? this.createActorView(actor);
     const radius = Math.max(8, actor.radius);
 
-    view.shadow.setPosition(actor.position.x, actor.position.y);
-    view.shadow.setScale(1 + actor.jump.height / 310, .45);
-    view.shadow.setAlpha(.18 + actor.jump.height / 620);
+    view.shadow.setPosition(actor.position.x, actor.position.y + 8);
+    view.shadow.setScale(
+      1 + actor.jump.height / 160,
+      Math.max(.35, 1 - actor.jump.height / 95),
+    );
+    view.shadow.setAlpha(
+      actor.lifeState === "active"
+        ? Math.max(.1, .22 - actor.jump.height / 330)
+        : 0,
+    );
     view.container.setPosition(
       actor.position.x,
       actor.position.y - actor.jump.height,
@@ -290,7 +299,17 @@ export class PhaserDiagnosticRendererPort implements RendererPort {
         (sum, actor) => sum + actor.position.y,
         0,
       ) / followed.length;
-      camera.centerOn(centerX, centerY);
+      const targetScrollX = centerX - camera.width / 2;
+      const targetScrollY = centerY - camera.height / 2;
+      if (!this.cameraInitialized) {
+        camera.centerOn(centerX, centerY);
+        this.cameraInitialized = true;
+        return;
+      }
+      camera.setScroll(
+        Phaser.Math.Linear(camera.scrollX, targetScrollX, .12),
+        Phaser.Math.Linear(camera.scrollY, targetScrollY, .12),
+      );
     }
   }
 }
