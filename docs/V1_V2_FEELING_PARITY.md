@@ -59,6 +59,7 @@ Shared-Camera-Abweichung.
   Spieler.
 - Waffen-Audio, Trefferfeedback, Knockback und die V1-Waffen sind noch nicht
   migriert.
-- Mobile Input wird im nächsten Slice über dieselben Core-Actions angebunden.
+- Mobile Input ist über dieselben Core-Actions angebunden. Touchgeräte werden
+  automatisch erkannt; `&controls=mobile` erzwingt den Test auf Desktop.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf
   Desktop und Mobile.

@@ -9,6 +9,7 @@ export {
 export {
   PhaserDiagnosticRendererPort,
 } from "./PhaserDiagnosticRendererPort";
+export { PhaserMobileInputAdapter } from "./PhaserMobileInputAdapter";
 export { PhaserTeamDeathmatchHudPort } from "./PhaserTeamDeathmatchHudPort";
 export { runPhaserGameBridgeSmokeCheck } from "./PhaserGameBridge.smoke";
 export { GameplayV2Scene } from "./scenes/GameplayV2Scene";

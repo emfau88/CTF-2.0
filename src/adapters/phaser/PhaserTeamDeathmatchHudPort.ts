@@ -18,7 +18,10 @@ implements HudPort, FrameDiagnosticsPort {
   private hudState: ModeHudState | null = null;
   private snapshot: WorldSnapshot | null = null;
 
-  constructor(private readonly scene: Phaser.Scene) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly mobileControls = false,
+  ) {
     const panelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: "Consolas, monospace",
       fontSize: "16px",
@@ -43,7 +46,9 @@ implements HudPort, FrameDiagnosticsPort {
     this.controlsText = scene.add.text(
       14,
       0,
-      "P1  WASD / SPACE / J     P2  ARROWS / ENTER / SHIFT",
+      mobileControls
+        ? "MOVE STICK     FIRE / AIM     JUMP"
+        : "P1  WASD / SPACE / J     P2  ARROWS / ENTER / SHIFT",
       {
         ...panelStyle,
         fontSize: "12px",
@@ -113,6 +118,7 @@ implements HudPort, FrameDiagnosticsPort {
     this.blueText.setText(playerStatus("BLUE P1", blue));
     this.redText.setPosition(width - 14, 14).setText(playerStatus("RED P2", red));
     this.controlsText.setPosition(14, height - 14);
+    this.controlsText.setVisible(!this.mobileControls);
     this.resultText.setPosition(width / 2, height / 2);
 
     const result = this.hudState.matchResult;

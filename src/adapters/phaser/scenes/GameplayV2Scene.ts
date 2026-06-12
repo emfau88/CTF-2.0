@@ -8,6 +8,7 @@ import {
   NoopAudioPort,
   NoopEffectsPort,
 } from "../../noop";
+import type { InputAdapterPort } from "../../input";
 import { PhaserDiagnosticHudPort } from "../PhaserDiagnosticHudPort";
 import {
   PhaserDiagnosticInputAdapter,
@@ -16,11 +17,12 @@ import {
   PhaserDiagnosticRendererPort,
 } from "../PhaserDiagnosticRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
+import { PhaserMobileInputAdapter } from "../PhaserMobileInputAdapter";
 import { PhaserTeamDeathmatchHudPort } from "../PhaserTeamDeathmatchHudPort";
 
 export class GameplayV2Scene extends Phaser.Scene {
   private bridge?: PhaserGameBridge;
-  private inputAdapter?: PhaserDiagnosticInputAdapter;
+  private inputAdapter?: InputAdapterPort;
   private diagnosticText?: Phaser.GameObjects.Text;
 
   constructor() {
@@ -30,13 +32,16 @@ export class GameplayV2Scene extends Phaser.Scene {
   create(): void {
     const isTeamDeathmatch = new URLSearchParams(window.location.search)
       .get("mode") === "tdm";
+    const useMobileControls = isTeamDeathmatch && prefersMobileControls();
     const hud = isTeamDeathmatch
-      ? new PhaserTeamDeathmatchHudPort(this)
+      ? new PhaserTeamDeathmatchHudPort(this, useMobileControls)
       : this.createDiagnosticHud();
-    this.inputAdapter = new PhaserDiagnosticInputAdapter(
-      this,
-      isTeamDeathmatch ? "tdm" : "diagnostic",
-    );
+    this.inputAdapter = useMobileControls
+      ? new PhaserMobileInputAdapter(this)
+      : new PhaserDiagnosticInputAdapter(
+        this,
+        isTeamDeathmatch ? "tdm" : "diagnostic",
+      );
     const runtime = isTeamDeathmatch
       ? new GameplayCoreRuntime({
         mode: new TeamDeathmatchMode(),
@@ -93,4 +98,16 @@ export class GameplayV2Scene extends Phaser.Scene {
     this.inputAdapter = undefined;
     this.diagnosticText = undefined;
   }
+}
+
+function prefersMobileControls(): boolean {
+  const override = new URLSearchParams(window.location.search).get("controls");
+  if (override === "mobile") {
+    return true;
+  }
+  if (override === "desktop") {
+    return false;
+  }
+  return navigator.maxTouchPoints > 0 ||
+    window.matchMedia("(pointer: coarse)").matches;
 }

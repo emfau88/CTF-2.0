@@ -106,7 +106,7 @@ gewonnen und neu gestartet werden.
 - [x] Damage-, Armor- und Respawn-Verhalten vergleichen.
 - [x] Kamera und visuelles Feedback vergleichen.
 - [x] Desktop-Input und wahrgenommene Latenz vergleichen.
-- [ ] Mobile-Steuerung spaeter mit derselben Core-Logik anbinden.
+- [x] Mobile-Steuerung mit derselben Core-Logik anbinden.
 - [x] V1-Konstanten und Formeln als Referenz dokumentieren.
 - [ ] Identische Startsituationen fuer V1 und V2 verwenden.
 - [x] Abweichungen messen und gezielt korrigieren.
@@ -221,7 +221,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [ ] Restart und Rematch implementieren.
 - [ ] Desktop-HUD finalisieren.
 - [ ] Mobile-HUD finalisieren.
-- [ ] Touch-Steuerung mit V1-Paritaet anbinden.
+- [x] Touch-Steuerung mit V1-Paritaet anbinden.
 - [ ] Settings und Audiooptionen integrieren.
 - [ ] UI konfiguriert nur Matchdaten und enthaelt keine Spielregeln.
 
