@@ -121,25 +121,39 @@ nicht als anderes Spiel wahrgenommen.
 **Ziel:** Alle Waffen funktionieren mode-unabhaengig und mit V1-Feeling.
 
 - [x] Basic Autoshoot migrieren.
-- [ ] Rocket Launcher migrieren.
-- [ ] Railgun migrieren.
-- [ ] Whip migrieren.
+- [x] Rocket Launcher migrieren.
+- [x] Railgun migrieren.
+- [x] Whip migrieren.
 
 Fuer jede Waffe:
 
-- [ ] Fire-Regeln und Eingaben abgleichen.
-- [ ] Cooldowns abgleichen.
-- [ ] Ammo und Ressourcen abgleichen.
-- [ ] Reichweite und Trefferverhalten abgleichen.
-- [ ] Damage und Knockback abgleichen.
-- [ ] Projectile- oder Hitscan-Daten im Core halten.
-- [ ] Gameplay-Events definieren.
-- [ ] Darstellung, Audio und Effekte ueber Adapter ausloesen.
-- [ ] Passende Pickups integrieren.
-- [ ] Regressionstests fuer Treffer, Schaden und Cooldown ergaenzen.
+- [x] Fire-Regeln und Eingaben abgleichen.
+- [x] Cooldowns abgleichen.
+- [x] Ammo und Ressourcen abgleichen.
+- [x] Reichweite und Trefferverhalten abgleichen.
+- [x] Damage und Knockback abgleichen.
+- [x] Projectile- oder Hitscan-Daten im Core halten.
+- [x] Gameplay-Events definieren.
+- [x] Darstellung, Audio und Effekte ueber Adapter ausloesen.
+- [x] Passende Pickups integrieren.
+- [x] Regressionstests fuer Treffer, Schaden und Cooldown ergaenzen.
 
 **Abschlusskriterium:** Jede V1-Waffe funktioniert bereits in TDM und fuehlt
 sich wie ihre V1-Version an.
+
+### V1-Waffenparitaet in V2
+
+- Rocket: `371` Geschwindigkeit, `45` Basisschaden, `105` Splash-Radius,
+  `230` Knockback und `5` Ammo pro Pickup.
+- Railgun: `1100` Reichweite, `95 %` Max-HP-Schaden, `2500 ms` Cooldown und
+  `5` Ammo pro Pickup.
+- Whip: `120` Reichweite, `35 Grad` Halbwinkel, `35` Schaden,
+  `800 ms` Cooldown und `8` Ammo pro Pickup.
+- Desktop/Hybrid: `Q` Rocket, `E` Railgun, `F` Whip.
+- Touch: eigene Rocket-, Rail- und Whip-Buttons; Drag bestimmt die Richtung,
+  Tap verwendet die zuletzt bekannte Zielrichtung.
+- Offene Paritaetsarbeit: temporaere Ammo-Drops nach Tod und Bot-Nutzung der
+  Spezialwaffen sind noch nicht migriert.
 
 ### Aktueller spielbarer Mobile-TDM-Slice
 

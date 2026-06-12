@@ -26,6 +26,8 @@ import { PhaserArenaRendererPort } from "../PhaserArenaRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
 import { PhaserMobileInputAdapter } from "../PhaserMobileInputAdapter";
 import { PhaserTeamDeathmatchHudPort } from "../PhaserTeamDeathmatchHudPort";
+import { PhaserWeaponAudioPort } from "../PhaserWeaponAudioPort";
+import { PhaserWeaponEffectsPort } from "../PhaserWeaponEffectsPort";
 
 export class GameplayV2Scene extends Phaser.Scene {
   private bridge?: PhaserGameBridge;
@@ -46,8 +48,39 @@ export class GameplayV2Scene extends Phaser.Scene {
     const useMobileControls = isTeamDeathmatch && prefersMobileControls(search);
     const useBotOpponent = isTeamDeathmatch &&
       prefersBotOpponent(search, useMobileControls);
+    const runtime = isTeamDeathmatch
+      ? new GameplayCoreRuntime({
+        mode: new TeamDeathmatchMode(),
+        createWorld: createTeamDeathmatchWorldState,
+        basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+        allowManualPrimaryFire: false,
+      })
+      : new GameplayCoreRuntime();
     const mobileInput = useMobileControls
-      ? new PhaserMobileInputAdapter(this, "blue-player", false)
+      ? new PhaserMobileInputAdapter(
+        this,
+        "blue-player",
+        false,
+        (weaponId) => {
+          const actor = (this.bridge?.snapshot ?? runtime.snapshot).actors.find(
+            (candidate) => candidate.id === "blue-player",
+          );
+          if (!actor) return { ammo: 0, cooldownMs: 0 };
+          if (weaponId === "rocket") {
+            return { ammo: actor.weapons.rocketAmmo, cooldownMs: 0 };
+          }
+          if (weaponId === "rail") {
+            return {
+              ammo: actor.weapons.railAmmo,
+              cooldownMs: actor.weapons.railCooldownMs,
+            };
+          }
+          return {
+            ammo: actor.weapons.whipAmmo,
+            cooldownMs: actor.weapons.whipCooldownMs,
+          };
+        },
+      )
       : undefined;
     const hud = isTeamDeathmatch
       ? new PhaserTeamDeathmatchHudPort(
@@ -57,14 +90,6 @@ export class GameplayV2Scene extends Phaser.Scene {
         () => mobileInput?.requestRestart(),
       )
       : this.createDiagnosticHud();
-    const runtime = isTeamDeathmatch
-      ? new GameplayCoreRuntime({
-        mode: new TeamDeathmatchMode(),
-        createWorld: createTeamDeathmatchWorldState,
-        basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
-        allowManualPrimaryFire: false,
-      })
-      : new GameplayCoreRuntime();
     const playerInput = useMobileControls && mobileInput
       ? mobileInput
       : new PhaserDiagnosticInputAdapter(
@@ -87,9 +112,13 @@ export class GameplayV2Scene extends Phaser.Scene {
           useMobileControls ? "blue-player" : undefined,
         )
         : new PhaserDiagnosticRendererPort(this),
-      audio: new NoopAudioPort(),
+      audio: isTeamDeathmatch
+        ? new PhaserWeaponAudioPort(this)
+        : new NoopAudioPort(),
       diagnostics: hud,
-      effects: new NoopEffectsPort(),
+      effects: isTeamDeathmatch
+        ? new PhaserWeaponEffectsPort(this)
+        : new NoopEffectsPort(),
       hud,
     });
     this.bridge.initialize();

@@ -159,6 +159,9 @@ function playerStatus(
   return [
     label,
     `HP ${actor?.health ?? 0}  AR ${actor?.armor ?? 0}`,
+    `RKT ${actor?.weapons.rocketAmmo ?? 0}  RAIL ${
+      actor?.weapons.railAmmo ?? 0
+    }  WHIP ${actor?.weapons.whipAmmo ?? 0}`,
     actor?.lifeState === "active"
       ? "ACTIVE"
       : `${actor?.lifeState.toUpperCase() ?? "MISSING"} ${

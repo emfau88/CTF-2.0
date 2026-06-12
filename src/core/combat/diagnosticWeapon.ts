@@ -26,8 +26,9 @@ export function fireDiagnosticProjectile(
   const offset = actor.radius + config.projectileRadius + config.muzzleOffset;
   const projectile: ProjectileState = {
     id: `diagnostic-projectile-${sequence}-${actor.id}`,
-    ownerActorId: actor.id,
-    teamId: actor.teamId,
+      ownerActorId: actor.id,
+      teamId: actor.teamId,
+      weaponId: "diagnostic-blaster",
     position: {
       x: actor.position.x + direction.x * offset,
       y: actor.position.y + direction.y * offset,

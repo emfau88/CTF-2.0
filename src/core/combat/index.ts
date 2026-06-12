@@ -10,6 +10,7 @@ export type {
   ProjectileId,
   ProjectileLifeState,
   ProjectileState,
+  ProjectileWeaponId,
 } from "./projectile";
 export {
   updateProjectiles,
@@ -20,3 +21,8 @@ export {
   type BasicAutoAttackConfig,
 } from "./BasicAutoAttackConfig";
 export { updateBasicAutoAttacks } from "./basicAutoAttack";
+export {
+  V2_V1_WEAPON_PARITY_CONFIG,
+  type V1WeaponConfig,
+} from "./V1WeaponConfig";
+export { fireV1Weapons } from "./v1Weapons";

@@ -6,6 +6,7 @@ export {
   type ActorRespawnState,
   type ActorId,
   type ActorState,
+  type ActorWeaponState,
   type CreateActorStateInput,
   type TeamId,
   type WorldFacing,

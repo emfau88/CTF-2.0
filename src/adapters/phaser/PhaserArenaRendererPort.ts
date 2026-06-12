@@ -22,7 +22,7 @@ interface ArenaActorView {
 export class PhaserArenaRendererPort implements RendererPort {
   private readonly actorViews = new Map<ActorId, ArenaActorView>();
   private readonly projectileViews =
-    new Map<ProjectileId, Phaser.GameObjects.Ellipse>();
+    new Map<ProjectileId, Phaser.GameObjects.Ellipse | Phaser.GameObjects.Image>();
   private readonly pickupViews =
     new Map<PickupId, Phaser.GameObjects.Container>();
   private cameraInitialized = false;
@@ -173,20 +173,39 @@ export class PhaserArenaRendererPort implements RendererPort {
   private renderProjectile(projectile: Readonly<ProjectileState>): void {
     const color = projectile.teamId === "blue" ? 0x79a9ff : 0xff806f;
     const view = this.projectileViews.get(projectile.id) ??
-      this.scene.add.ellipse(
-        projectile.position.x,
-        projectile.position.y,
-        projectile.radius * 2.7,
-        projectile.radius * .9,
-        color,
-        .98,
-      ).setDepth(52);
+      this.createProjectileView(projectile, color);
     view
       .setPosition(projectile.position.x, projectile.position.y)
-      .setDisplaySize(projectile.radius * 2.7, projectile.radius * .9)
-      .setRotation(Math.atan2(projectile.velocity.y, projectile.velocity.x))
-      .setFillStyle(color, .98);
+      .setRotation(Math.atan2(projectile.velocity.y, projectile.velocity.x));
+    if (view instanceof Phaser.GameObjects.Ellipse) {
+      view.setDisplaySize(projectile.radius * 2.7, projectile.radius * .9);
+      view.setFillStyle(color, .98);
+    } else {
+      view.setScale(.46);
+    }
     this.projectileViews.set(projectile.id, view);
+  }
+
+  private createProjectileView(
+    projectile: Readonly<ProjectileState>,
+    color: number,
+  ): Phaser.GameObjects.Ellipse | Phaser.GameObjects.Image {
+    if (projectile.weaponId === "rocket") {
+      return this.scene.add.image(
+        projectile.position.x,
+        projectile.position.y,
+        "rocketProjectile",
+        2,
+      ).setScale(.46).setDepth(52);
+    }
+    return this.scene.add.ellipse(
+      projectile.position.x,
+      projectile.position.y,
+      projectile.radius * 2.7,
+      projectile.radius * .9,
+      color,
+      .98,
+    ).setDepth(52);
   }
 
   private destroyProjectileViews(): void {
@@ -235,7 +254,7 @@ export class PhaserArenaRendererPort implements RendererPort {
     const icon = this.scene.add.image(
       0,
       -5,
-      pickup.type === "health" ? "pickupHealth" : "pickupArmor",
+      pickupTexture(pickup.type),
     ).setName("icon").setScale(.28);
     container.add([pad, glow, icon]);
     this.pickupViews.set(pickup.id, container);
@@ -294,6 +313,14 @@ export class PhaserArenaRendererPort implements RendererPort {
       Phaser.Math.Linear(camera.scrollY, targetScrollY, .12),
     );
   }
+}
+
+function pickupTexture(type: PickupState["type"]): string {
+  if (type === "health") return "pickupHealth";
+  if (type === "armor") return "pickupArmor";
+  if (type === "rocket") return "pickupRocket";
+  if (type === "rail") return "pickupRail";
+  return "pickupWhip";
 }
 
 function characterFrame(actor: Readonly<ActorState>): number {

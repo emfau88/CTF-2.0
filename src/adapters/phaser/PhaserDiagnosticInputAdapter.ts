@@ -15,6 +15,9 @@ interface DiagnosticKeys {
   readonly jump: Phaser.Input.Keyboard.Key;
   readonly firePrimary: Phaser.Input.Keyboard.Key;
   readonly fireSpecial: Phaser.Input.Keyboard.Key;
+  readonly rocket: Phaser.Input.Keyboard.Key;
+  readonly rail: Phaser.Input.Keyboard.Key;
+  readonly whip: Phaser.Input.Keyboard.Key;
   readonly debugDamage: Phaser.Input.Keyboard.Key;
   readonly debugScore: Phaser.Input.Keyboard.Key;
   readonly restartMatch: Phaser.Input.Keyboard.Key;
@@ -36,6 +39,9 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
   private scoreWasHeld = false;
   private restartWasHeld = false;
   private redJumpWasHeld = false;
+  private rocketWasHeld = false;
+  private railWasHeld = false;
+  private whipWasHeld = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -54,6 +60,9 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
       jump: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       firePrimary: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
       fireSpecial: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F),
+      rocket: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
+      rail: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+      whip: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F),
       debugDamage: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
       debugScore: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L),
       restartMatch: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R),
@@ -107,9 +116,10 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
         actorId: blueActorId,
       });
     }
-    if (fireSpecial) {
+    if (this.profile === "diagnostic" && fireSpecial) {
       actions.push({ action: "fireSpecial", phase: "held" });
     }
+    this.appendWeaponActions(actions, blueActorId, aim);
     if (
       this.profile === "diagnostic" &&
       this.keys.debugDamage.isDown &&
@@ -140,6 +150,9 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
     this.scoreWasHeld = this.keys.debugScore.isDown;
     this.restartWasHeld = this.keys.restartMatch.isDown;
     this.redJumpWasHeld = this.keys.redJump.isDown;
+    this.rocketWasHeld = this.keys.rocket.isDown;
+    this.railWasHeld = this.keys.rail.isDown;
+    this.whipWasHeld = this.keys.whip.isDown;
     return {
       sequence: ++this.sequence,
       timeMs: this.scene.time.now,
@@ -155,6 +168,9 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
     this.scoreWasHeld = false;
     this.restartWasHeld = false;
     this.redJumpWasHeld = false;
+    this.rocketWasHeld = false;
+    this.railWasHeld = false;
+    this.whipWasHeld = false;
   }
 
   dispose(): void {
@@ -208,6 +224,28 @@ export class PhaserDiagnosticInputAdapter implements InputAdapterPort {
     }
     if (this.keys.redFire.isDown) {
       actions.push({ action: "firePrimary", phase: "held", actorId });
+    }
+  }
+
+  private appendWeaponActions(
+    actions: CoreActionIntent[],
+    actorId: string | undefined,
+    direction: WorldPosition,
+  ): void {
+    for (const [weaponId, held, wasHeld] of [
+      ["rocket", this.keys.rocket.isDown, this.rocketWasHeld],
+      ["rail", this.keys.rail.isDown, this.railWasHeld],
+      ["whip", this.keys.whip.isDown, this.whipWasHeld],
+    ] as const) {
+      if (held && !wasHeld) {
+        actions.push({
+          action: "fireWeapon",
+          phase: "pressed",
+          actorId,
+          direction,
+          payload: { weaponId },
+        });
+      }
     }
   }
 

@@ -70,5 +70,11 @@ Shared-Camera-Abweichung.
   Pickup-Assets wie V1. Der autoritative Zustand bleibt trotzdem im V2-Core.
 - Mobile-TDM steuert den roten Gegner ueber normale `move`- und `aim`-Intents.
   Navigation meidet Solids und Gaps; Bot-Jumps und Rollen sind noch offen.
+- Rocket, Railgun und Whip verwenden in V2 die V1-Werte aus
+  `src/config.ts`. Trefferregeln liegen im Core, waehrend Phaser nur
+  Projektile, Beams, Swings, Explosionen und Sounds darstellt.
+- V1-Weapon-Pickups auf Training Crossing sind in V2 vorhanden. Temporaere
+  Ammo-Drops nach einem Tod und Spezialwaffennutzung durch Bots sind noch
+  offene Paritaetspunkte.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf
   Desktop und Mobile.

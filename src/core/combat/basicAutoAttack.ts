@@ -99,6 +99,7 @@ function createBasicProjectile(
     id: `basic-projectile-${owner.id}-${owner.lifeId}-${timeMs}`,
     ownerActorId: owner.id,
     teamId: owner.teamId,
+    weaponId: "basic-autoshoot",
     position: {
       x: owner.position.x + direction.x * offset,
       y: owner.position.y + direction.y * offset,

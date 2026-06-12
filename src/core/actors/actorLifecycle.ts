@@ -60,6 +60,11 @@ export function applyDamage(
     actor.velocity.x = 0;
     actor.velocity.y = 0;
     actor.armor = 0;
+    actor.weapons.rocketAmmo = 0;
+    actor.weapons.railAmmo = 0;
+    actor.weapons.railCooldownMs = 0;
+    actor.weapons.whipAmmo = 0;
+    actor.weapons.whipCooldownMs = 0;
     actor.respawn = {
       reason: "death",
       remainingMs: config.respawnDelayMs,

@@ -56,6 +56,36 @@ export function createTeamDeathmatchWorldState(): WorldState {
       type: "armor",
       position: { x: 750, y: 410 },
     }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "rocket-red",
+      type: "rocket",
+      position: { x: 130, y: 500 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "rail-red",
+      type: "rail",
+      position: { x: 215, y: 500 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "whip-red",
+      type: "whip",
+      position: { x: 285, y: 410 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "rocket-blue",
+      type: "rocket",
+      position: { x: 1370, y: 500 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "rail-blue",
+      type: "rail",
+      position: { x: 1285, y: 500 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
+    createPickupState({
+      id: "whip-blue",
+      type: "whip",
+      position: { x: 1215, y: 410 },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG),
   );
   return world;
 }

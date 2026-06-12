@@ -19,6 +19,14 @@ export function updateActorWorld(
       0,
       actor.primaryFireCooldownMs - ms,
     );
+    actor.weapons.railCooldownMs = Math.max(
+      0,
+      actor.weapons.railCooldownMs - ms,
+    );
+    actor.weapons.whipCooldownMs = Math.max(
+      0,
+      actor.weapons.whipCooldownMs - ms,
+    );
     const lifecycle = updateActorLifecycle(
       actor,
       ms,

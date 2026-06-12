@@ -7,12 +7,16 @@ import {
   createScoreBoardState,
   createTeamDeathmatchWorldState,
   DiagnosticArenaMode,
+  fireV1Weapons,
   GameplayCoreRuntime,
   TeamDeathmatchMode,
   TdmBotController,
   updatePickups,
+  updateProjectiles,
+  V2_ACTOR_LIFECYCLE_CONFIG,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_COLLISION_GROUNDWORK_CONFIG,
+  V2_DIAGNOSTIC_BLASTER_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
 } from "../../core";
 import type {
@@ -183,6 +187,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkTeamDeathmatchSlice();
   checkBasicAutoShootParity();
   checkTdmBotController();
+  checkV1WeaponParity();
 }
 
 function checkJumpParity(): void {
@@ -1225,4 +1230,126 @@ function checkTdmBotController(): void {
   if (fell) {
     throw new Error("TDM bot navigation must avoid authored gap zones.");
   }
+}
+
+export function checkV1WeaponParity(): void {
+  checkRocketParity();
+  checkRailParity();
+  checkWhipParity();
+}
+
+function checkRocketParity(): void {
+  const world = createWeaponTestWorld(160);
+  const owner = world.actors[0]!;
+  const target = world.actors[1]!;
+  owner.weapons.rocketAmmo = 1;
+  const fired = fireV1Weapons(world, owner, weaponInput("rocket"));
+  if (
+    owner.weapons.rocketAmmo !== 0 ||
+    world.projectiles[0]?.weaponId !== "rocket" ||
+    !fired.some((event) => event.type === "weapon.rocketFired")
+  ) {
+    throw new Error("Rocket must consume ammo and create a rocket projectile.");
+  }
+  for (let frame = 0; frame < 20 && world.projectiles.length > 0; frame++) {
+    world.timeMs += 34;
+    updateProjectiles(
+      world.projectiles,
+      world.actors,
+      world.geometry,
+      34,
+      world.timeMs,
+      V2_DIAGNOSTIC_BLASTER_CONFIG,
+      V2_ACTOR_LIFECYCLE_CONFIG,
+    );
+  }
+  if (target.health >= target.maxHealth || target.velocity.x <= 0) {
+    throw new Error("Rocket splash must apply damage and outward knockback.");
+  }
+}
+
+function checkRailParity(): void {
+  const world = createWeaponTestWorld(400);
+  const owner = world.actors[0]!;
+  const target = world.actors[1]!;
+  owner.weapons.railAmmo = 2;
+  const events = fireV1Weapons(world, owner, weaponInput("rail"));
+  if (
+    owner.weapons.railAmmo !== 1 ||
+    owner.weapons.railCooldownMs !== 2500 ||
+    target.health !== 5 ||
+    !events.some((event) => event.type === "weapon.railFired")
+  ) {
+    throw new Error("Railgun must mirror V1 damage, ammo, and cooldown.");
+  }
+  fireV1Weapons(world, owner, weaponInput("rail"));
+  if (owner.weapons.railAmmo !== 1) {
+    throw new Error("Railgun cooldown must reject repeated fire.");
+  }
+}
+
+function checkWhipParity(): void {
+  const world = createWeaponTestWorld(110);
+  const owner = world.actors[0]!;
+  const target = world.actors[1]!;
+  owner.weapons.whipAmmo = 1;
+  const events = fireV1Weapons(world, owner, weaponInput("whip"));
+  if (
+    owner.weapons.whipAmmo !== 0 ||
+    owner.weapons.whipCooldownMs !== 800 ||
+    target.health !== 65 ||
+    !events.some((event) => event.type === "weapon.whipFired")
+  ) {
+    throw new Error("Whip must mirror V1 cone damage, ammo, and cooldown.");
+  }
+}
+
+function createWeaponTestWorld(targetX: number) {
+  const world = createEmptyWorldState("weapon-smoke");
+  world.geometry = {
+    bounds: { minX: 0, minY: 0, maxX: 1000, maxY: 800 },
+    solids: [],
+    gaps: [],
+  };
+  world.actors.push(
+    createActorState({
+      id: "blue",
+      kind: "player",
+      teamId: "blue",
+      position: { x: 100, y: 100 },
+      radius: 16,
+      maxHealth: 100,
+      maxArmor: 0,
+    }),
+    createActorState({
+      id: "red",
+      kind: "player",
+      teamId: "red",
+      position: { x: targetX, y: 100 },
+      radius: 16,
+      maxHealth: 100,
+      maxArmor: 0,
+    }),
+  );
+  return world;
+}
+
+function weaponInput(weaponId: "rocket" | "rail" | "whip") {
+  return {
+    sequence: 1,
+    timeMs: 0,
+    deltaMs: 16,
+    actions: [{
+      action: "aim",
+      phase: "held" as const,
+      actorId: "blue",
+      direction: { x: 1, y: 0 },
+    }, {
+      action: "fireWeapon",
+      phase: "pressed" as const,
+      actorId: "blue",
+      direction: { x: 1, y: 0 },
+      payload: { weaponId },
+    }],
+  };
 }

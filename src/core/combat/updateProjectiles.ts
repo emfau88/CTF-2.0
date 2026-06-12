@@ -52,6 +52,9 @@ export function updateProjectiles(
       projectile.position.y - projectile.radius < geometry.bounds.minY ||
       projectile.position.y + projectile.radius > geometry.bounds.maxY;
     if (hitSolid || outsideBounds) {
+      if (projectile.weaponId === "rocket") {
+        explodeRocket(projectile, actors, geometry, timeMs, events, lifecycleConfig);
+      }
       expireProjectile(projectile, timeMs, events, hitSolid ? "solid" : "bounds");
       continue;
     }
@@ -73,18 +76,30 @@ export function updateProjectiles(
         teamId: projectile.teamId ?? undefined,
         payload: {
           projectileId: projectile.id,
+          weaponId: projectile.weaponId,
           position: { ...projectile.position },
           damage: projectile.damage,
         },
       });
-      const damage = applyDamage(
-        target,
-        projectile.damage,
-        timeMs,
-        lifecycleConfig,
-        projectile.ownerActorId,
-      );
-      events.push(...damage.events);
+      if (projectile.weaponId === "rocket") {
+        explodeRocket(
+          projectile,
+          actors,
+          geometry,
+          timeMs,
+          events,
+          lifecycleConfig,
+        );
+      } else {
+        const damage = applyDamage(
+          target,
+          projectile.damage,
+          timeMs,
+          lifecycleConfig,
+          projectile.ownerActorId,
+        );
+        events.push(...damage.events);
+      }
       continue;
     }
 
@@ -125,10 +140,97 @@ function expireProjectile(
     teamId: projectile.teamId ?? undefined,
     payload: {
       projectileId: projectile.id,
+      weaponId: projectile.weaponId,
       position: { ...projectile.position },
       reason,
     },
   });
+}
+
+function explodeRocket(
+  projectile: ProjectileState,
+  actors: ActorState[],
+  geometry: WorldGeometry,
+  timeMs: number,
+  events: GameEvent[],
+  lifecycleConfig: ActorLifecycleConfig,
+): void {
+  const splashRadius = projectile.splashRadius ?? 0;
+  const knockback = projectile.knockback ?? 0;
+  events.push({
+    id: `weapon-rocket-exploded-${projectile.id}-${timeMs}`,
+    type: "weapon.rocketExploded",
+    timeMs,
+    sourceActorId: projectile.ownerActorId,
+    teamId: projectile.teamId ?? undefined,
+    payload: {
+      projectileId: projectile.id,
+      position: { ...projectile.position },
+      splashRadius,
+    },
+  });
+  for (const actor of actors) {
+    if (
+      actor.lifeState !== "active" ||
+      actor.teamId === projectile.teamId
+    ) {
+      continue;
+    }
+    const dx = actor.position.x - projectile.position.x;
+    const dy = actor.position.y - projectile.position.y;
+    const distance = Math.hypot(dx, dy);
+    if (
+      distance > splashRadius + actor.radius ||
+      geometry.solids.some((solid) =>
+        lineIntersectsRect(projectile.position, actor.position, solid)
+      )
+    ) {
+      continue;
+    }
+    const falloff = clamp(1 - distance / splashRadius, .35, 1);
+    events.push(...applyDamage(
+      actor,
+      projectile.damage * falloff,
+      timeMs,
+      lifecycleConfig,
+      projectile.ownerActorId,
+    ).events);
+    const normal = distance || 1;
+    actor.velocity.x += dx / normal * knockback * falloff;
+    actor.velocity.y += dy / normal * knockback * falloff;
+    actor.position.x += dx / normal * 18 * falloff;
+    actor.position.y += dy / normal * 18 * falloff;
+  }
+}
+
+function lineIntersectsRect(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  rect: WorldRect,
+): boolean {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  let near = 0;
+  let far = 1;
+  for (const [origin, direction, min, max] of [
+    [from.x, dx, rect.x, rect.x + rect.width],
+    [from.y, dy, rect.y, rect.y + rect.height],
+  ] as const) {
+    if (Math.abs(direction) < .0001) {
+      if (origin < min || origin > max) {
+        return false;
+      }
+      continue;
+    }
+    const first = (min - origin) / direction;
+    const second = (max - origin) / direction;
+    near = Math.max(near, Math.min(first, second));
+    far = Math.min(far, Math.max(first, second));
+    if (near > far) {
+      return false;
+    }
+  }
+  return far >= 0 && near <= 1;
 }
 
 function circleIntersectsRect(

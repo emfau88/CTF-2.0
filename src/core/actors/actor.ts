@@ -46,6 +46,14 @@ export interface ActorJumpState {
   height: number;
 }
 
+export interface ActorWeaponState {
+  rocketAmmo: number;
+  railAmmo: number;
+  railCooldownMs: number;
+  whipAmmo: number;
+  whipCooldownMs: number;
+}
+
 export interface ActorState {
   readonly id: ActorId;
   readonly kind: string;
@@ -68,6 +76,7 @@ export interface ActorState {
   armor: number;
   maxArmor: number;
   primaryFireCooldownMs: number;
+  weapons: ActorWeaponState;
   respawn: ActorRespawnState | null;
 }
 
@@ -93,6 +102,7 @@ export type CreateActorStateInput = {
   readonly armor?: number;
   readonly maxArmor?: number;
   readonly primaryFireCooldownMs?: number;
+  readonly weapons?: Partial<ActorWeaponState>;
   readonly respawn?: ActorRespawnState | null;
 };
 
@@ -139,6 +149,13 @@ export function createActorState(input: CreateActorStateInput): ActorState {
     armor: input.armor ?? maxArmor,
     maxArmor,
     primaryFireCooldownMs: input.primaryFireCooldownMs ?? 0,
+    weapons: {
+      rocketAmmo: input.weapons?.rocketAmmo ?? 0,
+      railAmmo: input.weapons?.railAmmo ?? 0,
+      railCooldownMs: input.weapons?.railCooldownMs ?? 0,
+      whipAmmo: input.weapons?.whipAmmo ?? 0,
+      whipCooldownMs: input.weapons?.whipCooldownMs ?? 0,
+    },
     respawn: input.respawn ? { ...input.respawn } : null,
   };
 }

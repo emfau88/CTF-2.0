@@ -72,6 +72,7 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       facing: { ...actor.facing },
       lastMoveDirection: { ...actor.lastMoveDirection },
       jump: { ...actor.jump },
+      weapons: { ...actor.weapons },
       lastSafePosition: { ...actor.lastSafePosition },
       respawn: actor.respawn ? { ...actor.respawn } : null,
     })),

@@ -5,6 +5,7 @@ import {
 } from "../actors";
 import {
   fireDiagnosticProjectile,
+  fireV1Weapons,
   V2_DIAGNOSTIC_BLASTER_CONFIG,
 } from "../combat";
 import type { GameEvent } from "../events";
@@ -55,6 +56,7 @@ export function updateDiagnosticControlledActor(
     }
     events.push(...fire.events);
   }
+  events.push(...fireV1Weapons(world, actor, input));
 
   updateLastMoveDirection(actor, input);
   applyJumpMovement(

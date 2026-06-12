@@ -12,6 +12,7 @@ export {
   type ActorRespawnState,
   type ActorId,
   type ActorState,
+  type ActorWeaponState,
   type CreateActorStateInput,
   type TeamId,
   type WorldFacing,
@@ -26,16 +27,20 @@ export {
 } from "./bots";
 export {
   fireDiagnosticProjectile,
+  fireV1Weapons,
   updateBasicAutoAttacks,
   updateProjectiles,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_DIAGNOSTIC_BLASTER_CONFIG,
+  V2_V1_WEAPON_PARITY_CONFIG,
   type BasicAutoAttackConfig,
   type DiagnosticFireResult,
   type DiagnosticWeaponConfig,
+  type V1WeaponConfig,
   type ProjectileId,
   type ProjectileLifeState,
   type ProjectileState,
+  type ProjectileWeaponId,
   type ProjectileUpdateResult,
 } from "./combat";
 export type {

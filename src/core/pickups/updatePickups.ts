@@ -68,9 +68,13 @@ export function updatePickups(
 }
 
 function canApplyPickup(actor: ActorState, pickup: PickupState): boolean {
-  return pickup.type === "health"
-    ? actor.health < actor.maxHealth
-    : actor.armor < actor.maxArmor;
+  if (pickup.type === "health") {
+    return actor.health < actor.maxHealth;
+  }
+  if (pickup.type === "armor") {
+    return actor.armor < actor.maxArmor;
+  }
+  return true;
 }
 
 function applyPickup(actor: ActorState, pickup: PickupState): number {
@@ -80,9 +84,19 @@ function applyPickup(actor: ActorState, pickup: PickupState): number {
     return actor.health - before;
   }
 
-  const before = actor.armor;
-  actor.armor = Math.min(actor.maxArmor, actor.armor + pickup.value);
-  return actor.armor - before;
+  if (pickup.type === "armor") {
+    const before = actor.armor;
+    actor.armor = Math.min(actor.maxArmor, actor.armor + pickup.value);
+    return actor.armor - before;
+  }
+  if (pickup.type === "rocket") {
+    actor.weapons.rocketAmmo += pickup.value;
+  } else if (pickup.type === "rail") {
+    actor.weapons.railAmmo += pickup.value;
+  } else {
+    actor.weapons.whipAmmo += pickup.value;
+  }
+  return pickup.value;
 }
 
 function circlesOverlap(actor: ActorState, pickup: PickupState): boolean {
