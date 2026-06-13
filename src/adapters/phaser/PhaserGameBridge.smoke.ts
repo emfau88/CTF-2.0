@@ -3,17 +3,22 @@ import {
   awardScore,
   createActorState,
   createEmptyWorldState,
+  createWorldSnapshot,
   createPickupState,
   createScoreBoardState,
   createTeamDeathmatchWorldState,
   DiagnosticArenaMode,
   fireV1Weapons,
+  GRAND_ARCHIVE_V2,
+  getWorldMap,
   GameplayCoreRuntime,
+  resolveWorldMap,
   TeamDeathmatchMode,
   TdmBotController,
   updatePickups,
   updateProjectiles,
   V2_ACTOR_LIFECYCLE_CONFIG,
+  V2_ARENA_PICKUP_PARITY_CONFIG,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_COLLISION_GROUNDWORK_CONFIG,
   V2_DIAGNOSTIC_BLASTER_CONFIG,
@@ -25,7 +30,12 @@ import type {
   PickupState,
 } from "../../core";
 import type { WorldGeometry } from "../../core";
+import { createDiagnosticWorldState } from "../../core/runtime/createDiagnosticWorldState";
 import { PhaserGameBridge } from "./PhaserGameBridge";
+import {
+  resolveMobileWeaponReleaseDirection,
+  resolveMobileWeaponTapDirection,
+} from "./PhaserMobileInputAdapter";
 
 export function runPhaserGameBridgeSmokeCheck(): void {
   let renders = 0;
@@ -108,6 +118,9 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   }
   const initialActor = initial.snapshot.actors[0];
   const nextActor = next.snapshot.actors[0];
+  const initialActorSpawn = initial.snapshot.spawnPoints.find((spawn) =>
+    spawn.id === initialActor?.spawnPointId
+  );
   if (
     next.events.length !== 1 ||
     initial.snapshot.actors.length !== 4 ||
@@ -138,9 +151,10 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   if (
     !initialActor ||
     !nextActor ||
+    !initialActorSpawn ||
     initialActor.id !== "diagnostic-actor-1" ||
-    initialActor.position.x !== 150 ||
-    initialActor.position.y !== 410 ||
+    initialActor.position.x !== initialActorSpawn.position.x ||
+    initialActor.position.y !== initialActorSpawn.position.y ||
     nextActor.position.x <= initialActor.position.x ||
     nextActor.position.y !== initialActor.position.y ||
     nextActor.velocity.x <= 0 ||
@@ -184,10 +198,129 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkPickupPipeline();
   checkMatchLifecycle();
   checkScoreSafety();
+  checkMobileWeaponTapTargeting();
+  checkWorldMapRegistry();
   checkTeamDeathmatchSlice();
   checkBasicAutoShootParity();
   checkTdmBotController();
   checkV1WeaponParity();
+}
+
+function checkMobileWeaponTapTargeting(): void {
+  const world = createEmptyWorldState("mobile-weapon-targeting");
+  world.geometry = {
+    bounds: { minX: 0, minY: 0, maxX: 800, maxY: 600 },
+    solids: [],
+    gaps: [],
+  };
+  world.actors.push(
+    createActorState({
+      id: "blue",
+      kind: "player",
+      teamId: "blue",
+      position: { x: 100, y: 100 },
+      radius: 16,
+      maxHealth: 100,
+      maxArmor: 100,
+    }),
+    createActorState({
+      id: "red",
+      kind: "player",
+      teamId: "red",
+      position: { x: 160, y: 180 },
+      radius: 16,
+      maxHealth: 100,
+      maxArmor: 100,
+    }),
+  );
+  const expectedLength = 100;
+  const targeted = resolveMobileWeaponTapDirection(
+    createWorldSnapshot(world),
+    "blue",
+    "whip",
+    { x: -1, y: 0 },
+  );
+  if (
+    Math.abs(targeted.x - 60 / expectedLength) > .0001 ||
+    Math.abs(targeted.y - 80 / expectedLength) > .0001
+  ) {
+    throw new Error("Mobile weapon tap must auto-aim at the nearest visible enemy.");
+  }
+
+  world.geometry = {
+    ...world.geometry,
+    solids: [{
+      id: "blocking-wall",
+      x: 125,
+      y: 90,
+      width: 12,
+      height: 120,
+    }],
+  };
+  const blocked = resolveMobileWeaponTapDirection(
+    createWorldSnapshot(world),
+    "blue",
+    "rocket",
+    { x: -1, y: 0 },
+  );
+  if (blocked.x !== 1 || blocked.y !== 0) {
+    throw new Error("Blocked mobile taps must retain the actor fallback direction.");
+  }
+
+  const tapRelease = resolveMobileWeaponReleaseDirection({
+    dragged: false,
+    dragDistance: 0,
+    manualDirection: { x: 0, y: -1 },
+    autoDirection: { x: .6, y: .8 },
+  });
+  const manualRelease = resolveMobileWeaponReleaseDirection({
+    dragged: true,
+    dragDistance: 64,
+    manualDirection: { x: 0, y: -4 },
+    autoDirection: { x: 1, y: 0 },
+  });
+  const cancelledRelease = resolveMobileWeaponReleaseDirection({
+    dragged: true,
+    dragDistance: 12,
+    manualDirection: { x: 0, y: -1 },
+    autoDirection: { x: 1, y: 0 },
+  });
+  if (
+    tapRelease?.x !== .6 ||
+    tapRelease.y !== .8 ||
+    manualRelease?.x !== 0 ||
+    manualRelease.y !== -1 ||
+    cancelledRelease !== null
+  ) {
+    throw new Error("Mobile weapon release must distinguish tap, manual aim and cancel.");
+  }
+}
+
+function checkWorldMapRegistry(): void {
+  if (
+    getWorldMap("training-crossing-v2")?.displayName !== "Training Crossing" ||
+    getWorldMap("grand-archive-v2") !== GRAND_ARCHIVE_V2 ||
+    getWorldMap("missing-map") !== undefined ||
+    resolveWorldMap("missing-map").id !== "training-crossing-v2"
+  ) {
+    throw new Error("V2 map registry must resolve known maps and fallback safely.");
+  }
+
+  const world = createTeamDeathmatchWorldState(GRAND_ARCHIVE_V2);
+  if (
+    world.map?.id !== "grand-archive-v2" ||
+    world.geometry.bounds.maxX !== 2500 ||
+    world.geometry.bounds.maxY !== 820 ||
+    world.geometry.solids.length !== 20 ||
+    world.geometry.gaps.length !== 4 ||
+    world.pickups.length !== 15 ||
+    world.actors.find((actor) => actor.id === "red-player")
+        ?.spawnPosition.x !== 145 ||
+    world.actors.find((actor) => actor.id === "blue-player")
+        ?.spawnPosition.x !== 2355
+  ) {
+    throw new Error("Grand Archive must populate its complete V2 TDM world.");
+  }
 }
 
 function checkJumpParity(): void {
@@ -209,6 +342,9 @@ function checkJumpParity(): void {
   if (heldJump.horizontalDistance <= 0) {
     throw new Error("Air control must preserve horizontal movement.");
   }
+  if (shortJump.jumpEvents !== 1 || heldJump.jumpEvents !== 1) {
+    throw new Error("Each successful jump must emit actor.jumped exactly once.");
+  }
 }
 
 function runJumpSequence(heldFrames: number): {
@@ -217,6 +353,7 @@ function runJumpSequence(heldFrames: number): {
   airborneFrames: number;
   horizontalDistance: number;
   landed: boolean;
+  jumpEvents: number;
 } {
   const runtime = new GameplayCoreRuntime();
   const initial = runtime.initialize().snapshot.actors[0];
@@ -229,6 +366,7 @@ function runJumpSequence(heldFrames: number): {
   let maxPlannedMs = 0;
   let airborneFrames = 0;
   let landed = false;
+  let jumpEvents = 0;
   let actor = initial;
 
   for (let frame = 0; frame < 80; frame++) {
@@ -255,6 +393,9 @@ function runJumpSequence(heldFrames: number): {
       deltaMs: 34,
       actions,
     });
+    jumpEvents += result.events.filter((event) =>
+      event.type === "actor.jumped"
+    ).length;
     actor = result.snapshot.actors[0] ?? actor;
     maxHeight = Math.max(maxHeight, actor.jump.height);
     maxPlannedMs = Math.max(maxPlannedMs, actor.jump.plannedDurationMs);
@@ -272,6 +413,7 @@ function runJumpSequence(heldFrames: number): {
     airborneFrames,
     horizontalDistance: actor.position.x - initial.position.x,
     landed,
+    jumpEvents,
   };
 }
 
@@ -462,8 +604,8 @@ function checkActorLifecycle(): void {
     respawnedActor.lifeState !== "active" ||
     respawnedActor.health !== respawnedActor.maxHealth ||
     respawnedActor.armor !== 0 ||
-    respawnedActor.position.x !== 150 ||
-    respawnedActor.position.y !== 410
+    respawnedActor.position.x !== respawnedActor.spawnPosition.x ||
+    respawnedActor.position.y !== respawnedActor.spawnPosition.y
   ) {
     throw new Error("Dead actor must respawn healthy at the map spawn.");
   }
@@ -486,7 +628,22 @@ function diagnosticDamageFrame(
 }
 
 function checkProjectilePipeline(): void {
-  const runtime = new GameplayCoreRuntime();
+  const runtime = new GameplayCoreRuntime({
+    createWorld: () => {
+      const world = createDiagnosticWorldState();
+      const owner = world.actors.find((actor) =>
+        actor.id === "diagnostic-actor-1"
+      );
+      const target = world.actors.find((actor) =>
+        actor.id === "diagnostic-target-1"
+      );
+      if (owner && target) {
+        target.position = { x: owner.position.x - 100, y: owner.position.y };
+        target.spawnPosition = { ...target.position };
+      }
+      return world;
+    },
+  });
   const initial = runtime.initialize();
   const targetBefore = initial.snapshot.actors.find((actor) =>
     actor.id === "diagnostic-target-1"
@@ -503,7 +660,7 @@ function checkProjectilePipeline(): void {
       {
         action: "aim",
         phase: "held",
-        direction: { x: 1, y: 0 },
+        direction: { x: -1, y: 0 },
       },
       { action: "firePrimary", phase: "held" },
     ],
@@ -880,7 +1037,7 @@ function checkTeamDeathmatchSlice(): void {
     initial.snapshot.modeId !== "team-deathmatch" ||
     initial.snapshot.actors.length !== 2 ||
     initial.snapshot.actors.some((actor) => actor.kind !== "player") ||
-    initial.snapshot.pickups.length !== 5 ||
+    initial.snapshot.pickups.length !== productionWorld.pickups.length ||
     initial.hudState.notices[0] !== "First to 3"
   ) {
     throw new Error("TDM must initialize players and V1 parity pickups.");
@@ -897,7 +1054,7 @@ function checkTeamDeathmatchSlice(): void {
     productionWorld.pickups.some((pickup) =>
       pickup.radius !== 22 ||
       pickup.respawnDelayMs !== 20_000 ||
-      (pickup.type === "health" ? pickup.value !== 50 : pickup.value !== 25)
+      pickup.value !== pickupParityValue(pickup.type)
     )
   ) {
     throw new Error("Training Crossing TDM content must mirror V1 placement.");
@@ -1036,6 +1193,14 @@ function checkTeamDeathmatchSlice(): void {
   }
 }
 
+function pickupParityValue(type: PickupState["type"]): number {
+  if (type === "health") return V2_ARENA_PICKUP_PARITY_CONFIG.healthValue;
+  if (type === "armor") return V2_ARENA_PICKUP_PARITY_CONFIG.armorValue;
+  if (type === "rocket") return V2_ARENA_PICKUP_PARITY_CONFIG.rocketValue;
+  if (type === "rail") return V2_ARENA_PICKUP_PARITY_CONFIG.railValue;
+  return V2_ARENA_PICKUP_PARITY_CONFIG.whipValue;
+}
+
 function createCloseRangeTeamDeathmatchWorld() {
   const world = createTeamDeathmatchWorldState();
   const blue = world.actors.find((actor) => actor.id === "blue-player");
@@ -1122,6 +1287,7 @@ function checkBasicAutoShootParity(): void {
         spawnPosition: { x: 100, y: 200 },
         radius: 16,
         maxHealth: 100,
+        armor: 0,
         maxArmor: 100,
       }),
       createActorState({
@@ -1132,6 +1298,7 @@ function checkBasicAutoShootParity(): void {
         spawnPosition: { x: 300, y: 200 },
         radius: 16,
         maxHealth: 100,
+        armor: 0,
         maxArmor: 100,
       }),
     );

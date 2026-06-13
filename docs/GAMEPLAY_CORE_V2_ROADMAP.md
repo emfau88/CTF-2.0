@@ -36,6 +36,10 @@ Neuimplementierung des V1-Spielgefuehls:
 - [x] World-, Actor-, Movement-, Jump-, Collision- und Gap-Grundlagen
       existieren.
 - [x] Training Crossing ist als Plain-Data-Geometrie vorhanden.
+- [x] Eine V2-Map-Registry waehlt Weltinhalt und Phaser-Praesentation aus
+      derselben Map-Definition.
+- [x] Grand Archive ist mit V1-Geometrie, Pickups und Bibliotheksoptik
+      migriert.
 - [x] Damage, Armor, Death und Respawn existieren.
 - [x] Ein diagnostisches Projektil und Health-/Armor-Pickups existieren.
 - [x] MatchState, Timer, ScoreBoard und diagnostischer GameMode existieren.
@@ -158,6 +162,10 @@ sich wie ihre V1-Version an.
 ### Aktueller spielbarer Mobile-TDM-Slice
 
 - [x] Touch-Stick und Jump-Button verwenden dieselben Core-Actions wie Desktop.
+- [x] Pickup-Icongroessen und Offsets entsprechen den typabhaengigen
+      V1-Darstellungswerten.
+- [x] Mobile Waffenbuttons verwenden V1-Touchlayout, Radien, Bildskalierung,
+      Ammo-Badges und Cooldown-Ringe.
 - [x] Basic Autoshoot funktioniert mit V1-Werten.
 - [x] Touch-Kamera folgt dem Blue Player.
 - [x] Match-Ende kann per Tap neu gestartet werden.
@@ -166,6 +174,21 @@ sich wie ihre V1-Version an.
 - [x] Teamseiten, Health-/Armor-Pickups und Pickup-Werte entsprechen V1.
 - [x] Mobile-TDM besitzt einen einfachen Red Bot als Einzelspieler-Gegner.
 - [ ] Bot-Jumps, Rollen und modusspezifische Taktiken folgen spaeter.
+
+### Aktueller V2-Audio-Slice
+
+- [x] Eigene Schritte mit V1-Geschwindigkeitstakt und Lautstaerke.
+- [x] Gegner-Schritte mit V1-Distanzabfall und maximal zwei parallelen Sounds.
+- [x] Erfolgreicher Jump-Start als serialisierbares Core-Event und V1-Sound.
+- [x] Basic Autoshoot lokal und raeumlich.
+- [x] Rocket-, Rail- und Whip-Sounds lokal; Gegnerwaffen raeumlich.
+- [x] Death-Sound lokal und raeumlich.
+- [x] Health-Pickup als Glass-/Air-Sequenz.
+- [x] Armor- und Waffen-Pickup lokal und raeumlich.
+- [x] Aktive Sounds werden bei Restart und Scene-Wechsel beendet.
+- [ ] Eigener Damage-/Hurt-Sound benoetigt noch eine verbindliche V1-Referenz
+      beziehungsweise Assetentscheidung.
+- [ ] SFX-/Mute-Settings folgen mit dem finalen Settings-Fluss.
 
 ## Meilenstein 5: Classic CTF als eigener GameMode
 
@@ -211,6 +234,9 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 ## Meilenstein 7: Maps und Content
 
 - [ ] Alle drei V1-Maps als Plain Data migrieren.
+- [x] Allgemeine V2-Map-Registry implementieren.
+- [x] Map-Auswahl an World-Factory und Renderer durchreichen.
+- [x] Renderer von Training Crossing entkoppeln.
 - [x] Training Crossing: Solids und Bounds migrieren.
 - [x] Training Crossing: Gaps migrieren.
 - [x] Training Crossing: Team-Spawns migrieren.
@@ -220,7 +246,25 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [ ] Mode-Kompatibilitaet einer Map validieren.
 - [ ] Keine Phaser-GameObjects in Map-Daten speichern.
 - [x] Training Crossing: V1-Optik und Platzierungen beibehalten.
-- [ ] Neue Maps ohne Scene-Aenderung ladbar machen.
+- [x] Grand Archive: Solids, Gaps, Team-Spawns und Pickups migrieren.
+- [x] Grand Archive: Bibliotheksassets, Lesetische, Kerzen, Staub und
+      Spinnen als Phaser-Praesentation migrieren.
+- [x] Neue Maps ohne Renderer- oder Scene-Sonderfall ladbar machen.
+- [ ] Kerzenreaktionen auf Rocket- und Rail-Treffer migrieren.
+
+### Map-Registry-/Grand-Archive-Slice
+
+- `WORLD_MAPS`, `getWorldMap()` und `resolveWorldMap()` bilden die zentrale
+  V2-Auswahl.
+- `createTeamDeathmatchWorldState(map)` erzeugt Geometrie, Spawns und Pickups
+  aus der ausgewaehlten Map.
+- `PhaserArenaRendererPort` uebersetzt die Plain-Data-Praesentation am
+  Adapterrand in das vorhandene Arena-Rendering.
+- Unbekannte Map-IDs fallen derzeit sicher auf Training Crossing zurueck.
+  Strikte Ablehnung und Mode-Kompatibilitaetsvalidierung bleiben Teil der
+  Produktionshaertung.
+- Build, kompletter Core-Smoke, V2-Menue, Grand Archive Desktop/Local,
+  Grand Archive Touch/Bot und Browser-Konsole wurden am 13.06.2026 geprueft.
 
 ## Meilenstein 8: Bots
 
@@ -311,6 +355,8 @@ Bei einem dieser Punkte wird nicht einfach weitergebaut:
 - [x] Meilenstein 1: Runtime konsolidieren.
 - [x] Meilenstein 2: spielbaren TDM-Slice manuell abnehmen und abschliessen.
 - [ ] Meilenstein 3: V1-Feeling systematisch abgleichen.
+- [x] V1-Feedback-Slice: Bewegungsspur, Rocket-Smoke/-Explosion,
+      Rail-/Whip-Feedback und Todesburst migrieren.
 - [ ] Meilenstein 4: V1-Waffen migrieren.
 - [ ] Meilenstein 5: Classic CTF als eigenen Modus implementieren.
 - [ ] Meilenstein 6: One Flag als Architekturtest implementieren.

@@ -1,9 +1,13 @@
 import Phaser from "phaser";
 import type {
+  ActorState,
   CoreActionIntent,
   CoreInputFrame,
   WorldPosition,
+  WorldSnapshot,
 } from "../../core";
+import { V2_V1_WEAPON_PARITY_CONFIG } from "../../core";
+import { calculateTouchLayout } from "../../touchLayout";
 import type { InputAdapterPort } from "../input";
 
 interface TouchControl {
@@ -35,6 +39,17 @@ interface KeyboardFallbackKeys {
 }
 
 type WeaponId = "rocket" | "rail" | "whip";
+interface WeaponControl extends TouchControl {
+  aim: WorldPosition;
+  drag: number;
+  dragged: boolean;
+}
+
+interface WeaponBadgeView {
+  readonly image: Phaser.GameObjects.Image;
+  readonly text: Phaser.GameObjects.Text;
+}
+
 export interface MobileWeaponStatus {
   readonly ammo: number;
   readonly cooldownMs: number;
@@ -44,9 +59,11 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   private sequence = 0;
   private restartRequested = false;
   private readonly graphics: Phaser.GameObjects.Graphics;
+  private readonly aimGraphics: Phaser.GameObjects.Graphics;
   private readonly fireLabel: Phaser.GameObjects.Text;
   private readonly jumpLabel: Phaser.GameObjects.Text;
   private readonly weaponViews: Record<WeaponId, Phaser.GameObjects.Image>;
+  private readonly weaponBadges: Record<WeaponId, WeaponBadgeView>;
   private readonly moveStick: TouchStick = {
     id: -1,
     x: 0,
@@ -81,11 +98,14 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   private aim: WorldPosition = { x: 1, y: 0 };
   private readonly keyboardKeys?: KeyboardFallbackKeys;
   private combinedJumpWasHeld = false;
-  private queuedWeapon: WeaponId | null = null;
-  private readonly weaponControls: Record<WeaponId, TouchControl> = {
-    rocket: createTouchControl(36),
-    rail: createTouchControl(36),
-    whip: createTouchControl(36),
+  private queuedWeapon: {
+    weaponId: WeaponId;
+    direction: WorldPosition;
+  } | null = null;
+  private readonly weaponControls: Record<WeaponId, WeaponControl> = {
+    rocket: createWeaponControl(36),
+    rail: createWeaponControl(36),
+    whip: createWeaponControl(36),
   };
   private weaponKeyWasHeld: Record<WeaponId, boolean> = {
     rocket: false,
@@ -98,6 +118,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     private readonly actorId = "blue-player",
     private readonly manualFireEnabled = true,
     private readonly weaponStatus?: (weaponId: WeaponId) => MobileWeaponStatus,
+    private readonly snapshotProvider?: () => WorldSnapshot,
   ) {
     scene.input.addPointer(2);
     const keyboard = scene.input.keyboard;
@@ -114,6 +135,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
       };
     }
     this.graphics = scene.add.graphics().setScrollFactor(0).setDepth(1100);
+    this.aimGraphics = scene.add.graphics().setDepth(1099);
     const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: "Arial, sans-serif",
       fontSize: "12px",
@@ -124,7 +146,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.fireLabel = scene.add.text(0, 0, "FIRE", labelStyle)
       .setOrigin(.5).setScrollFactor(0).setDepth(1101);
     this.jumpLabel = scene.add.text(0, 0, "JUMP", labelStyle)
-      .setOrigin(.5).setScrollFactor(0).setDepth(1101);
+      .setOrigin(.5).setScrollFactor(0).setDepth(1101).setVisible(false);
     this.weaponViews = {
       rocket: scene.add.image(0, 0, "uiRocketButton"),
       rail: scene.add.image(0, 0, "uiRailButton"),
@@ -133,6 +155,11 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     for (const view of Object.values(this.weaponViews)) {
       view.setScrollFactor(0).setDepth(1101);
     }
+    this.weaponBadges = {
+      rocket: this.createWeaponBadge("uiAmmoBadge", "#17211f"),
+      rail: this.createWeaponBadge("uiRailBadge", "#10281a"),
+      whip: this.createWeaponBadge("uiAmmoBadge", "#2b1c36"),
+    };
 
     scene.input.on("pointerdown", this.handlePointerDown, this);
     scene.input.on("pointermove", this.handlePointerMove, this);
@@ -219,10 +246,15 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.scene.input.off("pointerupoutside", this.handlePointerUp, this);
     this.scene.scale.off("resize", this.layout, this);
     this.graphics.destroy();
+    this.aimGraphics.destroy();
     this.fireLabel.destroy();
     this.jumpLabel.destroy();
     for (const view of Object.values(this.weaponViews)) {
       view.destroy();
+    }
+    for (const badge of Object.values(this.weaponBadges)) {
+      badge.image.destroy();
+      badge.text.destroy();
     }
     for (const key of Object.values(this.keyboardKeys ?? {})) {
       key.destroy();
@@ -262,15 +294,15 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   private appendWeaponActions(actions: CoreActionIntent[]): void {
     for (const weaponId of ["rocket", "rail", "whip"] as const) {
       const held = Boolean(this.keyboardKeys?.[weaponId].isDown);
-      if (
-        this.queuedWeapon === weaponId ||
-        (held && !this.weaponKeyWasHeld[weaponId])
-      ) {
+      const queued = this.queuedWeapon?.weaponId === weaponId
+        ? this.queuedWeapon
+        : null;
+      if (queued || (held && !this.weaponKeyWasHeld[weaponId])) {
         actions.push({
           action: "fireWeapon",
           phase: "pressed",
           actorId: this.actorId,
-          direction: { ...this.aim },
+          direction: queued?.direction ?? { ...this.aim },
           payload: { weaponId },
         });
       }
@@ -293,10 +325,15 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
 
   private readonly handlePointerDown = (pointer: Phaser.Input.Pointer): void => {
     const weapon = this.weaponAt(pointer);
-    if (weapon && this.weaponControls[weapon].id < 0) {
-      this.captureControl(this.weaponControls[weapon], pointer);
+    if (weapon === "whip") {
+      this.queueAutoTargetedWeapon(weapon);
+    } else if (weapon && this.weaponControls[weapon].id < 0) {
+      const control = this.weaponControls[weapon];
+      this.captureControl(control, pointer);
+      control.drag = 0;
+      control.dragged = false;
       this.updateWeaponAim(weapon, pointer);
-    } else if (inside(pointer, this.jump) && this.jump.id < 0) {
+    } else if (inside(pointer, this.jump, 24) && this.jump.id < 0) {
       this.captureControl(this.jump, pointer);
     } else if (
       this.manualFireEnabled &&
@@ -347,53 +384,59 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     }
     const weapon = this.capturedWeapon(pointer.id);
     if (weapon) {
-      this.queuedWeapon = weapon;
-      this.releaseControl(this.weaponControls[weapon]);
+      const control = this.weaponControls[weapon];
+      const direction = resolveMobileWeaponReleaseDirection({
+        dragged: control.dragged,
+        dragDistance: control.drag,
+        manualDirection: control.aim,
+        autoDirection: this.autoTargetDirection(weapon),
+      });
+      if (direction) {
+        this.queuedWeapon = {
+          weaponId: weapon,
+          direction,
+        };
+      }
+      this.releaseControl(control);
+      control.drag = 0;
+      control.dragged = false;
     }
     this.draw();
   };
 
   private layout(gameSize: Phaser.Structs.Size): void {
-    const compact = gameSize.width <= 720 || gameSize.height <= 520;
-    const edge = compact ? 62 : 88;
-    const bottom = gameSize.height - edge;
-    this.moveStick.radius = compact ? 50 : 62;
-    this.moveStick.x = edge;
-    this.moveStick.y = bottom;
+    const layout = calculateTouchLayout(gameSize.width, gameSize.height);
+    const compact = layout.rocket.r <= 36;
+    this.moveStick.radius = layout.joy.r;
+    this.moveStick.x = layout.joy.ox;
+    this.moveStick.y = layout.joy.oy;
     if (!this.moveStick.held) {
       this.moveStick.originX = this.moveStick.x;
       this.moveStick.originY = this.moveStick.y;
     }
-    this.jump.radius = compact ? 42 : 50;
-    this.jump.x = gameSize.width - edge;
-    this.jump.y = bottom;
+    this.jump.radius = layout.jump.r;
+    this.jump.x = layout.jump.x;
+    this.jump.y = layout.jump.y;
     this.fire.radius = compact ? 38 : 46;
-    this.fire.x = this.jump.x - (compact ? 94 : 116);
-    this.fire.y = bottom + (compact ? 4 : 8);
+    this.fire.x = layout.rocket.x;
+    this.fire.y = layout.rocket.y;
     this.fireLabel.setPosition(this.fire.x, this.fire.y)
       .setVisible(this.manualFireEnabled);
     this.jumpLabel.setPosition(this.jump.x, this.jump.y);
-    const weaponRadius = compact ? 34 : 40;
     const positions = {
-      rocket: { x: this.jump.x - (compact ? 88 : 112), y: bottom + 2 },
-      rail: {
-        x: this.jump.x - (compact ? 62 : 82),
-        y: bottom - (compact ? 76 : 96),
-      },
-      whip: {
-        x: this.jump.x - (compact ? 140 : 174),
-        y: bottom - (compact ? 68 : 88),
-      },
+      rocket: layout.rocket,
+      rail: layout.rail,
+      whip: layout.whip,
     };
     for (const weaponId of ["rocket", "rail", "whip"] as const) {
       Object.assign(this.weaponControls[weaponId], positions[weaponId], {
-        radius: weaponRadius,
+        radius: positions[weaponId].r,
       });
       this.weaponViews[weaponId]
         .setPosition(positions[weaponId].x, positions[weaponId].y)
         .setScale(weaponId === "whip"
-          ? compact ? .38 : .48
-          : compact ? .28 : .36)
+          ? compact ? .42 : .54
+          : compact ? .27 : .38)
         .setVisible(this.weaponAvailable(weaponId));
     }
     this.draw();
@@ -427,8 +470,11 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     const dy = pointer.y - control.y;
     const distance = Math.hypot(dx, dy);
     if (distance > 10) {
-      this.aim = { x: dx / distance, y: dy / distance };
+      control.aim = { x: dx / distance, y: dy / distance };
+      this.aim = { ...control.aim };
     }
+    control.drag = distance;
+    if (distance > 16) control.dragged = true;
   }
 
   private captureControl(
@@ -451,6 +497,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   private draw(): void {
     const graphics = this.graphics;
     graphics.clear();
+    this.aimGraphics.clear();
     graphics.fillStyle(0xffffff, .38);
     graphics.lineStyle(2, 0x17302d, .2);
     graphics.fillCircle(
@@ -463,34 +510,108 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
       this.moveStick.originY,
       this.moveStick.radius,
     );
-    const travel = this.moveStick.radius * .58 * this.moveStick.magnitude;
-    graphics.fillStyle(0x17302d, .46);
+    const knobRadius = this.moveStick.radius <= 50 ? 18 : 22;
+    const travel = (this.moveStick.radius - knobRadius + 8) *
+      this.moveStick.magnitude;
+    graphics.fillStyle(0x17302d, .42);
     graphics.fillCircle(
       this.moveStick.originX + this.moveStick.direction.x * travel,
       this.moveStick.originY + this.moveStick.direction.y * travel,
-      this.moveStick.radius * .34,
+      knobRadius,
     );
     if (this.manualFireEnabled) {
       this.drawButton(this.fire, 0xf3c453);
     }
-    this.drawButton(this.jump, 0xffffff);
-    for (const [weaponId, color] of [
-      ["rocket", 0xf0b94b],
-      ["rail", 0x67e894],
-      ["whip", 0xd38af1],
-    ] as const) {
+    graphics.fillStyle(
+      this.jump.held ? 0xffd86b : 0xffffff,
+      this.jump.held ? .84 : .52,
+    );
+    graphics.lineStyle(
+      3,
+      this.jump.held ? 0xb77516 : 0x17302d,
+      .28,
+    );
+    graphics.fillCircle(this.jump.x, this.jump.y, this.jump.radius);
+    graphics.strokeCircle(this.jump.x, this.jump.y, this.jump.radius);
+    for (const weaponId of ["rocket", "rail", "whip"] as const) {
       const status = this.weaponStatus?.(weaponId) ?? {
         ammo: 0,
         cooldownMs: 0,
       };
       const available = status.ammo > 0;
+      const control = this.weaponControls[weaponId];
+      const compact = control.radius <= 36;
+      const badgeOffset = compact ? 24 : 31;
+      const badge = this.weaponBadges[weaponId];
+      const active = control.held && status.cooldownMs <= 0;
+      const baseScale = weaponId === "whip"
+        ? compact ? .42 : .54
+        : compact ? .27 : .38;
       this.weaponViews[weaponId]
         .setVisible(available)
-        .setAlpha(status.cooldownMs > 0 ? .58 : 1);
+        .setAlpha(status.cooldownMs > 0
+          ? weaponId === "rail" ? .62 : .58
+          : 1)
+        .setScale(
+          active && weaponId !== "whip" ? baseScale + .025 : baseScale,
+        );
+      badge.image
+        .setPosition(control.x + badgeOffset, control.y + badgeOffset)
+        .setScale(compact ? .12 : .16)
+        .setAlpha(.95)
+        .setVisible(available);
+      badge.text
+        .setPosition(control.x + badgeOffset, control.y + badgeOffset)
+        .setFontSize(compact ? 14 : 17)
+        .setText(String(status.ammo))
+        .setVisible(available);
       if (available) {
-        this.drawButton(this.weaponControls[weaponId], color);
+        this.drawCooldown(weaponId, control, status.cooldownMs);
+      }
+      if (
+        available &&
+        control.held &&
+        control.dragged &&
+        weaponId !== "whip"
+      ) {
+        this.drawWeaponAim(weaponId, control, status.cooldownMs);
       }
     }
+  }
+
+  private drawWeaponAim(
+    weaponId: "rocket" | "rail",
+    control: WeaponControl,
+    cooldownMs: number,
+  ): void {
+    const ready = cooldownMs <= 0;
+    const buttonLength = Math.min(68, Math.max(28, control.drag));
+    const color = weaponId === "rocket" ? 0xffd36c : 0x62ff91;
+    const lightColor = weaponId === "rocket" ? 0xfff0b2 : 0xcaffd9;
+    const alpha = ready ? .8 : .3;
+    this.graphics.lineStyle(5, lightColor, ready ? .92 : .38)
+      .beginPath()
+      .moveTo(control.x, control.y)
+      .lineTo(
+        control.x + control.aim.x * buttonLength,
+        control.y + control.aim.y * buttonLength,
+      )
+      .strokePath();
+
+    const actor = this.controlledActor();
+    if (!actor || actor.lifeState !== "active") return;
+    const length = weaponId === "rocket" ? 260 : 310;
+    const startX = actor.position.x;
+    const startY = actor.position.y - actor.jump.height;
+    const endX = startX + control.aim.x * length;
+    const endY = startY + control.aim.y * length;
+    this.aimGraphics.lineStyle(weaponId === "rocket" ? 4 : 3, color, alpha)
+      .beginPath()
+      .moveTo(startX, startY)
+      .lineTo(endX, endY)
+      .strokePath();
+    this.aimGraphics.fillStyle(lightColor, ready ? .86 : .35)
+      .fillCircle(endX, endY, weaponId === "rocket" ? 7 : 6);
   }
 
   private drawButton(control: TouchControl, color: number): void {
@@ -503,8 +624,57 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   private weaponAt(pointer: Phaser.Input.Pointer): WeaponId | null {
     return (["rocket", "rail", "whip"] as const).find((weaponId) =>
       this.weaponAvailable(weaponId) &&
-      inside(pointer, this.weaponControls[weaponId])
+      inside(
+        pointer,
+        this.weaponControls[weaponId],
+        weaponId === "rocket" ? 24 : 20,
+      )
     ) ?? null;
+  }
+
+  private createWeaponBadge(
+    texture: string,
+    stroke: string,
+  ): WeaponBadgeView {
+    const image = this.scene.add.image(0, 0, texture)
+      .setScrollFactor(0)
+      .setDepth(1102)
+      .setVisible(false);
+    const text = this.scene.add.text(0, 0, "0", {
+      fontFamily: "Arial",
+      fontSize: "17px",
+      color: "#ffffff",
+      stroke,
+      strokeThickness: 5,
+    }).setOrigin(.5).setScrollFactor(0).setDepth(1103).setVisible(false);
+    return { image, text };
+  }
+
+  private drawCooldown(
+    weaponId: WeaponId,
+    control: TouchControl,
+    cooldownMs: number,
+  ): void {
+    if (cooldownMs <= 0 || weaponId === "rocket") {
+      return;
+    }
+    const total = weaponId === "rail"
+      ? V2_V1_WEAPON_PARITY_CONFIG.railCooldownMs
+      : V2_V1_WEAPON_PARITY_CONFIG.whipCooldownMs;
+    const ratio = Phaser.Math.Clamp(cooldownMs / total, 0, 1);
+    this.graphics.lineStyle(
+      5,
+      weaponId === "rail" ? 0x62ff91 : 0xf4b35d,
+      .72,
+    ).beginPath()
+      .arc(
+        control.x,
+        control.y,
+        control.radius + 5,
+        -Math.PI / 2,
+        -Math.PI / 2 + Math.PI * 2 * (1 - ratio),
+      )
+      .strokePath();
   }
 
   private capturedWeapon(pointerId: number): WeaponId | null {
@@ -516,18 +686,45 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   private weaponAvailable(weaponId: WeaponId): boolean {
     return (this.weaponStatus?.(weaponId).ammo ?? 0) > 0;
   }
+
+  private queueAutoTargetedWeapon(weaponId: WeaponId): void {
+    this.queuedWeapon = {
+      weaponId,
+      direction: this.autoTargetDirection(weaponId),
+    };
+  }
+
+  private autoTargetDirection(weaponId: WeaponId): WorldPosition {
+    const snapshot = this.snapshotProvider?.();
+    if (!snapshot) {
+      return { ...this.aim };
+    }
+    return resolveMobileWeaponTapDirection(
+      snapshot,
+      this.actorId,
+      weaponId,
+      this.aim,
+    );
+  }
+
+  private controlledActor(
+    snapshot = this.snapshotProvider?.(),
+  ): Readonly<ActorState> | undefined {
+    return snapshot?.actors.find((actor) => actor.id === this.actorId);
+  }
 }
 
 function inside(
   pointer: Phaser.Input.Pointer,
   control: TouchControl,
+  padding = 18,
 ): boolean {
   return Phaser.Math.Distance.Between(
     pointer.x,
     pointer.y,
     control.x,
     control.y,
-  ) <= control.radius + 18;
+  ) <= control.radius + padding;
 }
 
 function createTouchControl(radius: number): TouchControl {
@@ -540,4 +737,126 @@ function createTouchControl(radius: number): TouchControl {
     pressed: false,
     released: false,
   };
+}
+
+function createWeaponControl(radius: number): WeaponControl {
+  return {
+    ...createTouchControl(radius),
+    aim: { x: 1, y: 0 },
+    drag: 0,
+    dragged: false,
+  };
+}
+
+function distance(left: WorldPosition, right: WorldPosition): number {
+  return Math.hypot(left.x - right.x, left.y - right.y);
+}
+
+function normalizeDirection(direction: WorldPosition): WorldPosition {
+  const length = Math.hypot(direction.x, direction.y);
+  return length > .001
+    ? { x: direction.x / length, y: direction.y / length }
+    : { x: 1, y: 0 };
+}
+
+export function resolveMobileWeaponTapDirection(
+  snapshot: WorldSnapshot,
+  actorId: string,
+  weaponId: WeaponId,
+  fallbackAim: WorldPosition,
+): WorldPosition {
+  const owner = snapshot.actors.find((actor) => actor.id === actorId);
+  if (!owner) return normalizeDirection(fallbackAim);
+  const maxRange = weaponId === "rail"
+    ? V2_V1_WEAPON_PARITY_CONFIG.railRange
+    : weaponId === "whip"
+    ? V2_V1_WEAPON_PARITY_CONFIG.whipRange
+    : Number.POSITIVE_INFINITY;
+  const target = snapshot.actors
+    .filter((candidate) =>
+      candidate.id !== owner.id &&
+      candidate.lifeState === "active" &&
+      candidate.teamId !== owner.teamId
+    )
+    .filter((candidate) =>
+      distance(owner.position, candidate.position) <= maxRange
+    )
+    .filter((candidate) =>
+      !snapshot.geometry.solids.some((solid) =>
+        lineIntersectsRect(owner.position, candidate.position, solid)
+      )
+    )
+    .sort((left, right) =>
+      distance(owner.position, left.position) -
+      distance(owner.position, right.position)
+    )[0];
+  const fallback = owner.lastMoveDirection.x !== 0 ||
+      owner.lastMoveDirection.y !== 0
+    ? owner.lastMoveDirection
+    : fallbackAim;
+  return normalizeDirection(
+    target
+      ? {
+        x: target.position.x - owner.position.x,
+        y: target.position.y - owner.position.y,
+      }
+      : fallback,
+  );
+}
+
+export function resolveMobileWeaponReleaseDirection(input: {
+  readonly dragged: boolean;
+  readonly dragDistance: number;
+  readonly manualDirection: WorldPosition;
+  readonly autoDirection: WorldPosition;
+}): WorldPosition | null {
+  if (input.dragged && input.dragDistance < 18) return null;
+  return normalizeDirection(
+    input.dragged ? input.manualDirection : input.autoDirection,
+  );
+}
+
+function lineIntersectsRect(
+  from: WorldPosition,
+  to: WorldPosition,
+  rect: { x: number; y: number; width: number; height: number },
+): boolean {
+  if (pointInRect(from, rect) || pointInRect(to, rect)) return true;
+  const topLeft = { x: rect.x, y: rect.y };
+  const topRight = { x: rect.x + rect.width, y: rect.y };
+  const bottomRight = {
+    x: rect.x + rect.width,
+    y: rect.y + rect.height,
+  };
+  const bottomLeft = { x: rect.x, y: rect.y + rect.height };
+  return segmentsIntersect(from, to, topLeft, topRight) ||
+    segmentsIntersect(from, to, topRight, bottomRight) ||
+    segmentsIntersect(from, to, bottomRight, bottomLeft) ||
+    segmentsIntersect(from, to, bottomLeft, topLeft);
+}
+
+function pointInRect(
+  point: WorldPosition,
+  rect: { x: number; y: number; width: number; height: number },
+): boolean {
+  return point.x >= rect.x &&
+    point.x <= rect.x + rect.width &&
+    point.y >= rect.y &&
+    point.y <= rect.y + rect.height;
+}
+
+function segmentsIntersect(
+  a: WorldPosition,
+  b: WorldPosition,
+  c: WorldPosition,
+  d: WorldPosition,
+): boolean {
+  const counterClockwise = (
+    p1: WorldPosition,
+    p2: WorldPosition,
+    p3: WorldPosition,
+  ) => (p3.y - p1.y) * (p2.x - p1.x) >
+    (p2.y - p1.y) * (p3.x - p1.x);
+  return counterClockwise(a, c, d) !== counterClockwise(b, c, d) &&
+    counterClockwise(a, b, c) !== counterClockwise(a, b, d);
 }

@@ -1,2 +1,21 @@
+export { GRAND_ARCHIVE_V2 } from "./grandArchiveV2";
 export { TRAINING_CROSSING_V2 } from "./trainingCrossingV2";
-export type { WorldMapData, WorldMapInfo } from "./worldMapData";
+export {
+  getWorldMap,
+  resolveWorldMap,
+  WORLD_MAPS,
+} from "./worldMapRegistry";
+export type {
+  WorldMapData,
+  WorldMapDecoration,
+  WorldMapDecorationKind,
+  WorldMapGapPresentation,
+  WorldMapGapVisual,
+  WorldMapInfo,
+  WorldMapPickupSpawn,
+  WorldMapPresentation,
+  WorldMapPresentationRect,
+  WorldMapTheme,
+  WorldMapWallPresentation,
+  WorldMapWallVisual,
+} from "./worldMapData";

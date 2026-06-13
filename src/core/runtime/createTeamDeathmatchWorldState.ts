@@ -6,21 +6,24 @@ import {
 import {
   createEmptyWorldState,
   TRAINING_CROSSING_V2,
+  type WorldMapData,
   type WorldState,
 } from "../world";
 
-export function createTeamDeathmatchWorldState(): WorldState {
+export function createTeamDeathmatchWorldState(
+  map: WorldMapData = TRAINING_CROSSING_V2,
+): WorldState {
   const world = createEmptyWorldState("team-deathmatch");
   world.geometry = {
-    bounds: { ...TRAINING_CROSSING_V2.geometry.bounds },
-    solids: TRAINING_CROSSING_V2.geometry.solids.map((solid) => ({ ...solid })),
-    gaps: TRAINING_CROSSING_V2.geometry.gaps.map((gap) => ({ ...gap })),
+    bounds: { ...map.geometry.bounds },
+    solids: map.geometry.solids.map((solid) => ({ ...solid })),
+    gaps: map.geometry.gaps.map((gap) => ({ ...gap })),
   };
   world.map = {
-    id: TRAINING_CROSSING_V2.id,
-    displayName: TRAINING_CROSSING_V2.displayName,
+    id: map.id,
+    displayName: map.displayName,
   };
-  world.spawnPoints = TRAINING_CROSSING_V2.spawnPoints.map((spawnPoint) => ({
+  world.spawnPoints = map.spawnPoints.map((spawnPoint) => ({
     ...spawnPoint,
     position: { ...spawnPoint.position },
     facing: spawnPoint.facing ? { ...spawnPoint.facing } : undefined,
@@ -30,63 +33,13 @@ export function createTeamDeathmatchWorldState(): WorldState {
     createPlayer(world, "blue-player", "blue", "blue-player-spawn"),
     createPlayer(world, "red-player", "red", "red-player-spawn"),
   );
-  world.pickups.push(
+  world.pickups.push(...map.pickupSpawns.map((pickup) =>
     createPickupState({
-      id: "health-red",
-      type: "health",
-      position: { x: 120, y: 320 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "armor-red",
-      type: "armor",
-      position: { x: 220, y: 320 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "health-blue",
-      type: "health",
-      position: { x: 1290, y: 320 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "armor-blue",
-      type: "armor",
-      position: { x: 1390, y: 320 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "armor-center",
-      type: "armor",
-      position: { x: 750, y: 410 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "rocket-red",
-      type: "rocket",
-      position: { x: 130, y: 500 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "rail-red",
-      type: "rail",
-      position: { x: 215, y: 500 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "whip-red",
-      type: "whip",
-      position: { x: 285, y: 410 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "rocket-blue",
-      type: "rocket",
-      position: { x: 1370, y: 500 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "rail-blue",
-      type: "rail",
-      position: { x: 1285, y: 500 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-    createPickupState({
-      id: "whip-blue",
-      type: "whip",
-      position: { x: 1215, y: 410 },
-    }, V2_ARENA_PICKUP_PARITY_CONFIG),
-  );
+      id: pickup.id,
+      type: pickup.type,
+      position: { ...pickup.position },
+    }, V2_ARENA_PICKUP_PARITY_CONFIG)
+  ));
   return world;
 }
 

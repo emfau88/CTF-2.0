@@ -59,7 +59,7 @@ export function updateDiagnosticControlledActor(
   events.push(...fireV1Weapons(world, actor, input));
 
   updateLastMoveDirection(actor, input);
-  applyJumpMovement(
+  const jumpResult = applyJumpMovement(
     actor,
     {
       pressed: hasAction(input, "jump", "pressed"),
@@ -69,6 +69,18 @@ export function updateDiagnosticControlledActor(
     input.deltaMs,
     V2_JUMP_PARITY_CONFIG,
   );
+  if (jumpResult.started) {
+    events.push({
+      id: `actor-jumped-${actor.id}-${world.timeMs}`,
+      type: "actor.jumped",
+      timeMs: world.timeMs,
+      sourceActorId: actor.id,
+      teamId: actor.teamId ?? undefined,
+      payload: {
+        position: { ...actor.position },
+      },
+    });
+  }
   const previousPosition = { ...actor.position };
   applyDiagnosticGroundMovement(actor, input);
   const collision = applyWorldCollision(

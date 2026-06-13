@@ -11,7 +11,11 @@ export {
   type WorldRect,
 } from "./worldGeometry";
 export {
+  GRAND_ARCHIVE_V2,
+  getWorldMap,
+  resolveWorldMap,
   TRAINING_CROSSING_V2,
+  WORLD_MAPS,
   type WorldMapData,
   type WorldMapInfo,
 } from "./maps";

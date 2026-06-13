@@ -60,14 +60,21 @@ Shared-Camera-Abweichung.
 - V2 verwendet noch Diagnoseformen statt der V1-Sprites und Animationen.
 - Der aktuelle TDM-Slice verwendet eine gemeinsame Kamera für zwei lokale
   Spieler.
-- Basic Autoshoot ist migriert. Waffen-Audio, Trefferfeedback, Knockback und
-  Rocket/Railgun/Whip sind noch nicht migriert.
+- Basic Autoshoot, Rocket, Railgun und Whip sind mit Core-Regeln, Effekten
+  und Audioadaptern migriert.
 - Mobile Input ist über dieselben Core-Actions angebunden. Touchgeräte werden
   automatisch erkannt; `&controls=mobile` erzwingt den Test auf Desktop.
 - Im mobilen TDM folgt die Kamera dem Blue Player. Nach Match-Ende startet ein
   Tap auf das Resultat einen neuen Lauf.
 - Training Crossing rendert in V2 mit denselben Ruinen-, Charakter- und
   Pickup-Assets wie V1. Der autoritative Zustand bleibt trotzdem im V2-Core.
+- Training Crossing und Grand Archive werden ueber dieselbe V2-Map-Registry
+  ausgewaehlt. Runtime und Renderer erhalten dasselbe Plain-Data-Map-Objekt;
+  der Phaser-Renderer enthaelt keine feste Training-Crossing-Auswahl mehr.
+- Grand Archive verwendet die V1-Bounds `2500x820`, alle 20 Solids, vier
+  Gaps, 15 Pickups, Team-Spawns und Bibliotheksassets. Lesetischkerzen,
+  Staub und Spinnen sind Presentation; Projektilinteraktion mit Kerzen ist
+  noch offen.
 - Mobile-TDM steuert den roten Gegner ueber normale `move`- und `aim`-Intents.
   Navigation meidet Solids und Gaps; Bot-Jumps und Rollen sind noch offen.
 - Rocket, Railgun und Whip verwenden in V2 die V1-Werte aus
@@ -76,5 +83,40 @@ Shared-Camera-Abweichung.
 - V1-Weapon-Pickups auf Training Crossing sind in V2 vorhanden. Temporaere
   Ammo-Drops nach einem Tod und Spezialwaffennutzung durch Bots sind noch
   offene Paritaetspunkte.
+- V2-Pickup-Icons verwenden die V1-Basisskalierungen `.18` fuer Health,
+  Armor und Rocket, `.22` fuer Rail sowie `.34` fuer Whip. Der Puls betraegt
+  wie in V1 nur `.008`; Waffen verwenden `y=-3`, andere Pickups `y=-5`.
+- Feste V2-Spawn-Pads bleiben auch waehrend des Pickup-Respawns sichtbar.
+  Nur Icon und Glow werden ausgeblendet; die cyanfarbenen V1-Aufstiegspartikel
+  laufen am Spawnpunkt dauerhaft weiter.
+- Mobile V2-Waffenbuttons verwenden direkt `calculateTouchLayout()` sowie die
+  V1-Radien `35/43`, Bildskalierungen `.27/.38` beziehungsweise `.42/.54`,
+  Badge-Skalierungen `.12/.16`, Badge-Abstaende `24/31` und die
+  Rail-/Whip-Cooldown-Ringe aus V1.
+- Mobile Rocket- und Rail-Buttons unterscheiden wie V1 zwischen Tap und
+  Drag: Tap zielt auf den naechsten lebenden, sichtbaren Gegner in Reichweite;
+  Drag zeigt Button- und Welt-Zielhilfe und feuert beim Loslassen manuell.
+  Zurueckziehen unter die Abbruchschwelle verwirft den Schuss. Whip bleibt
+  ein direkter Autoziel-Tap.
+- `PhaserArenaAudioPort` spiegelt den vorhandenen V1-Audiopfad fuer eigene und
+  gegnerische Schritte, Jump, Basic Autoshoot, Spezialwaffen, Death sowie
+  Health-, Armor- und Waffen-Pickups. Raeumliche Sounds verwenden den
+  quadratischen V1-Distanzabfall; Listener ist im aktuellen TDM-Slice P1
+  (`blue-player`).
+- Ein erfolgreicher Sprung emittiert `actor.jumped`; einmalige Sounds bleiben
+  dadurch eventbasiert. Schritte werden als Presentation aus Snapshot-
+  Geschwindigkeit und Grounded-Zustand abgeleitet.
+- Ein eigener Damage-/Hurt-Sound bleibt offen, weil der aktuelle V1-Code
+  dafuer keinen separaten Audioaufruf und kein eindeutig zugeordnetes Asset
+  besitzt.
+- V2 spiegelt jetzt die V1-Presentation fuer Bewegungsspur, Rocket-Smoke,
+  Rocket-Explosion, Rail-Beam, Rail-Impact und Whip-Kegel. Rail-Impact wird
+  wie in V1 nur bei einem Treffer dargestellt; der Whip unterscheidet
+  Treffer und Fehlschuss farblich.
+- `actor.died` erzeugt den V1-Todesburst mit 24 Team-/Dunkel-/Weisspartikeln,
+  zwei zeitversetzten Ringen und kurzem Flash. Fall-Respawns erhalten bewusst
+  keinen Todesburst, entsprechend dem V1-Verhalten.
+- Temporaere Ammo-Drops nach einem Tod bleiben ein Gameplay-Paritaetspunkt
+  und sind nicht Teil dieses Presentation-Slices.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf
   Desktop und Mobile.

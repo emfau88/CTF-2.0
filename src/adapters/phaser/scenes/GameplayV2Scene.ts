@@ -3,6 +3,7 @@ import { preloadArenaAssets } from "../../../assets";
 import {
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
+  resolveWorldMap,
   TeamDeathmatchMode,
   TdmBotController,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
@@ -22,11 +23,11 @@ import {
 import {
   PhaserDiagnosticRendererPort,
 } from "../PhaserDiagnosticRendererPort";
+import { PhaserArenaAudioPort } from "../PhaserArenaAudioPort";
 import { PhaserArenaRendererPort } from "../PhaserArenaRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
 import { PhaserMobileInputAdapter } from "../PhaserMobileInputAdapter";
 import { PhaserTeamDeathmatchHudPort } from "../PhaserTeamDeathmatchHudPort";
-import { PhaserWeaponAudioPort } from "../PhaserWeaponAudioPort";
 import { PhaserWeaponEffectsPort } from "../PhaserWeaponEffectsPort";
 
 export class GameplayV2Scene extends Phaser.Scene {
@@ -45,13 +46,14 @@ export class GameplayV2Scene extends Phaser.Scene {
   create(): void {
     const search = new URLSearchParams(window.location.search);
     const isTeamDeathmatch = search.get("mode") === "tdm";
+    const selectedMap = resolveWorldMap(search.get("map"));
     const useMobileControls = isTeamDeathmatch && prefersMobileControls(search);
     const useBotOpponent = isTeamDeathmatch &&
       prefersBotOpponent(search, useMobileControls);
     const runtime = isTeamDeathmatch
       ? new GameplayCoreRuntime({
         mode: new TeamDeathmatchMode(),
-        createWorld: createTeamDeathmatchWorldState,
+        createWorld: () => createTeamDeathmatchWorldState(selectedMap),
         basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
         allowManualPrimaryFire: false,
       })
@@ -80,6 +82,7 @@ export class GameplayV2Scene extends Phaser.Scene {
             cooldownMs: actor.weapons.whipCooldownMs,
           };
         },
+        () => this.bridge?.snapshot ?? runtime.snapshot,
       )
       : undefined;
     const hud = isTeamDeathmatch
@@ -109,15 +112,16 @@ export class GameplayV2Scene extends Phaser.Scene {
       renderer: isTeamDeathmatch
         ? new PhaserArenaRendererPort(
           this,
+          selectedMap,
           useMobileControls ? "blue-player" : undefined,
         )
         : new PhaserDiagnosticRendererPort(this),
       audio: isTeamDeathmatch
-        ? new PhaserWeaponAudioPort(this)
+        ? new PhaserArenaAudioPort(this, "blue-player")
         : new NoopAudioPort(),
       diagnostics: hud,
       effects: isTeamDeathmatch
-        ? new PhaserWeaponEffectsPort(this)
+        ? new PhaserWeaponEffectsPort(this, "blue-player")
         : new NoopEffectsPort(),
       hud,
     });
@@ -173,6 +177,9 @@ function prefersMobileControls(search: URLSearchParams): boolean {
   }
   if (override === "desktop" || override === "keyboard") {
     return false;
+  }
+  if (search.get("players") === "bot") {
+    return true;
   }
   return navigator.maxTouchPoints > 0 ||
     window.matchMedia("(pointer: coarse)").matches;

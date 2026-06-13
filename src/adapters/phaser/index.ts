@@ -11,8 +11,8 @@ export {
   PhaserDiagnosticRendererPort,
 } from "./PhaserDiagnosticRendererPort";
 export { PhaserMobileInputAdapter } from "./PhaserMobileInputAdapter";
+export { PhaserArenaAudioPort } from "./PhaserArenaAudioPort";
 export { PhaserTeamDeathmatchHudPort } from "./PhaserTeamDeathmatchHudPort";
-export { PhaserWeaponAudioPort } from "./PhaserWeaponAudioPort";
 export { PhaserWeaponEffectsPort } from "./PhaserWeaponEffectsPort";
 export { runPhaserGameBridgeSmokeCheck } from "./PhaserGameBridge.smoke";
 export { GameplayV2Scene } from "./scenes/GameplayV2Scene";
