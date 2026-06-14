@@ -15,6 +15,7 @@ import {
   fireV1Weapons,
   FLANK_SWITCH_V2,
   GRAND_ARCHIVE_V2,
+  GridBotNavigator,
   getWorldMap,
   GameplayCoreRuntime,
   ClassicCtfMode,
@@ -1802,11 +1803,90 @@ function checkBasicAutoShootParity(): void {
 }
 
 function checkTdmBotController(): void {
+  checkBotDecisionAndMovementConfig();
+  checkGridBotNavigator();
   checkTdmBotNavigation(createTeamDeathmatchWorldState, "Training Crossing");
   checkTdmBotNavigation(
     () => createTeamDeathmatchWorldState(FLANK_SWITCH_V2),
     "Flank Switch",
   );
+}
+
+function checkBotDecisionAndMovementConfig(): void {
+  const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+  const mode = new TeamDeathmatchMode();
+  mode.initialize(world);
+  const controller = new TdmBotController(
+    "red-player",
+    "blue-player",
+    { inputMagnitude: .5 },
+    {
+      directionTo: () => ({ x: 0, y: 1 }),
+      reset: () => {},
+    },
+  );
+  const actions = controller.readActions(createWorldSnapshot(world), 34);
+  const move = actions.find((action) => action.action === "move");
+  const aim = actions.find((action) => action.action === "aim");
+  if (
+    move?.magnitude !== .5 ||
+    move.direction?.x !== 0 ||
+    move.direction.y !== 1 ||
+    aim?.direction?.x !== 1 ||
+    aim.direction.y !== 0
+  ) {
+    throw new Error(
+      "TDM bot decisions must delegate navigation and honor movement config.",
+    );
+  }
+}
+
+function checkGridBotNavigator(): void {
+  const world = createEmptyWorldState("bot-navigation-smoke");
+  world.geometry = {
+    bounds: { minX: 0, minY: 0, maxX: 400, maxY: 400 },
+    solids: [{
+      id: "navigation-wall",
+      x: 160,
+      y: 80,
+      width: 80,
+      height: 240,
+    }],
+    gaps: [],
+  };
+  const navigator = new GridBotNavigator({
+    cellSize: 40,
+    repathIntervalMs: 420,
+    waypointReachDistance: 24,
+    obstaclePadding: 18,
+  });
+  const direction = navigator.directionTo(
+    { x: 80, y: 200 },
+    { x: 320, y: 200 },
+    "target:1",
+    createWorldSnapshot(world),
+    34,
+  );
+  if (
+    direction.x <= 0 ||
+    Math.abs(direction.y) < .1 ||
+    Math.abs(Math.hypot(direction.x, direction.y) - 1) > .001
+  ) {
+    throw new Error(
+      "Grid bot navigation must independently route around blockers.",
+    );
+  }
+  navigator.reset();
+  const direct = navigator.directionTo(
+    { x: 60, y: 60 },
+    { x: 340, y: 60 },
+    "target:2",
+    createWorldSnapshot(world),
+    34,
+  );
+  if (direct.x <= 0 || Math.abs(direct.y) > .1) {
+    throw new Error("Grid bot navigation reset must allow a fresh direct path.");
+  }
 }
 
 function checkTdmBotNavigation(

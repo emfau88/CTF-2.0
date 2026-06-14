@@ -294,13 +294,13 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Minimalen TDM-Zielcontroller fuer Gegnerverfolgung erstellen.
 - [x] Generische Grid-Navigation fuer Solids und Gaps erstellen.
 - [x] Bots erzeugen dieselben Core-Action-Intents wie Spieler.
-- [ ] Geschwindigkeit als Bot-Konfiguration behandeln.
+- [x] Geschwindigkeit als Bot-Konfiguration behandeln.
 - [ ] Jump Links als Map-Daten modellieren.
 - [ ] Bot-Jump-Unterstuetzung ueber das gemeinsame Jump-System implementieren.
 - [x] Grundlegendes TDM-Bot-Ziel implementieren.
 - [ ] CTF-Rollen implementieren.
 - [ ] One-Flag-Ziele fuer Bots implementieren.
-- [ ] Navigation und Entscheidung getrennt testen.
+- [x] Navigation und Entscheidung getrennt testen.
 - [ ] Das alte Bot-Bewegungsexperiment bis dahin nicht anwenden.
 
 ### Movement-Balancing-Slice
@@ -312,8 +312,18 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
   Core-Konfiguration.
 - Core-Smokes simulieren gehaltene Spruenge ueber alle Gaps und Solids von
   Training Crossing, Grand Archive und Flank Switch.
-- Die zusaetzliche Bot-Input-Magnitude `0.82` wird erst zusammen mit der
-  expliziten Bot-Geschwindigkeitskonfiguration neu bewertet.
+- Die fruehere Bot-Input-Magnitude `0.82` wurde mit der expliziten
+  Bot-Geschwindigkeitskonfiguration neu bewertet und auf `1` gesetzt; Bots und
+  Spieler nutzen damit dieselbe reduzierte Core-Geschwindigkeit.
+
+### Bot-Navigation-Separation-Slice
+
+- `BotMovementConfig` enthaelt die explizite Bot-Input-Magnitude; der Standard
+  ist `1`, damit Bots denselben reduzierten Core-Speed wie Spieler verwenden.
+- `GridBotNavigator` besitzt A*-Pfad, Repath-Timing und Wegpunktfortschritt.
+- `TdmBotController` entscheidet nur ueber Actor-Ziel, Aim und Action-Intents.
+- Navigation um Blocker, konfigurierbare Movement-Actions und die bestehende
+  TDM-Langstreckennavigation werden getrennt im Core-Smoke geprueft.
 
 ## Meilenstein 9: Mobile, UI und kompletter Spielablauf
 

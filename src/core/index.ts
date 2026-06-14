@@ -21,8 +21,12 @@ export {
 } from "./actors";
 export type { GameEvent } from "./events";
 export {
+  GridBotNavigator,
   TdmBotController,
-  V2_TDM_BOT_NAVIGATION_CONFIG,
+  V2_BOT_MOVEMENT_CONFIG,
+  V2_BOT_NAVIGATION_CONFIG,
+  type BotMovementConfig,
+  type BotNavigator,
   type BotNavigationConfig,
 } from "./bots";
 export {
