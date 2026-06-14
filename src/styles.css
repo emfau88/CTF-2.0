@@ -124,6 +124,7 @@ canvas { display: block; }
   cursor: pointer;
 }
 .v2-game-menu-button:active { transform: translateY(1px); }
+.v2-audio-button { top: max(44px, calc(env(safe-area-inset-top) + 36px)); min-width: 92px; }
 #hud { position: fixed; inset: 0; pointer-events: none; color: #17302d; font-size: 13px; }
 .score { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); display: flex; justify-content: space-between; align-items: center; }
 .score-team, #debug, .hud-actions button, .settings-panel { background: rgb(255 255 255 / .78); border: 1px solid rgb(30 50 45 / .15); border-radius: 8px; box-shadow: 0 8px 22px rgb(20 40 34 / .12); backdrop-filter: blur(10px); }

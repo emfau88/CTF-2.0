@@ -8,7 +8,7 @@ import type {
 import type { FrameDiagnosticsPort } from "../debugging";
 import type { HudPort } from "../hud";
 
-export class PhaserTeamDeathmatchHudPort
+export class PhaserArenaHudPort
 implements HudPort, FrameDiagnosticsPort {
   private readonly scoreText: Phaser.GameObjects.Text;
   private readonly blueText: Phaser.GameObjects.Text;
@@ -147,7 +147,9 @@ implements HudPort, FrameDiagnosticsPort {
         : `${result.winnerEntryId.toUpperCase()} WINS`;
       this.resultText.setText([
         headline,
-        this.mobileControls ? "Tap to restart" : "Press R to restart",
+        this.mobileControls
+          ? "Tap to restart\nMenu button for main menu"
+          : "Press R to restart\nPress M for menu",
       ]).setVisible(true);
     } else {
       this.resultText.setVisible(false);

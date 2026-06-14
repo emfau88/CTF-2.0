@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { preloadArenaAssets } from "../../../assets";
+import { buildV2MenuSearch, readV2Route } from "../../../v2Route";
 import {
   ClassicCtfBotController,
   ClassicCtfMode,
@@ -8,6 +9,7 @@ import {
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   OneFlagMode,
+  OneFlagBotController,
   resolveWorldMap,
   TeamDeathmatchMode,
   TdmBotController,
@@ -32,13 +34,14 @@ import { PhaserArenaAudioPort } from "../PhaserArenaAudioPort";
 import { PhaserArenaRendererPort } from "../PhaserArenaRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
 import { PhaserMobileInputAdapter } from "../PhaserMobileInputAdapter";
-import { PhaserTeamDeathmatchHudPort } from "../PhaserTeamDeathmatchHudPort";
+import { PhaserArenaHudPort } from "../PhaserArenaHudPort";
 import { PhaserWeaponEffectsPort } from "../PhaserWeaponEffectsPort";
 
 export class GameplayV2Scene extends Phaser.Scene {
   private bridge?: PhaserGameBridge;
   private inputAdapter?: InputAdapterPort;
   private diagnosticText?: Phaser.GameObjects.Text;
+  private menuKey?: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super("GameplayV2Scene");
@@ -49,15 +52,16 @@ export class GameplayV2Scene extends Phaser.Scene {
   }
 
   create(): void {
-    const search = new URLSearchParams(window.location.search);
-    const isTeamDeathmatch = search.get("mode") === "tdm";
-    const isClassicCtf = search.get("mode") === "ctf";
-    const isOneFlag = search.get("mode") === "one-flag";
+    const route = readV2Route(new URLSearchParams(window.location.search));
+    const isTeamDeathmatch = route.mode === "tdm";
+    const isClassicCtf = route.mode === "ctf";
+    const isOneFlag = route.mode === "one-flag";
     const isArenaMode = isTeamDeathmatch || isClassicCtf || isOneFlag;
-    const selectedMap = resolveWorldMap(search.get("map"));
-    const useMobileControls = isArenaMode && prefersMobileControls(search);
+    const selectedMap = resolveWorldMap(route.map);
+    const useMobileControls = isArenaMode && prefersMobileControls(route);
     const useBotOpponent = isArenaMode &&
-      prefersBotOpponent(search, useMobileControls);
+      prefersBotOpponent(route.players, useMobileControls);
+    this.sound.mute = route.sfx === "off";
     const runtime = isArenaMode
       ? new GameplayCoreRuntime({
         mode: isClassicCtf
@@ -102,7 +106,7 @@ export class GameplayV2Scene extends Phaser.Scene {
       )
       : undefined;
     const hud = isArenaMode
-      ? new PhaserTeamDeathmatchHudPort(
+      ? new PhaserArenaHudPort(
         this,
         useMobileControls,
         useBotOpponent,
@@ -127,6 +131,11 @@ export class GameplayV2Scene extends Phaser.Scene {
             "attacker",
             selectedMap,
           )
+          : isOneFlag
+          ? new OneFlagBotController(
+            "red-player",
+            selectedMap,
+          )
           : new TdmBotController("red-player", "blue-player"),
       )
       : playerInput;
@@ -148,15 +157,24 @@ export class GameplayV2Scene extends Phaser.Scene {
       hud,
     });
     this.bridge.initialize();
+    window.addEventListener("v2-sfx-changed", this.handleSfxChanged);
 
     if (!isArenaMode) {
       this.scale.on("resize", this.centerDiagnostic, this);
+    } else if (this.input.keyboard) {
+      this.menuKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.M,
+      );
     }
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
   }
 
   update(_time: number, delta: number): void {
     if (!this.bridge || !this.inputAdapter) {
+      return;
+    }
+    if (this.menuKey && Phaser.Input.Keyboard.JustDown(this.menuKey)) {
+      window.location.search = buildV2MenuSearch(readV2Route());
       return;
     }
     this.bridge.advance(this.inputAdapter.readFrame(delta));
@@ -184,23 +202,33 @@ export class GameplayV2Scene extends Phaser.Scene {
 
   private shutdown(): void {
     this.scale.off("resize", this.centerDiagnostic, this);
+    window.removeEventListener("v2-sfx-changed", this.handleSfxChanged);
     this.bridge?.dispose();
     this.inputAdapter?.dispose();
+    this.menuKey?.destroy();
     this.bridge = undefined;
     this.inputAdapter = undefined;
     this.diagnosticText = undefined;
+    this.menuKey = undefined;
   }
+
+  private readonly handleSfxChanged = (event: Event): void => {
+    const enabled = Boolean(
+      (event as CustomEvent<{ enabled?: boolean }>).detail?.enabled,
+    );
+    this.sound.mute = !enabled;
+  };
 }
 
-function prefersMobileControls(search: URLSearchParams): boolean {
-  const override = search.get("controls");
+function prefersMobileControls(route: { controls: string; players: string }): boolean {
+  const override = route.controls;
   if (override === "mobile" || override === "touch") {
     return true;
   }
   if (override === "desktop" || override === "keyboard") {
     return false;
   }
-  if (search.get("players") === "bot") {
+  if (route.players === "bot") {
     return true;
   }
   return navigator.maxTouchPoints > 0 ||
@@ -208,10 +236,9 @@ function prefersMobileControls(search: URLSearchParams): boolean {
 }
 
 function prefersBotOpponent(
-  search: URLSearchParams,
+  players: string,
   mobileControls: boolean,
 ): boolean {
-  const players = search.get("players");
   if (players === "bot") {
     return true;
   }

@@ -18,6 +18,12 @@ export {
 } from "./ClassicCtfBotDecisionController";
 export { ClassicCtfBotController } from "./ClassicCtfBotController";
 export {
+  OneFlagBotDecisionController,
+  type OneFlagBotGoal,
+  type OneFlagBotGoalKind,
+} from "./OneFlagBotDecisionController";
+export { OneFlagBotController } from "./OneFlagBotController";
+export {
   GridBotNavigator,
   type BotNavigationDecision,
   type BotNavigator,

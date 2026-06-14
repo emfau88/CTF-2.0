@@ -1,34 +1,50 @@
+import {
+  buildV2MatchSearch,
+  readV2Route,
+  type V2ControlsMode,
+  type V2PlayersMode,
+} from "./v2Route";
+
 interface V2MenuElements {
   readonly root: HTMLElement;
   readonly mode: HTMLSelectElement;
   readonly map: HTMLSelectElement;
   readonly players: HTMLSelectElement;
   readonly controls: HTMLSelectElement;
+  readonly sfx: HTMLSelectElement;
   readonly play: HTMLButtonElement;
 }
 
 export function showGameplayV2Menu(): void {
   const elements = readMenuElements();
+  const route = readV2Route();
   document.documentElement.style.setProperty(
     "--v2-menu-floor",
     `url("${import.meta.env.BASE_URL}assets/ruins/floor-stone.png")`,
   );
+  elements.mode.value = route.mode;
+  elements.map.value = route.map;
+  elements.players.value = route.players;
+  elements.controls.value = route.controls;
+  elements.sfx.value = route.sfx;
   elements.root.classList.remove("is-hidden");
-  elements.players.addEventListener("change", () => {
+  const syncControls = (): void => {
     const localMatch = elements.players.value === "local";
     if (localMatch) {
       elements.controls.value = "keyboard";
     }
     elements.controls.disabled = localMatch;
-  });
+  };
+  syncControls();
+  elements.players.addEventListener("change", syncControls);
   elements.play.addEventListener("click", () => {
-    const params = new URLSearchParams();
-    params.set("scene", "v2");
-    params.set("mode", elements.mode.value);
-    params.set("map", elements.map.value);
-    params.set("players", elements.players.value);
-    params.set("controls", elements.controls.value);
-    window.location.search = params.toString();
+    window.location.search = buildV2MatchSearch({
+      mode: elements.mode.value as typeof route.mode,
+      map: elements.map.value,
+      players: elements.players.value as V2PlayersMode,
+      controls: elements.controls.value as V2ControlsMode,
+      sfx: elements.sfx.value === "off" ? "off" : "on",
+    });
   });
 }
 
@@ -40,6 +56,7 @@ function readMenuElements(): V2MenuElements {
     map: requiredElement<HTMLSelectElement>("v2-menu-map"),
     players: requiredElement<HTMLSelectElement>("v2-menu-players"),
     controls: requiredElement<HTMLSelectElement>("v2-menu-controls"),
+    sfx: requiredElement<HTMLSelectElement>("v2-menu-sfx"),
     play: requiredElement<HTMLButtonElement>("v2-menu-play"),
   };
 }

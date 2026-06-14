@@ -21,6 +21,8 @@ import {
   getWorldMap,
   GameplayCoreRuntime,
   ClassicCtfMode,
+  OneFlagBotController,
+  OneFlagBotDecisionController,
   OneFlagMode,
   resolveWorldMap,
   TeamDeathmatchMode,
@@ -219,6 +221,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkWorldMapRegistry();
   checkClassicCtfMode();
   checkOneFlagFoundation();
+  checkOneFlagBots();
   checkTeamDeathmatchSlice();
   checkBasicAutoShootParity();
   checkTdmBotController();
@@ -833,6 +836,255 @@ function checkOneFlagFoundation(): void {
     world.match.result.winnerEntryId !== "blue"
   ) {
     throw new Error("One Flag must end at the configured capture limit.");
+  }
+}
+
+function checkOneFlagBots(): void {
+  checkOneFlagBotDecisions();
+  checkOneFlagBotPickupRuntime();
+  checkOneFlagBotEscortRuntime();
+  checkOneFlagBotChaseRuntime();
+  checkOneFlagBotCaptureRuntime();
+}
+
+function checkOneFlagBotDecisions(): void {
+  const world = createOneFlagWorldState(TRAINING_CROSSING_V2);
+  const mode = new OneFlagMode(TRAINING_CROSSING_V2);
+  mode.initialize(world);
+  const controller = new OneFlagBotDecisionController(TRAINING_CROSSING_V2);
+  const red = world.actors.find((actor) => actor.id === "red-player")!;
+  const blue = world.actors.find((actor) => actor.id === "blue-player")!;
+
+  let snapshot = createWorldSnapshot(world);
+  if (controller.chooseGoal(red, snapshot).kind !== "take-center-flag") {
+    throw new Error("One Flag bots must initially seek the center flag.");
+  }
+
+  world.objectives[0] = {
+    ...world.objectives[0]!,
+    state: {
+      ...world.objectives[0]!.state,
+      status: "carried",
+      interactingActorId: red.id,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  if (controller.chooseGoal(red, snapshot).kind !== "capture-flag") {
+    throw new Error("One Flag carriers must head for the opposing base.");
+  }
+
+  const ally = createActorState({
+    id: "red-one-flag-ally",
+    kind: "bot",
+    teamId: "red",
+    position: { x: 760, y: 410 },
+    radius: 16,
+    maxHealth: 100,
+    maxArmor: 100,
+  });
+  world.actors.push(ally);
+  world.objectives[0] = {
+    ...world.objectives[0]!,
+    state: {
+      ...world.objectives[0]!.state,
+      status: "carried",
+      interactingActorId: ally.id,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  if (controller.chooseGoal(red, snapshot).kind !== "escort-carrier") {
+    throw new Error("One Flag bots must escort an allied carrier.");
+  }
+
+  world.objectives[0] = {
+    ...world.objectives[0]!,
+    state: {
+      ...world.objectives[0]!.state,
+      status: "carried",
+      interactingActorId: blue.id,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  if (controller.chooseGoal(red, snapshot).kind !== "chase-enemy-carrier") {
+    throw new Error("One Flag bots must chase an enemy carrier.");
+  }
+
+  world.objectives[0] = {
+    ...world.objectives[0]!,
+    state: {
+      ...world.objectives[0]!.state,
+      status: "carried",
+      interactingActorId: "missing-carrier",
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  if (controller.chooseGoal(red, snapshot).kind !== "control-mid") {
+    throw new Error("One Flag bots must fall back to center control.");
+  }
+}
+
+function checkOneFlagBotPickupRuntime(): void {
+  const runtime = createOneFlagBotRuntime(TRAINING_CROSSING_V2);
+  const controller = new OneFlagBotController("red-player", TRAINING_CROSSING_V2);
+  let pickedUp = false;
+  for (let sequence = 1; sequence <= 800; sequence++) {
+    const frame = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: controller.readActions(runtime.snapshot, 34),
+    });
+    pickedUp ||= frame.events.some((event) =>
+      event.type === "objective.flagPickedUp" &&
+      event.sourceActorId === "red-player"
+    );
+    if (pickedUp) break;
+  }
+  if (!pickedUp) {
+    throw new Error("One Flag bots must reach and pick up the center flag.");
+  }
+}
+
+function checkOneFlagBotEscortRuntime(): void {
+  const runtime = createOneFlagBotRuntime(
+    TRAINING_CROSSING_V2,
+    (world) => {
+      const ally = createActorState({
+        id: "red-one-flag-ally",
+        kind: "bot",
+        teamId: "red",
+        position: centerOfRect(TRAINING_CROSSING_V2.presentation.combatZone!),
+        radius: 16,
+        maxHealth: 100,
+        maxArmor: 100,
+      });
+      zeroWeapons(ally);
+      world.actors.push(ally);
+      const red = world.actors.find((actor) => actor.id === "red-player")!;
+      red.position = { x: 150, y: 410 };
+      red.spawnPosition = { ...red.position };
+      red.lastSafePosition = { ...red.position };
+      const blue = world.actors.find((actor) => actor.id === "blue-player")!;
+      blue.position = { x: 1350, y: 410 };
+      blue.spawnPosition = { ...blue.position };
+      blue.lastSafePosition = { ...blue.position };
+      zeroWeapons(red);
+      zeroWeapons(blue);
+    },
+  );
+  const controller = new OneFlagBotController("red-player", TRAINING_CROSSING_V2);
+  runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [],
+  });
+  const initialRed = actorById(runtime.snapshot.actors, "red-player");
+  const ally = actorById(runtime.snapshot.actors, "red-one-flag-ally");
+  const initialDistance = distanceBetweenPositions(
+    initialRed.position,
+    ally.position,
+  );
+  for (let sequence = 2; sequence <= 140; sequence++) {
+    runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: controller.readActions(runtime.snapshot, 34),
+    });
+  }
+  const finalRed = actorById(runtime.snapshot.actors, "red-player");
+  const finalDistance = distanceBetweenPositions(finalRed.position, ally.position);
+  if (finalDistance >= initialDistance - 120) {
+    throw new Error("One Flag bots must close distance to escort an allied carrier.");
+  }
+}
+
+function checkOneFlagBotChaseRuntime(): void {
+  const runtime = createOneFlagBotRuntime(
+    TRAINING_CROSSING_V2,
+    (world) => {
+      const center = centerOfRect(TRAINING_CROSSING_V2.presentation.combatZone!);
+      const blue = world.actors.find((actor) => actor.id === "blue-player")!;
+      blue.position = { ...center };
+      blue.spawnPosition = { ...center };
+      blue.lastSafePosition = { ...center };
+      const red = world.actors.find((actor) => actor.id === "red-player")!;
+      red.position = { x: 150, y: 410 };
+      red.spawnPosition = { ...red.position };
+      red.lastSafePosition = { ...red.position };
+      zeroWeapons(red);
+      zeroWeapons(blue);
+    },
+  );
+  const controller = new OneFlagBotController("red-player", TRAINING_CROSSING_V2);
+  runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [],
+  });
+  const initialRed = actorById(runtime.snapshot.actors, "red-player");
+  const blue = actorById(runtime.snapshot.actors, "blue-player");
+  const initialDistance = distanceBetweenPositions(
+    initialRed.position,
+    blue.position,
+  );
+  for (let sequence = 2; sequence <= 120; sequence++) {
+    runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: controller.readActions(runtime.snapshot, 34),
+    });
+  }
+  const finalRed = actorById(runtime.snapshot.actors, "red-player");
+  const finalDistance = distanceBetweenPositions(finalRed.position, blue.position);
+  if (finalDistance >= initialDistance - 150) {
+    throw new Error("One Flag bots must chase an enemy carrier.");
+  }
+}
+
+function checkOneFlagBotCaptureRuntime(): void {
+  for (
+    const map of [
+      TRAINING_CROSSING_V2,
+      GRAND_ARCHIVE_V2,
+      FLANK_SWITCH_V2,
+    ]
+  ) {
+    const runtime = createOneFlagBotRuntime(map);
+    const controller = new OneFlagBotController("red-player", map);
+    let pickedUp = false;
+    let captured = false;
+    let fell = false;
+    for (let sequence = 1; sequence <= 3200; sequence++) {
+      const frame = runtime.advance({
+        sequence,
+        timeMs: sequence * 34,
+        deltaMs: 34,
+        actions: controller.readActions(runtime.snapshot, 34),
+      });
+      pickedUp ||= frame.events.some((event) =>
+        event.type === "objective.flagPickedUp" &&
+        event.sourceActorId === "red-player"
+      );
+      captured ||= frame.events.some((event) =>
+        event.type === "objective.flagCaptured" &&
+        event.sourceActorId === "red-player"
+      );
+      const red = actorById(frame.snapshot.actors, "red-player");
+      fell ||= red.lifeState === "falling";
+      if (captured) break;
+    }
+    const redScore = runtime.snapshot.scoreBoard.entries.find((entry) =>
+      entry.id === "red"
+    )?.score;
+    if (!pickedUp || !captured || redScore !== 1 || fell) {
+      throw new Error(
+        `${map.displayName} One Flag bots must pick up and capture through normal rules.`,
+      );
+    }
   }
 }
 
@@ -2213,6 +2465,42 @@ function createStationaryBotController(): TdmBotController {
       reset: () => {},
     },
   );
+}
+
+function createOneFlagBotRuntime(
+  map: WorldMapData,
+  configureWorld?: (world: ReturnType<typeof createOneFlagWorldState>) => void,
+): GameplayCoreRuntime {
+  const createWorld = () => {
+    const world = createOneFlagWorldState(map);
+    for (const actor of world.actors) {
+      zeroWeapons(actor);
+    }
+    configureWorld?.(world);
+    return world;
+  };
+  const runtime = new GameplayCoreRuntime({
+    mode: new OneFlagMode(map),
+    createWorld,
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  return runtime;
+}
+
+function zeroWeapons(actor: ActorState): void {
+  actor.weapons.rocketAmmo = 0;
+  actor.weapons.railAmmo = 0;
+  actor.weapons.whipAmmo = 0;
+  actor.weapons.railCooldownMs = 0;
+  actor.weapons.whipCooldownMs = 0;
+}
+
+function distanceBetweenPositions(
+  left: { x: number; y: number },
+  right: { x: number; y: number },
+): number {
+  return Math.hypot(left.x - right.x, left.y - right.y);
 }
 
 function actorById(

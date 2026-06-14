@@ -189,7 +189,7 @@ sich wie ihre V1-Version an.
 - [x] Aktive Sounds werden bei Restart und Scene-Wechsel beendet.
 - [ ] Eigener Damage-/Hurt-Sound benoetigt noch eine verbindliche V1-Referenz
       beziehungsweise Assetentscheidung.
-- [ ] SFX-/Mute-Settings folgen mit dem finalen Settings-Fluss.
+- [x] SFX-/Mute-Settings folgen mit dem finalen Settings-Fluss.
 
 ## Meilenstein 5: Classic CTF als eigener GameMode
 
@@ -301,7 +301,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Spezialwaffen ueber normale `fireWeapon`-Actions verwenden.
 - [x] Grundlegendes TDM-Bot-Ziel implementieren.
 - [x] CTF-Rollen implementieren.
-- [ ] One-Flag-Ziele fuer Bots implementieren.
+- [x] One-Flag-Ziele fuer Bots implementieren.
 - [x] Navigation und Entscheidung getrennt testen.
 - [ ] Das alte Bot-Bewegungsexperiment bis dahin nicht anwenden.
 
@@ -373,6 +373,19 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - Ein Runtime-Smoke zwingt den Angreifer zu Flag-Pickup, Rueckweg und Capture
   durch die normalen Objective-, Navigation- und Jump-Regeln.
 
+### One-Flag-Botziele-Slice
+
+- `OneFlagBotDecisionController` behandelt One Flag getrennt von
+  `TdmBotController`, `ClassicCtfBotDecisionController` und
+  `GridBotNavigator`.
+- Carrier laufen zur gegnerischen Basis, gegnerische Carrier werden gejagt,
+  verbuendete Carrier eskortiert, freie Center-Flags geholt und ansonsten die
+  Kartenmitte kontrolliert.
+- `OneFlagBotController` erzeugt dafuer ausschliesslich normale `move`-,
+  `aim`-, `jump`- und `fireWeapon`-Actions.
+- Entscheidungstests bleiben getrennt; Runtime-Smokes pruefen Pickup,
+  Eskorte, Carrier-Jagd und Capture fuer One Flag.
+
 ## Meilenstein 9: Mobile, UI und kompletter Spielablauf
 
 - [x] Erste V2-Mode-Auswahl implementieren.
@@ -380,14 +393,28 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Solo-vs-Bot und lokales Zwei-Spieler-Setup konfigurierbar machen.
 - [x] Schlanken V2-Startbildschirm implementieren.
 - [x] Rueckkehr vom laufenden V2-Match zum Hauptmenue ermoeglichen.
-- [ ] Ergebnisbildschirm mit Rueckkehr ins V2-Menue vervollstaendigen.
-- [ ] Restart und Rematch implementieren.
+- [x] Ergebnisbildschirm mit Rueckkehr ins V2-Menue vervollstaendigen.
+- [x] Restart und Rematch implementieren.
 - [ ] Desktop-HUD finalisieren.
 - [ ] Mobile-HUD finalisieren.
 - [x] Touch-Steuerung mit V1-Paritaet anbinden.
 - [x] Touch-Overlay und WASD/Space koennen denselben P1 steuern.
-- [ ] Settings und Audiooptionen integrieren.
+- [x] Settings und Audiooptionen integrieren.
 - [ ] UI konfiguriert nur Matchdaten und enthaelt keine Spielregeln.
+
+### Arena-Flow-/Settings-Slice
+
+- `PhaserArenaHudPort` ersetzt den TDM-spezifisch benannten Match-HUD-Port als
+  gemeinsamen V2-Arena-HUD-Pfad fuer TDM, Classic CTF und One Flag.
+- Ergebnisanzeige, Restart-Hinweise und der Rueckweg ins V2-Menue laufen ueber
+  denselben opt-in-Flow; Desktop verwendet `R` fuer Restart und `M` fuer Menu,
+  Touch verwendet Tap fuer Restart plus den gemeinsamen Menu-Button.
+- Das V2-Menue und der laufende Match-Pfad teilen sich eine gemeinsame
+  Routen-/Matchkonfiguration fuer Modus, Map, `players`, `controls` und
+  `sfx`; die Menue-Rueckkehr behaelt diese Werte bei.
+- SFX-Mute bleibt eine Adapter-/Praesentationsentscheidung: das V2-Menue
+  bietet `SFX on/off`, der laufende Match-Pfad besitzt dafuer einen
+  gemeinsamen DOM-Button, und der Core kennt diese Option nicht.
 
 ## Meilenstein 10: Produktionsqualitaet
 

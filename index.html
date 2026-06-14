@@ -45,6 +45,12 @@
               <option value="keyboard">Keyboard only</option>
             </select>
           </label>
+          <label>SFX
+            <select id="v2-menu-sfx">
+              <option value="on">On</option>
+              <option value="off">Muted</option>
+            </select>
+          </label>
         </div>
 
         <button id="v2-menu-play" type="button">Play</button>
@@ -56,6 +62,9 @@
     </div>
     <button id="v2-game-menu-button" class="v2-game-menu-button is-hidden" type="button">
       Menu
+    </button>
+    <button id="v2-audio-button" class="v2-game-menu-button v2-audio-button is-hidden" type="button" aria-pressed="false">
+      SFX ON
     </button>
     <div id="hud">
       <div class="score">

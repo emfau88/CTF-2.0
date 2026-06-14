@@ -24,6 +24,8 @@ export {
   ClassicCtfBotController,
   ClassicCtfBotDecisionController,
   GridBotNavigator,
+  OneFlagBotController,
+  OneFlagBotDecisionController,
   TdmBotCombatController,
   TdmBotController,
   V2_BOT_COMBAT_CONFIG,
@@ -37,6 +39,8 @@ export {
   type BotNavigationDecision,
   type BotNavigator,
   type BotNavigationConfig,
+  type OneFlagBotGoal,
+  type OneFlagBotGoalKind,
 } from "./bots";
 export {
   fireDiagnosticProjectile,
