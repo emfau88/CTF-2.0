@@ -221,15 +221,27 @@ Vertrag ist durch den Core-Smoke abgesichert.
 
 **Ziel:** Die Objective- und GameMode-Grenzen praktisch pruefen.
 
-- [ ] Eine neutrale Flagge oder ein Center-Objective definieren.
-- [ ] Mode-eigene Capture-Ziele definieren.
-- [ ] Gemeinsame Objective-Vertraege nur bei nachgewiesenem Bedarf erweitern.
-- [ ] Eigenen HUD-Zustand erzeugen.
-- [ ] Keine Annahme von exakt zwei Flags im gemeinsamen Core zulassen.
-- [ ] Classic CTF und TDM unveraendert lauffaehig halten.
+- [x] Eine neutrale Flagge oder ein Center-Objective definieren.
+- [x] Mode-eigene Capture-Ziele definieren.
+- [x] Gemeinsame Objective-Vertraege nur bei nachgewiesenem Bedarf erweitern.
+- [x] Eigenen HUD-Zustand erzeugen.
+- [x] Keine Annahme von exakt zwei Flags im gemeinsamen Core zulassen.
+- [x] Classic CTF und TDM unveraendert lauffaehig halten.
 
 **Stop-Bedingung:** Wenn One Flag Aenderungen an Classic-CTF- oder TDM-Regeln
 erzwingt, wird zuerst die Objective-Grenze korrigiert.
+
+### One-Flag-Foundation-Slice
+
+- Der gemeinsame Flag-Factory-Vertrag unterstuetzt Team- und neutrale Flags.
+- `OneFlagMode` erzeugt genau eine neutrale Flagge im Karten-Kampfzentrum.
+- World-Factory, Match-Timer und isolierter HUD-Vertrag sind angelegt.
+- Die neutrale Flagge kann von beiden Teams aufgenommen und getragen werden.
+- Tod oder Fall setzt sie sofort ins Kartenzentrum zurueck.
+- Ein Capture erfolgt in der gegnerischen Basis und endet bei drei Punkten.
+- Renderer und HUD stellen die neutrale Flagge und ihren Zustand dar.
+- Menue und Scene-Pfad starten One Flag auf allen drei V2-Karten.
+- Dedizierte One-Flag-Botziele bleiben Teil von Meilenstein 8.
 
 ## Meilenstein 7: Maps und Content
 
@@ -285,7 +297,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [ ] Bot-Jump-Unterstuetzung ueber das gemeinsame Jump-System implementieren.
 - [x] Grundlegendes TDM-Bot-Ziel implementieren.
 - [ ] CTF-Rollen implementieren.
-- [ ] One-Flag-Ziele implementieren.
+- [ ] One-Flag-Ziele fuer Bots implementieren.
 - [ ] Navigation und Entscheidung getrennt testen.
 - [ ] Das alte Bot-Bewegungsexperiment bis dahin nicht anwenden.
 
@@ -366,5 +378,5 @@ Bei einem dieser Punkte wird nicht einfach weitergebaut:
       Rail-/Whip-Feedback und Todesburst migrieren.
 - [ ] Meilenstein 4: V1-Waffen migrieren.
 - [ ] Meilenstein 5: Classic CTF als eigenen Modus implementieren.
-- [ ] Meilenstein 6: One Flag als Architekturtest implementieren.
+- [x] Meilenstein 6: One Flag als Architekturtest implementieren.
 - [ ] Danach Maps, Bots, Mobile, UI und Produktionshaertung ausbauen.

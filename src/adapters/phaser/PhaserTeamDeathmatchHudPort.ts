@@ -156,14 +156,24 @@ implements HudPort, FrameDiagnosticsPort {
 }
 
 function objectiveStatus(state: ModeHudState): string[] {
-  if (state.modeId !== "classic-ctf") return [];
-  const red = state.objectives.find((objective) => objective.id === "red-flag");
-  const blue = state.objectives.find((objective) =>
-    objective.id === "blue-flag"
-  );
-  return [
-    `FLAGS  RED ${flagLabel(red)}  |  BLUE ${flagLabel(blue)}`,
-  ];
+  if (state.modeId === "classic-ctf") {
+    const red = state.objectives.find((objective) =>
+      objective.id === "red-flag"
+    );
+    const blue = state.objectives.find((objective) =>
+      objective.id === "blue-flag"
+    );
+    return [
+      `FLAGS  RED ${flagLabel(red)}  |  BLUE ${flagLabel(blue)}`,
+    ];
+  }
+  if (state.modeId === "one-flag") {
+    const center = state.objectives.find((objective) =>
+      objective.id === "center-flag"
+    );
+    return [`CENTER FLAG  ${flagLabel(center)}`];
+  }
+  return [];
 }
 
 function flagLabel(

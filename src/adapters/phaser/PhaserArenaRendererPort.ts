@@ -46,7 +46,7 @@ export class PhaserArenaRendererPort implements RendererPort {
   private readonly pickupViews =
     new Map<PickupId, Phaser.GameObjects.Container>();
   private readonly objectiveViews =
-    new Map<string, Phaser.GameObjects.Image>();
+    new Map<string, Phaser.GameObjects.Image | Phaser.GameObjects.Container>();
   private readonly spawnPadParticleGraphics: Phaser.GameObjects.Graphics;
   private readonly libraryDustGraphics?: Phaser.GameObjects.Graphics;
   private readonly libraryDust: LibraryDustParticle[] = [];
@@ -330,21 +330,50 @@ export class PhaserArenaRendererPort implements RendererPort {
       }
     }
     for (const objective of snapshot.objectives) {
-      if (objective.kind !== "team-flag") continue;
-      const teamId = objective.state.controllingTeamId;
-      if (teamId !== "red" && teamId !== "blue") continue;
       const view = this.objectiveViews.get(objective.id) ??
-        this.scene.add.image(
-          objective.position.x,
-          objective.position.y - 18,
-          teamId === "red" ? "flagRed" : "flagBlue",
-        ).setDepth(34).setScale(.25);
+        this.createObjectiveView(objective);
+      if (!view) continue;
       view
         .setPosition(objective.position.x, objective.position.y - 18)
-        .setScale(.25)
         .setAlpha(objective.state.status === "carried" ? .94 : 1);
       this.objectiveViews.set(objective.id, view);
     }
+  }
+
+  private createObjectiveView(
+    objective: WorldSnapshot["objectives"][number],
+  ): Phaser.GameObjects.Image | Phaser.GameObjects.Container | null {
+    if (objective.kind === "neutral-flag") {
+      const graphics = this.scene.add.graphics();
+      graphics.lineStyle(3, 0x243431, 1)
+        .beginPath()
+        .moveTo(-7, 20)
+        .lineTo(-7, -25)
+        .strokePath();
+      graphics.fillStyle(0xfff4c4, 1)
+        .fillTriangle(-5, -23, 24, -14, -5, -5);
+      graphics.lineStyle(2, 0xd8a93d, 1)
+        .beginPath()
+        .moveTo(-5, -23)
+        .lineTo(24, -14)
+        .lineTo(-5, -5)
+        .closePath()
+        .strokePath();
+      graphics.fillStyle(0x243431, 1).fillCircle(-7, 21, 4);
+      return this.scene.add.container(
+        objective.position.x,
+        objective.position.y - 18,
+        [graphics],
+      ).setDepth(34);
+    }
+    if (objective.kind !== "team-flag") return null;
+    const teamId = objective.state.controllingTeamId;
+    if (teamId !== "red" && teamId !== "blue") return null;
+    return this.scene.add.image(
+      objective.position.x,
+      objective.position.y - 18,
+      teamId === "red" ? "flagRed" : "flagBlue",
+    ).setDepth(34).setScale(.25);
   }
 
   private destroyObjectiveViews(): void {

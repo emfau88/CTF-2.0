@@ -1,9 +1,6 @@
 import type { ActorId, TeamId, WorldPosition } from "../actors";
 import type { GameEvent } from "../events";
-import {
-  createFlagObjective,
-  type Objective,
-} from "../objectives";
+import { createFlagObjective, type Objective } from "../objectives";
 import {
   awardScore,
   createScoreBoardState,
@@ -22,14 +19,14 @@ import type {
 import type { GameMode, ModeHudState } from "./gameMode";
 import { createMatchState, type MatchResult } from "./matchState";
 
-export interface ClassicCtfModeConfig {
+export interface OneFlagModeConfig {
   readonly durationMs: number;
   readonly captureLimit: number;
   readonly pickupRadius: number;
   readonly initialScores: readonly ScoreEntry[];
 }
 
-export const V2_CLASSIC_CTF_CONFIG: ClassicCtfModeConfig = {
+export const V2_ONE_FLAG_CONFIG: OneFlagModeConfig = {
   durationMs: 180_000,
   captureLimit: 3,
   pickupRadius: 36,
@@ -39,19 +36,19 @@ export const V2_CLASSIC_CTF_CONFIG: ClassicCtfModeConfig = {
   ],
 };
 
-export class ClassicCtfMode implements GameMode {
-  readonly id = "classic-ctf";
+export class OneFlagMode implements GameMode {
+  readonly id = "one-flag";
   readonly spawnProvider: SpawnProvider = new AssignedSpawnProvider();
 
   constructor(
     private readonly map: WorldMapData,
-    private readonly config: ClassicCtfModeConfig = V2_CLASSIC_CTF_CONFIG,
+    private readonly config: OneFlagModeConfig = V2_ONE_FLAG_CONFIG,
   ) {}
 
   initialize(world: WorldState): readonly GameEvent[] {
     world.modeId = this.id;
     world.match = createMatchState(
-      "classic-ctf-match-1",
+      "one-flag-match-1",
       this.id,
       this.config.durationMs,
     );
@@ -59,16 +56,12 @@ export class ClassicCtfMode implements GameMode {
     world.scoreBoard = createScoreBoardState(this.config.initialScores);
     world.objectives = [
       createFlagObjective({
-        id: "red-flag",
-        kind: "team-flag",
-        position: centerOf(this.map.presentation.redBase),
-        teamId: "red",
-      }),
-      createFlagObjective({
-        id: "blue-flag",
-        kind: "team-flag",
-        position: centerOf(this.map.presentation.blueBase),
-        teamId: "blue",
+        id: "center-flag",
+        kind: "neutral-flag",
+        position: centerOf(
+          this.map.presentation.combatZone ??
+            boundsRect(this.map),
+        ),
       }),
     ];
     return [this.matchStartedEvent(world)];
@@ -76,54 +69,46 @@ export class ClassicCtfMode implements GameMode {
 
   update(world: WorldState, deltaMs: number): readonly GameEvent[] {
     const match = world.match;
-    if (!match || match.phase !== "running") {
-      return [];
-    }
+    if (!match || match.phase !== "running") return [];
     const ms = Math.max(0, deltaMs);
     match.elapsedMs = Math.min(match.durationMs, match.elapsedMs + ms);
     match.remainingMs = Math.max(0, match.durationMs - match.elapsedMs);
-    if (match.remainingMs <= 0) {
-      return this.endMatch(world, "time-limit");
-    }
+    if (match.remainingMs <= 0) return this.endMatch(world, "time-limit");
 
     const events: GameEvent[] = [];
-    this.syncCarriedFlags(world, events);
+    this.syncCarriedFlag(world, events);
     for (const actor of world.actors) {
       if (actor.lifeState !== "active" || !actor.teamId) continue;
       const carriedFlag = flagCarriedBy(world, actor.id);
       if (carriedFlag) {
-        if (pointInRect(actor.position, this.baseFor(actor.teamId))) {
+        if (pointInRect(actor.position, this.captureTargetFor(actor.teamId))) {
           events.push(...this.captureFlag(world, carriedFlag, actor.id));
           if (world.match?.phase === "ended") break;
         }
         continue;
       }
-      const enemyFlag = world.objectives.find((objective) =>
-        isTeamFlag(objective) &&
-        objective.state.controllingTeamId !== actor.teamId &&
-        objective.state.status === "home"
-      );
+      const flag = neutralFlagAtHome(world);
       if (
-        enemyFlag &&
-        distance(actor.position, enemyFlag.position) < this.config.pickupRadius
+        flag &&
+        distance(actor.position, flag.position) < this.config.pickupRadius
       ) {
-        replaceObjective(world, enemyFlag.id, {
-          ...enemyFlag,
+        replaceObjective(world, flag.id, {
+          ...flag,
           state: {
-            ...enemyFlag.state,
+            ...flag.state,
             status: "carried",
             interactingActorId: actor.id,
           },
         });
         events.push({
-          id: `flag-picked-up-${enemyFlag.id}-${actor.id}-${world.timeMs}`,
+          id: `flag-picked-up-${flag.id}-${actor.id}-${world.timeMs}`,
           type: "objective.flagPickedUp",
           timeMs: world.timeMs,
           sourceActorId: actor.id,
           teamId: actor.teamId,
           payload: {
-            objectiveId: enemyFlag.id,
-            flagTeamId: enemyFlag.state.controllingTeamId,
+            objectiveId: flag.id,
+            flagTeamId: null,
           },
         });
       }
@@ -139,7 +124,8 @@ export class ClassicCtfMode implements GameMode {
       return [];
     }
     const actorId = event.targetActorId ?? event.sourceActorId;
-    return actorId ? this.resetFlagsCarriedBy(world, actorId, event.type) : [];
+    const flag = actorId ? flagCarriedBy(world, actorId) : undefined;
+    return flag ? this.resetFlag(world, flag, event.type) : [];
   }
 
   isComplete(world: WorldSnapshot): boolean {
@@ -147,6 +133,10 @@ export class ClassicCtfMode implements GameMode {
   }
 
   getHudState(world: WorldSnapshot): ModeHudState {
+    const flag = world.objectives.find(isNeutralFlag);
+    const carrier = world.actors.find((actor) =>
+      actor.id === flag?.state.interactingActorId
+    );
     return {
       modeId: this.id,
       phase: world.match?.phase ?? "notStarted",
@@ -155,37 +145,37 @@ export class ClassicCtfMode implements GameMode {
       matchResult: world.match?.result ?? null,
       scores: world.scoreBoard.entries,
       objectives: world.objectives,
-      notices: [`First to ${this.config.captureLimit} captures`],
+      notices: carrier?.teamId
+        ? [`${carrier.teamId} carries the center flag`]
+        : [`Carry the center flag to the enemy base`],
     };
   }
 
-  private syncCarriedFlags(
+  private syncCarriedFlag(
     world: WorldState,
     events: GameEvent[],
   ): void {
-    for (const objective of [...world.objectives]) {
-      if (!isTeamFlag(objective) || objective.state.status !== "carried") {
-        continue;
-      }
-      const carrierId = objective.state.interactingActorId;
-      const carrier = world.actors.find((actor) => actor.id === carrierId);
-      if (!carrier || carrier.lifeState !== "active") {
-        events.push(...this.resetFlag(world, objective, "carrier-inactive"));
-        continue;
-      }
-      replaceObjective(world, objective.id, {
-        ...objective,
-        position: {
-          x: carrier.position.x,
-          y: carrier.position.y - 24 - carrier.jump.height,
-        },
-      });
+    const flag = world.objectives.find(isNeutralFlag);
+    if (!flag || flag.state.status !== "carried") return;
+    const carrier = world.actors.find((actor) =>
+      actor.id === flag.state.interactingActorId
+    );
+    if (!carrier || carrier.lifeState !== "active") {
+      events.push(...this.resetFlag(world, flag, "carrier-inactive"));
+      return;
     }
+    replaceObjective(world, flag.id, {
+      ...flag,
+      position: {
+        x: carrier.position.x,
+        y: carrier.position.y - 24 - carrier.jump.height,
+      },
+    });
   }
 
   private captureFlag(
     world: WorldState,
-    objective: Objective,
+    flag: Objective,
     actorId: ActorId,
   ): readonly GameEvent[] {
     const actor = world.actors.find((candidate) => candidate.id === actorId);
@@ -194,19 +184,20 @@ export class ClassicCtfMode implements GameMode {
       entry.teamId === actor.teamId
     );
     if (!scoreEntry) return [];
-    const awardKey = `capture:${actor.teamId}:${world.timeMs}:${actor.lifeId}`;
+    const awardKey = `one-flag-capture:${actor.teamId}:${world.timeMs}:${actor.lifeId}`;
     const award = awardScore(world.scoreBoard, scoreEntry.id, 1, awardKey);
     if (!award.awarded) return [];
-    this.resetFlagToHome(world, objective);
+    this.resetFlagToCenter(world, flag);
     const events: GameEvent[] = [{
-      id: `flag-captured-${objective.id}-${actor.id}-${world.timeMs}`,
+      id: `flag-captured-${flag.id}-${actor.id}-${world.timeMs}`,
       type: "objective.flagCaptured",
       timeMs: world.timeMs,
       sourceActorId: actor.id,
       teamId: actor.teamId,
       payload: {
-        objectiveId: objective.id,
-        flagTeamId: objective.state.controllingTeamId,
+        objectiveId: flag.id,
+        flagTeamId: null,
+        captureTargetTeamId: opposingTeam(actor.teamId),
         score: award.score,
       },
     }, {
@@ -219,7 +210,7 @@ export class ClassicCtfMode implements GameMode {
         entryId: scoreEntry.id,
         amount: 1,
         score: award.score,
-        reason: "capture",
+        reason: "one-flag-capture",
         awardKey,
       },
     }];
@@ -229,58 +220,45 @@ export class ClassicCtfMode implements GameMode {
     return events;
   }
 
-  private resetFlagsCarriedBy(
-    world: WorldState,
-    actorId: ActorId,
-    reason: string,
-  ): readonly GameEvent[] {
-    return world.objectives.flatMap((objective) =>
-      isTeamFlag(objective) &&
-        objective.state.interactingActorId === actorId
-        ? this.resetFlag(world, objective, reason)
-        : []
-    );
-  }
-
   private resetFlag(
     world: WorldState,
-    objective: Objective,
+    flag: Objective,
     reason: string,
   ): readonly GameEvent[] {
-    this.resetFlagToHome(world, objective);
+    this.resetFlagToCenter(world, flag);
     return [{
-      id: `flag-reset-${objective.id}-${world.timeMs}`,
+      id: `flag-reset-${flag.id}-${world.timeMs}`,
       type: "objective.flagReset",
       timeMs: world.timeMs,
       payload: {
-        objectiveId: objective.id,
-        flagTeamId: objective.state.controllingTeamId,
+        objectiveId: flag.id,
+        flagTeamId: null,
         reason,
       },
     }];
   }
 
-  private baseFor(teamId: TeamId): WorldMapPresentationRect {
-    return teamId === "red"
-      ? this.map.presentation.redBase
-      : this.map.presentation.blueBase;
-  }
-
-  private resetFlagToHome(
+  private resetFlagToCenter(
     world: WorldState,
-    objective: Objective,
+    flag: Objective,
   ): void {
-    const teamId = objective.state.controllingTeamId;
-    if (!teamId) return;
-    replaceObjective(world, objective.id, {
-      ...objective,
-      position: centerOf(this.baseFor(teamId)),
+    replaceObjective(world, flag.id, {
+      ...flag,
+      position: centerOf(
+        this.map.presentation.combatZone ?? boundsRect(this.map),
+      ),
       state: {
-        ...objective.state,
+        ...flag.state,
         status: "home",
         interactingActorId: null,
       },
     });
+  }
+
+  private captureTargetFor(teamId: TeamId): WorldMapPresentationRect {
+    return teamId === "red"
+      ? this.map.presentation.blueBase
+      : this.map.presentation.redBase;
   }
 
   private endMatch(
@@ -306,7 +284,7 @@ export class ClassicCtfMode implements GameMode {
 
   private matchStartedEvent(world: WorldState): GameEvent {
     const match = world.match;
-    if (!match) throw new Error("Classic CTF match state must exist.");
+    if (!match) throw new Error("One Flag match state must exist.");
     return {
       id: `match-started-${match.id}`,
       type: "match.started",
@@ -321,19 +299,45 @@ export class ClassicCtfMode implements GameMode {
   }
 }
 
+function boundsRect(map: WorldMapData): WorldMapPresentationRect {
+  const bounds = map.geometry.bounds;
+  return {
+    x: bounds.minX,
+    y: bounds.minY,
+    width: bounds.maxX - bounds.minX,
+    height: bounds.maxY - bounds.minY,
+  };
+}
+
+function centerOf(rect: WorldMapPresentationRect): {
+  readonly x: number;
+  readonly y: number;
+} {
+  return {
+    x: rect.x + rect.width / 2,
+    y: rect.y + rect.height / 2,
+  };
+}
+
+function neutralFlagAtHome(world: WorldState): Objective | undefined {
+  return world.objectives.find((objective) =>
+    isNeutralFlag(objective) && objective.state.status === "home"
+  );
+}
+
 function flagCarriedBy(
   world: WorldState,
   actorId: ActorId,
 ): Objective | undefined {
   return world.objectives.find((objective) =>
-    isTeamFlag(objective) &&
+    isNeutralFlag(objective) &&
     objective.state.status === "carried" &&
     objective.state.interactingActorId === actorId
   );
 }
 
-function isTeamFlag(objective: Readonly<Objective>): boolean {
-  return objective.kind === "team-flag";
+function isNeutralFlag(objective: Readonly<Objective>): boolean {
+  return objective.kind === "neutral-flag";
 }
 
 function replaceObjective(
@@ -347,13 +351,6 @@ function replaceObjective(
   if (index >= 0) world.objectives[index] = replacement;
 }
 
-function centerOf(rect: WorldMapPresentationRect): WorldPosition {
-  return {
-    x: rect.x + rect.width / 2,
-    y: rect.y + rect.height / 2,
-  };
-}
-
 function pointInRect(
   point: WorldPosition,
   rect: WorldMapPresentationRect,
@@ -364,6 +361,10 @@ function pointInRect(
 
 function distance(a: WorldPosition, b: WorldPosition): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function opposingTeam(teamId: TeamId): TeamId {
+  return teamId === "red" ? "blue" : "red";
 }
 
 function resolveResult(world: WorldState): MatchResult {

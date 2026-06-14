@@ -3,8 +3,10 @@ import { preloadArenaAssets } from "../../../assets";
 import {
   ClassicCtfMode,
   createClassicCtfWorldState,
+  createOneFlagWorldState,
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
+  OneFlagMode,
   resolveWorldMap,
   TeamDeathmatchMode,
   TdmBotController,
@@ -49,7 +51,8 @@ export class GameplayV2Scene extends Phaser.Scene {
     const search = new URLSearchParams(window.location.search);
     const isTeamDeathmatch = search.get("mode") === "tdm";
     const isClassicCtf = search.get("mode") === "ctf";
-    const isArenaMode = isTeamDeathmatch || isClassicCtf;
+    const isOneFlag = search.get("mode") === "one-flag";
+    const isArenaMode = isTeamDeathmatch || isClassicCtf || isOneFlag;
     const selectedMap = resolveWorldMap(search.get("map"));
     const useMobileControls = isArenaMode && prefersMobileControls(search);
     const useBotOpponent = isArenaMode &&
@@ -58,9 +61,13 @@ export class GameplayV2Scene extends Phaser.Scene {
       ? new GameplayCoreRuntime({
         mode: isClassicCtf
           ? new ClassicCtfMode(selectedMap)
+          : isOneFlag
+          ? new OneFlagMode(selectedMap)
           : new TeamDeathmatchMode(),
         createWorld: () => isClassicCtf
           ? createClassicCtfWorldState(selectedMap)
+          : isOneFlag
+          ? createOneFlagWorldState(selectedMap)
           : createTeamDeathmatchWorldState(selectedMap),
         basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
         allowManualPrimaryFire: false,

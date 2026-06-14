@@ -3,6 +3,7 @@ import {
   awardScore,
   createActorState,
   createClassicCtfWorldState,
+  createOneFlagWorldState,
   createEmptyWorldState,
   createWorldSnapshot,
   createPickupState,
@@ -15,6 +16,7 @@ import {
   getWorldMap,
   GameplayCoreRuntime,
   ClassicCtfMode,
+  OneFlagMode,
   resolveWorldMap,
   TeamDeathmatchMode,
   TdmBotController,
@@ -205,6 +207,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkMobileWeaponTapTargeting();
   checkWorldMapRegistry();
   checkClassicCtfMode();
+  checkOneFlagFoundation();
   checkTeamDeathmatchSlice();
   checkBasicAutoShootParity();
   checkTdmBotController();
@@ -468,6 +471,181 @@ function checkClassicCtfMode(): void {
     world.match.result.winnerEntryId !== "blue"
   ) {
     throw new Error("Classic CTF must end at the configured capture limit.");
+  }
+}
+
+function checkOneFlagFoundation(): void {
+  for (
+    const map of [
+      TRAINING_CROSSING_V2,
+      GRAND_ARCHIVE_V2,
+      FLANK_SWITCH_V2,
+    ]
+  ) {
+    const world = createOneFlagWorldState(map);
+    const mode = new OneFlagMode(map);
+    const started = mode.initialize(world);
+    const objective = world.objectives[0];
+    const zone = map.presentation.combatZone;
+    const expectedX = zone
+      ? zone.x + zone.width / 2
+      : (map.geometry.bounds.minX + map.geometry.bounds.maxX) / 2;
+    const expectedY = zone
+      ? zone.y + zone.height / 2
+      : (map.geometry.bounds.minY + map.geometry.bounds.maxY) / 2;
+
+    if (
+      started[0]?.type !== "match.started" ||
+      world.modeId !== "one-flag" ||
+      world.objectives.length !== 1 ||
+      objective?.id !== "center-flag" ||
+      objective.kind !== "neutral-flag" ||
+      objective.position.x !== expectedX ||
+      objective.position.y !== expectedY ||
+      objective.state.status !== "home" ||
+      objective.state.controllingTeamId !== null ||
+      objective.state.interactingActorId !== null
+    ) {
+      throw new Error(
+        `One Flag must initialize one neutral center flag on ${map.id}.`,
+      );
+    }
+
+    const hud = mode.getHudState(createWorldSnapshot(world));
+    const events = mode.update(world, 34);
+    if (
+      events.length !== 0 ||
+      hud.modeId !== "one-flag" ||
+      hud.objectives.length !== 1 ||
+      world.objectives[0]?.state.status !== "home" ||
+      world.scoreBoard.entries.some((entry) => entry.score !== 0)
+    ) {
+      throw new Error(
+        "One Flag must remain idle while no actor reaches the center flag.",
+      );
+    }
+  }
+
+  const world = createOneFlagWorldState(TRAINING_CROSSING_V2);
+  const mode = new OneFlagMode(TRAINING_CROSSING_V2);
+  mode.initialize(world);
+  const blue = world.actors.find((actor) => actor.id === "blue-player");
+  if (!blue) throw new Error("One Flag smoke requires the blue player.");
+  const center = {
+    x: TRAINING_CROSSING_V2.presentation.combatZone!.x +
+      TRAINING_CROSSING_V2.presentation.combatZone!.width / 2,
+    y: TRAINING_CROSSING_V2.presentation.combatZone!.y +
+      TRAINING_CROSSING_V2.presentation.combatZone!.height / 2,
+  };
+  const redBase = {
+    x: TRAINING_CROSSING_V2.presentation.redBase.x +
+      TRAINING_CROSSING_V2.presentation.redBase.width / 2,
+    y: TRAINING_CROSSING_V2.presentation.redBase.y +
+      TRAINING_CROSSING_V2.presentation.redBase.height / 2,
+  };
+  const blueBase = {
+    x: TRAINING_CROSSING_V2.presentation.blueBase.x +
+      TRAINING_CROSSING_V2.presentation.blueBase.width / 2,
+    y: TRAINING_CROSSING_V2.presentation.blueBase.y +
+      TRAINING_CROSSING_V2.presentation.blueBase.height / 2,
+  };
+
+  blue.position = { ...center };
+  world.timeMs = 34;
+  let events = mode.update(world, 34);
+  if (
+    !events.some((event) => event.type === "objective.flagPickedUp") ||
+    world.objectives[0]?.state.interactingActorId !== blue.id
+  ) {
+    throw new Error("One Flag must allow either team to take the center flag.");
+  }
+  if (
+    mode.getHudState(createWorldSnapshot(world)).notices[0] !==
+      "blue carries the center flag"
+  ) {
+    throw new Error("One Flag HUD state must identify the carrier team.");
+  }
+
+  blue.position = { x: 700, y: 380 };
+  blue.jump.height = 20;
+  world.timeMs = 68;
+  mode.update(world, 34);
+  if (
+    world.objectives[0]?.position.x !== 700 ||
+    world.objectives[0]?.position.y !== 336
+  ) {
+    throw new Error("The neutral flag must follow its carrier and jump height.");
+  }
+
+  events = mode.handleEvent({
+    id: "one-flag-blue-fell",
+    type: "diagnostic.actorFell",
+    timeMs: 68,
+    sourceActorId: blue.id,
+    teamId: blue.teamId ?? undefined,
+    payload: {},
+  }, world);
+  if (
+    !events.some((event) => event.type === "objective.flagReset") ||
+    world.objectives[0]?.state.status !== "home" ||
+    world.objectives[0]?.position.x !== center.x ||
+    world.objectives[0]?.position.y !== center.y
+  ) {
+    throw new Error("One Flag must reset immediately after a carrier falls.");
+  }
+
+  blue.position = { ...center };
+  world.timeMs += 34;
+  mode.update(world, 34);
+  events = mode.handleEvent({
+    id: "one-flag-blue-died",
+    type: "actor.died",
+    timeMs: world.timeMs,
+    targetActorId: blue.id,
+    teamId: blue.teamId ?? undefined,
+    payload: { victimLifeId: blue.lifeId },
+  }, world);
+  if (
+    !events.some((event) => event.type === "objective.flagReset") ||
+    world.objectives[0]?.state.status !== "home"
+  ) {
+    throw new Error("One Flag must reset immediately after a carrier dies.");
+  }
+
+  blue.jump.height = 0;
+  for (let capture = 1; capture <= 3; capture++) {
+    blue.position = { ...center };
+    world.timeMs += 34;
+    mode.update(world, 34);
+
+    blue.position = { ...blueBase };
+    world.timeMs += 34;
+    events = mode.update(world, 34);
+    if (
+      events.some((event) => event.type === "objective.flagCaptured") ||
+      world.scoreBoard.entries.find((entry) => entry.id === "blue")?.score !==
+        capture - 1
+    ) {
+      throw new Error("One Flag must not score in the carrier's own base.");
+    }
+
+    blue.position = { ...redBase };
+    world.timeMs += 34;
+    events = mode.update(world, 34);
+    if (
+      !events.some((event) => event.type === "objective.flagCaptured") ||
+      world.scoreBoard.entries.find((entry) => entry.id === "blue")?.score !==
+        capture
+    ) {
+      throw new Error("One Flag must score in the opposing team base.");
+    }
+  }
+  if (
+    world.match?.phase !== "ended" ||
+    world.match.result?.kind !== "winner" ||
+    world.match.result.winnerEntryId !== "blue"
+  ) {
+    throw new Error("One Flag must end at the configured capture limit.");
   }
 }
 

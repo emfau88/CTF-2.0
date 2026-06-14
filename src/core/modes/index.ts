@@ -20,6 +20,11 @@ export {
   type MatchState,
 } from "./matchState";
 export {
+  OneFlagMode,
+  V2_ONE_FLAG_CONFIG,
+  type OneFlagModeConfig,
+} from "./OneFlagMode";
+export {
   TeamDeathmatchMode,
   V2_TEAM_DEATHMATCH_CONFIG,
   type TeamDeathmatchModeConfig,

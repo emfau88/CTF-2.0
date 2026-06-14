@@ -1,4 +1,5 @@
 export { createClassicCtfWorldState } from "./createClassicCtfWorldState";
+export { createOneFlagWorldState } from "./createOneFlagWorldState";
 export {
   applyDiagnosticGroundMovement,
 } from "./applyDiagnosticGroundMovement";

@@ -64,6 +64,9 @@ export {
   type MatchPhase,
   type MatchResult,
   type MatchState,
+  OneFlagMode,
+  V2_ONE_FLAG_CONFIG,
+  type OneFlagModeConfig,
   TeamDeathmatchMode,
   V2_TEAM_DEATHMATCH_CONFIG,
   type TeamDeathmatchModeConfig,
@@ -86,7 +89,14 @@ export {
   type CollisionConfig,
   type WorldCollisionResult,
 } from "./movement";
-export type { Objective, ObjectiveState } from "./objectives";
+export {
+  createFlagObjective,
+  isFlagObjective,
+  type CreateFlagObjectiveInput,
+  type FlagObjectiveKind,
+  type Objective,
+  type ObjectiveState,
+} from "./objectives";
 export {
   createPickupState,
   updatePickups,
@@ -102,6 +112,7 @@ export {
 } from "./pickups";
 export {
   createClassicCtfWorldState,
+  createOneFlagWorldState,
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   type CoreFrameResult,
