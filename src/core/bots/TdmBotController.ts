@@ -11,6 +11,7 @@ import {
   GridBotNavigator,
   type BotNavigator,
 } from "./GridBotNavigator";
+import { TdmBotCombatController } from "./TdmBotCombatController";
 
 export class TdmBotController {
   private jumpHeld = false;
@@ -21,6 +22,8 @@ export class TdmBotController {
     private readonly movement: BotMovementConfig =
       V2_BOT_MOVEMENT_CONFIG,
     private readonly navigator: BotNavigator = new GridBotNavigator(),
+    private readonly combat: TdmBotCombatController =
+      new TdmBotCombatController(),
   ) {}
 
   readActions(
@@ -30,6 +33,7 @@ export class TdmBotController {
     const actor = findActiveActor(snapshot, this.actorId);
     const target = findActiveActor(snapshot, this.targetActorId);
     if (!actor || !target || snapshot.match?.phase === "ended") {
+      this.combat.reset();
       this.jumpHeld = false;
       return [this.stopIntent()];
     }
@@ -53,6 +57,15 @@ export class TdmBotController {
       actorId: actor.id,
       direction: directionBetween(actor.position, target.position),
     }];
+    const weaponAction = this.combat.readAction(
+      actor,
+      target,
+      snapshot,
+      deltaMs,
+    );
+    if (weaponAction) {
+      actions.push(weaponAction);
+    }
     if (navigation.jump) {
       if (
         !this.jumpHeld &&
@@ -84,6 +97,7 @@ export class TdmBotController {
 
   reset(): void {
     this.navigator.reset();
+    this.combat.reset();
     this.jumpHeld = false;
   }
 

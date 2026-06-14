@@ -156,8 +156,8 @@ sich wie ihre V1-Version an.
 - Desktop/Hybrid: `Q` Rocket, `E` Railgun, `F` Whip.
 - Touch: eigene Rocket-, Rail- und Whip-Buttons; Drag bestimmt die Richtung,
   Tap verwendet die zuletzt bekannte Zielrichtung.
-- Offene Paritaetsarbeit: temporaere Ammo-Drops nach Tod und Bot-Nutzung der
-  Spezialwaffen sind noch nicht migriert.
+- Offene Paritaetsarbeit: temporaere Ammo-Drops nach Tod sind noch nicht
+  migriert. Bot-Nutzung der Spezialwaffen ist im TDM-Slice vorhanden.
 
 ### Aktueller spielbarer Mobile-TDM-Slice
 
@@ -173,7 +173,8 @@ sich wie ihre V1-Version an.
 - [x] Training Crossing verwendet V1-Ruinenassets und Charakter-Sprites.
 - [x] Teamseiten, Health-/Armor-Pickups und Pickup-Werte entsprechen V1.
 - [x] Mobile-TDM besitzt einen einfachen Red Bot als Einzelspieler-Gegner.
-- [ ] Bot-Jumps, Rollen und modusspezifische Taktiken folgen spaeter.
+- [x] TDM-Bots navigieren, springen und verwenden Spezialwaffen.
+- [ ] CTF-Rollen und One-Flag-Ziele folgen spaeter.
 
 ### Aktueller V2-Audio-Slice
 
@@ -297,6 +298,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Geschwindigkeit als Bot-Konfiguration behandeln.
 - [x] Jump Links als Map-Daten modellieren.
 - [x] Bot-Jump-Unterstuetzung ueber das gemeinsame Jump-System implementieren.
+- [x] Spezialwaffen ueber normale `fireWeapon`-Actions verwenden.
 - [x] Grundlegendes TDM-Bot-Ziel implementieren.
 - [ ] CTF-Rollen implementieren.
 - [ ] One-Flag-Ziele fuer Bots implementieren.
@@ -340,6 +342,20 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
   und prueft `actor.jumped`, erfolgreiche Landung und ausbleibenden Fall.
 - Langstrecken-Navigation wird auf Training Crossing, Grand Archive und Flank
   Switch geprueft.
+
+### Bot-Spezialwaffen-Slice
+
+- `TdmBotCombatController` bewertet Kampfentscheidungen getrennt von
+  `GridBotNavigator` und erzeugt ausschliesslich normale
+  `fireWeapon`-Actions.
+- Whip wird im Nahbereich, Rocket auf mittlere Distanz und Rail bevorzugt auf
+  lange Distanz beziehungsweise als sichtbarer Fallback eingesetzt.
+- Sichtlinie, Ammo, Rail-/Whip-Cooldowns, Waffenreichweiten und der
+  V1-Bot-Schusstakt fuer Rockets werden vor der Action-Erzeugung geprueft.
+- Treffer, Damage, Knockback, Ammo-Verbrauch und echte Waffen-Cooldowns
+  bleiben in den gemeinsamen Core-Waffensystemen autoritativ.
+- Entscheidungstests sind von Navigationstests getrennt; Runtime-Smokes
+  pruefen Treffer, Ammo und Cooldown fuer Rocket, Rail und Whip.
 
 ## Meilenstein 9: Mobile, UI und kompletter Spielablauf
 

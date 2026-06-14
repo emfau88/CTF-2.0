@@ -22,9 +22,12 @@ export {
 export type { GameEvent } from "./events";
 export {
   GridBotNavigator,
+  TdmBotCombatController,
   TdmBotController,
+  V2_BOT_COMBAT_CONFIG,
   V2_BOT_MOVEMENT_CONFIG,
   V2_BOT_NAVIGATION_CONFIG,
+  type BotCombatConfig,
   type BotMovementConfig,
   type BotNavigationDecision,
   type BotNavigator,

@@ -22,6 +22,7 @@ import {
   OneFlagMode,
   resolveWorldMap,
   TeamDeathmatchMode,
+  TdmBotCombatController,
   TdmBotController,
   TRAINING_CROSSING_V2,
   updatePickups,
@@ -1804,6 +1805,8 @@ function checkBasicAutoShootParity(): void {
 
 function checkTdmBotController(): void {
   checkBotDecisionAndMovementConfig();
+  checkTdmBotCombatDecision();
+  checkTdmBotSpecialWeapons();
   checkGridBotNavigator();
   checkBotJumpUsesCoreSystem();
   checkTdmBotNavigation(createTeamDeathmatchWorldState, "Training Crossing");
@@ -1815,6 +1818,243 @@ function checkTdmBotController(): void {
     () => createTeamDeathmatchWorldState(FLANK_SWITCH_V2),
     "Flank Switch",
   );
+}
+
+function checkTdmBotCombatDecision(): void {
+  const world = createWeaponTestWorld(200);
+  const bot = world.actors[0]!;
+  const target = world.actors[1]!;
+  const combat = new TdmBotCombatController();
+  bot.weapons.whipAmmo = 1;
+  bot.weapons.rocketAmmo = 1;
+  bot.weapons.railAmmo = 1;
+  let action = combat.readAction(
+    bot,
+    target,
+    createWorldSnapshot(world),
+    34,
+  );
+  if (weaponIdFromAction(action) !== "whip") {
+    throw new Error("TDM bot combat must prefer Whip in melee range.");
+  }
+
+  target.position.x = 400;
+  bot.weapons.whipAmmo = 0;
+  bot.weapons.railAmmo = 0;
+  action = combat.readAction(bot, target, createWorldSnapshot(world), 34);
+  if (weaponIdFromAction(action) !== "rocket") {
+    throw new Error("TDM bot combat must use Rocket at medium range.");
+  }
+  if (
+    combat.readAction(bot, target, createWorldSnapshot(world), 34) !== null
+  ) {
+    throw new Error("TDM bot Rocket decisions must honor the V1 fire cadence.");
+  }
+
+  combat.reset();
+  target.position.x = 800;
+  bot.weapons.railAmmo = 1;
+  action = combat.readAction(bot, target, createWorldSnapshot(world), 34);
+  if (weaponIdFromAction(action) !== "rail") {
+    throw new Error("TDM bot combat must prefer Rail at long range.");
+  }
+
+  bot.weapons.rocketAmmo = 0;
+  bot.weapons.railCooldownMs = 100;
+  if (combat.readAction(bot, target, createWorldSnapshot(world), 34) !== null) {
+    throw new Error("TDM bot combat must honor Rail ammo and cooldown state.");
+  }
+  bot.weapons.railCooldownMs = 0;
+  world.geometry = {
+    ...world.geometry,
+    solids: [{
+      id: "combat-line-of-sight-wall",
+      x: 430,
+      y: 60,
+      width: 40,
+      height: 80,
+    }],
+  };
+  if (combat.readAction(bot, target, createWorldSnapshot(world), 34) !== null) {
+    throw new Error("TDM bot combat must not fire through solid walls.");
+  }
+}
+
+function checkTdmBotSpecialWeapons(): void {
+  checkTdmBotWhipRuntime();
+  checkTdmBotRailRuntime();
+  checkTdmBotRocketRuntime();
+}
+
+function checkTdmBotWhipRuntime(): void {
+  const runtime = createBotWeaponRuntime("whip", 100);
+  const controller = createStationaryBotController();
+  const frame = runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: controller.readActions(runtime.snapshot, 34),
+  });
+  const red = actorById(frame.snapshot.actors, "red-player");
+  const blue = actorById(frame.snapshot.actors, "blue-player");
+  if (
+    red.weapons.whipAmmo !== 0 ||
+    red.weapons.whipCooldownMs !== 800 ||
+    blue.health !== 65 ||
+    !frame.events.some((event) =>
+      event.type === "weapon.whipFired" &&
+      event.sourceActorId === "red-player"
+    )
+  ) {
+    throw new Error(
+      "TDM bot Whip actions must apply hit, ammo, and cooldown rules.",
+    );
+  }
+}
+
+function checkTdmBotRailRuntime(): void {
+  const runtime = createBotWeaponRuntime("rail", 600);
+  const controller = createStationaryBotController();
+  let frame = runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: controller.readActions(runtime.snapshot, 34),
+  });
+  let red = actorById(frame.snapshot.actors, "red-player");
+  const blue = actorById(frame.snapshot.actors, "blue-player");
+  if (
+    red.weapons.railAmmo !== 0 ||
+    red.weapons.railCooldownMs !== 2500 ||
+    blue.health !== 5 ||
+    !frame.events.some((event) =>
+      event.type === "weapon.railFired" &&
+      event.sourceActorId === "red-player"
+    )
+  ) {
+    throw new Error(
+      "TDM bot Rail actions must apply hit, ammo, and cooldown rules.",
+    );
+  }
+  frame = runtime.advance({
+    sequence: 2,
+    timeMs: 68,
+    deltaMs: 34,
+    actions: controller.readActions(runtime.snapshot, 34),
+  });
+  red = actorById(frame.snapshot.actors, "red-player");
+  if (
+    red.weapons.railAmmo !== 0 ||
+    frame.events.some((event) => event.type === "weapon.railFired")
+  ) {
+    throw new Error("TDM bot Rail cooldown must reject repeated fire.");
+  }
+}
+
+function checkTdmBotRocketRuntime(): void {
+  const runtime = createBotWeaponRuntime("rocket", 300);
+  const controller = createStationaryBotController();
+  let fired = false;
+  let damaged = false;
+  for (let sequence = 1; sequence <= 80; sequence++) {
+    const frame = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: controller.readActions(runtime.snapshot, 34),
+    });
+    fired ||= frame.events.some((event) =>
+      event.type === "weapon.rocketFired" &&
+      event.sourceActorId === "red-player"
+    );
+    damaged ||= frame.events.some((event) =>
+      event.type === "actor.damaged" &&
+      event.sourceActorId === "red-player" &&
+      event.targetActorId === "blue-player"
+    );
+    if (damaged) break;
+  }
+  const red = actorById(runtime.snapshot.actors, "red-player");
+  const blue = actorById(runtime.snapshot.actors, "blue-player");
+  if (
+    !fired ||
+    !damaged ||
+    red.weapons.rocketAmmo !== 0 ||
+    blue.health >= blue.maxHealth ||
+    blue.velocity.x <= 0
+  ) {
+    throw new Error(
+      "TDM bot Rocket actions must consume ammo and apply splash impact.",
+    );
+  }
+}
+
+function createBotWeaponRuntime(
+  weaponId: "rocket" | "rail" | "whip",
+  distance: number,
+): GameplayCoreRuntime {
+  const createWorld = () => {
+    const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+    world.geometry = {
+      bounds: { minX: 0, minY: 0, maxX: 1200, maxY: 400 },
+      solids: [],
+      gaps: [],
+    };
+    const red = world.actors.find((actor) => actor.id === "red-player")!;
+    const blue = world.actors.find((actor) => actor.id === "blue-player")!;
+    red.position = { x: 100, y: 200 };
+    red.spawnPosition = { ...red.position };
+    red.lastSafePosition = { ...red.position };
+    blue.position = { x: 100 + distance, y: 200 };
+    blue.spawnPosition = { ...blue.position };
+    blue.lastSafePosition = { ...blue.position };
+    if (weaponId === "rocket") red.weapons.rocketAmmo = 1;
+    if (weaponId === "rail") red.weapons.railAmmo = 1;
+    if (weaponId === "whip") red.weapons.whipAmmo = 1;
+    return world;
+  };
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld,
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  return runtime;
+}
+
+function createStationaryBotController(): TdmBotController {
+  return new TdmBotController(
+    "red-player",
+    "blue-player",
+    { inputMagnitude: 0 },
+    {
+      navigate: () => ({
+        direction: { x: 0, y: 0 },
+        jump: false,
+      }),
+      reset: () => {},
+    },
+  );
+}
+
+function actorById(
+  actors: readonly Readonly<ActorState>[],
+  actorId: string,
+): Readonly<ActorState> {
+  const actor = actors.find((candidate) => candidate.id === actorId);
+  if (!actor) {
+    throw new Error(`Missing smoke actor: ${actorId}`);
+  }
+  return actor;
+}
+
+function weaponIdFromAction(
+  action: CoreActionIntent | null,
+): unknown {
+  return action?.payload && typeof action.payload === "object" &&
+      "weaponId" in action.payload
+    ? action.payload.weaponId
+    : null;
 }
 
 function checkBotDecisionAndMovementConfig(): void {
