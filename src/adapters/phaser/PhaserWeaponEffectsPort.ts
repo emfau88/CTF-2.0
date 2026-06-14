@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { V2_GROUND_PARITY_CONFIG } from "../../core";
 import type {
   ActorState,
   GameEvent,
@@ -180,12 +181,13 @@ export class PhaserWeaponEffectsPort implements EffectsPort {
     if (actor) {
       const speedRatio = Math.min(
         1,
-        Math.hypot(actor.velocity.x, actor.velocity.y) / 335,
+        Math.hypot(actor.velocity.x, actor.velocity.y) /
+          V2_GROUND_PARITY_CONFIG.maxSpeed,
       );
       if (
         actor.lifeState === "active" &&
         this.trailTimerMs <= 0 &&
-        speedRatio * 335 > 48
+        speedRatio * V2_GROUND_PARITY_CONFIG.maxSpeed > 48
       ) {
         this.trailTimerMs = Math.max(7, 18 - speedRatio * 8);
         this.trail.push({

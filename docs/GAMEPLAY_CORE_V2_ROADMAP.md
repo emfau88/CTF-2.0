@@ -289,6 +289,8 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 
 **Ziel:** Bots verwenden dieselben Regeln und Inputs wie menschliche Actors.
 
+- [x] Globale V2-Bewegung fuer Spieler und Bots auf `80 %` reduzieren.
+- [x] Authored Gaps und Hindernisse mit reduzierter Geschwindigkeit pruefen.
 - [x] Minimalen TDM-Zielcontroller fuer Gegnerverfolgung erstellen.
 - [x] Generische Grid-Navigation fuer Solids und Gaps erstellen.
 - [x] Bots erzeugen dieselben Core-Action-Intents wie Spieler.
@@ -300,6 +302,18 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [ ] One-Flag-Ziele fuer Bots implementieren.
 - [ ] Navigation und Entscheidung getrennt testen.
 - [ ] Das alte Bot-Bewegungsexperiment bis dahin nicht anwenden.
+
+### Movement-Balancing-Slice
+
+- `V2_GROUND_PARITY_CONFIG.maxSpeed` wurde von `335` auf `268` reduziert.
+- Beschleunigung und Jump-Konfiguration bleiben fuer direkte Vergleichbarkeit
+  unveraendert.
+- Audio und Bewegungseffekte beziehen ihren Speed-Massstab aus derselben
+  Core-Konfiguration.
+- Core-Smokes simulieren gehaltene Spruenge ueber alle Gaps und Solids von
+  Training Crossing, Grand Archive und Flank Switch.
+- Die zusaetzliche Bot-Input-Magnitude `0.82` wird erst zusammen mit der
+  expliziten Bot-Geschwindigkeitskonfiguration neu bewertet.
 
 ## Meilenstein 9: Mobile, UI und kompletter Spielablauf
 

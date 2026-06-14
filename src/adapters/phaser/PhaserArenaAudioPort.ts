@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { V2_GROUND_PARITY_CONFIG } from "../../core";
 import type {
   ActorId,
   ActorState,
@@ -8,7 +9,7 @@ import type {
 import type { AudioPort } from "../audio";
 
 const STEP_KEYS = ["step1", "step2", "step3", "step4", "step5"] as const;
-const MAX_ACTOR_SPEED = 335;
+const MAX_ACTOR_SPEED = V2_GROUND_PARITY_CONFIG.maxSpeed;
 const ENEMY_STEP_RANGE = 420;
 
 type PickupType = "health" | "armor" | "rocket" | "rail" | "whip";

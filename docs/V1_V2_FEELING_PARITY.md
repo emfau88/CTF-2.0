@@ -13,7 +13,9 @@ in:
 ## Bereits gespiegelt
 
 - Beschleunigung: `1580`
-- Maximalgeschwindigkeit: `335`
+- V1-Maximalgeschwindigkeit: `335`
+- V2-Maximalgeschwindigkeit: bewusst auf `268` reduziert (`80 %`), da sich
+  `335` insbesondere auf Touch deutlich zu schnell anfuehlt.
 - Bodenreibung: `7`
 - Reibung mit Input: `1.25`
 - Luftreibung: `1.05`
@@ -37,6 +39,18 @@ in:
 - Basic Autoshoot: Reichweite `520`, Cooldown `3000 ms`
 - Basic-Projektil: Speed `286`, Damage `18`, Radius `9`, TTL `2600 ms`
 - Pickups: Radius `22`, Respawn `20000 ms`, Health `50`, Armor `25`
+
+## Bewusste Movement-Balance-Abweichung
+
+- Beschleunigung, Bremsung, Luftkontrolle, Sprunghoehe und Sprungdauer bleiben
+  zunaechst unveraendert.
+- Spieler und Bots verwenden denselben reduzierten Core-Geschwindigkeitswert.
+- Audio-Schrittfrequenz und Bewegungsspur skalieren ueber denselben
+  `V2_GROUND_PARITY_CONFIG`-Wert.
+- Deterministische Smokes pruefen jedes authored Gap und Solid auf allen drei
+  Karten mit einem gehaltenen Sprung bei `268`.
+- Short-Jump- und Long-Jump-Unterschied, Landung und Jump-Events bleiben
+  weiterhin separat abgesichert.
 
 ## Update-Reihenfolge
 

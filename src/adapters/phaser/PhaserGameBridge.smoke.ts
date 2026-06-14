@@ -1,4 +1,6 @@
 import {
+  applyGroundMovement,
+  applyJumpMovement,
   applyWorldCollision,
   awardScore,
   createActorState,
@@ -29,11 +31,15 @@ import {
   V2_COLLISION_GROUNDWORK_CONFIG,
   V2_DIAGNOSTIC_BLASTER_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
+  V2_GROUND_PARITY_CONFIG,
+  V2_JUMP_PARITY_CONFIG,
 } from "../../core";
 import type {
   ActorState,
   CoreActionIntent,
   PickupState,
+  WorldMapData,
+  WorldRect,
 } from "../../core";
 import type { WorldGeometry } from "../../core";
 import { createDiagnosticWorldState } from "../../core/runtime/createDiagnosticWorldState";
@@ -164,7 +170,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
     nextActor.position.x <= initialActor.position.x ||
     nextActor.position.y !== initialActor.position.y ||
     nextActor.velocity.x <= 0 ||
-    nextActor.velocity.x >= 335 ||
+    nextActor.velocity.x >= V2_GROUND_PARITY_CONFIG.maxSpeed ||
     nextActor.velocity.y !== 0
   ) {
     throw new Error("Diagnostic actor must accelerate with V2 ground movement.");
@@ -198,6 +204,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
 
   bridge.dispose();
   checkJumpParity();
+  checkAuthoredJumpReachability();
   checkCollisionAndGapGroundwork();
   checkActorLifecycle();
   checkProjectilePipeline();
@@ -650,6 +657,35 @@ function checkOneFlagFoundation(): void {
 }
 
 function checkJumpParity(): void {
+  const speedActor = createActorState({
+    id: "movement-speed-cap",
+    kind: "diagnostic",
+    position: { x: 200, y: 200 },
+    radius: 16,
+  });
+  for (let frame = 0; frame < 120; frame++) {
+    applyGroundMovement(
+      speedActor,
+      {
+        direction: { x: 1, y: 0 },
+        magnitude: 1,
+        grounded: true,
+      },
+      34,
+      V2_GROUND_PARITY_CONFIG,
+    );
+  }
+  const cappedSpeed = Math.hypot(
+    speedActor.velocity.x,
+    speedActor.velocity.y,
+  );
+  if (
+    V2_GROUND_PARITY_CONFIG.maxSpeed !== 268 ||
+    Math.abs(cappedSpeed - V2_GROUND_PARITY_CONFIG.maxSpeed) > .001
+  ) {
+    throw new Error("V2 movement must enforce the approved 20% speed reduction.");
+  }
+
   const shortJump = runJumpSequence(1);
   const heldJump = runJumpSequence(10);
 
@@ -671,6 +707,101 @@ function checkJumpParity(): void {
   if (shortJump.jumpEvents !== 1 || heldJump.jumpEvents !== 1) {
     throw new Error("Each successful jump must emit actor.jumped exactly once.");
   }
+}
+
+function checkAuthoredJumpReachability(): void {
+  for (
+    const map of [
+      TRAINING_CROSSING_V2,
+      GRAND_ARCHIVE_V2,
+      FLANK_SWITCH_V2,
+    ]
+  ) {
+    for (const gap of map.geometry.gaps) {
+      checkAuthoredRectTraversal(map, gap, "gap");
+    }
+    for (const solid of map.geometry.solids) {
+      checkAuthoredRectTraversal(map, solid, "solid");
+    }
+  }
+}
+
+function checkAuthoredRectTraversal(
+  map: WorldMapData,
+  rect: WorldRect,
+  kind: "gap" | "solid",
+): void {
+  const horizontal = rect.width <= rect.height;
+  const direction = horizontal ? { x: 1, y: 0 } : { x: 0, y: 1 };
+  const approachDistance = 40;
+  const exitDistance = 16;
+  const actor = createActorState({
+    id: `${map.id}-${kind}-${rect.id}`,
+    kind: "diagnostic",
+    position: horizontal
+      ? { x: rect.x - approachDistance, y: rect.y + rect.height / 2 }
+      : { x: rect.x + rect.width / 2, y: rect.y - approachDistance },
+    velocity: {
+      x: direction.x * V2_GROUND_PARITY_CONFIG.maxSpeed,
+      y: direction.y * V2_GROUND_PARITY_CONFIG.maxSpeed,
+    },
+    lastMoveDirection: direction,
+    radius: 16,
+  });
+  actor.lastSafePosition = { ...actor.position };
+  const geometry: WorldGeometry = {
+    bounds: { ...map.geometry.bounds },
+    solids: kind === "solid" ? [{ ...rect }] : [],
+    gaps: kind === "gap" ? [{ ...rect }] : [],
+  };
+  const target = horizontal
+    ? rect.x + rect.width + exitDistance
+    : rect.y + rect.height + exitDistance;
+  let collided = false;
+  let fell = false;
+
+  for (let frame = 0; frame < 40; frame++) {
+    applyJumpMovement(
+      actor,
+      {
+        pressed: frame === 0,
+        held: frame < 18,
+        released: frame === 18,
+      },
+      34,
+      V2_JUMP_PARITY_CONFIG,
+    );
+    applyGroundMovement(
+      actor,
+      {
+        direction,
+        magnitude: 1,
+        grounded: actor.jump.grounded,
+      },
+      34,
+      V2_GROUND_PARITY_CONFIG,
+    );
+    const collision = applyWorldCollision(
+      actor,
+      geometry,
+      34,
+      (frame + 1) * 34,
+      V2_COLLISION_GROUNDWORK_CONFIG,
+    );
+    collided ||= collision.collided;
+    fell ||= collision.fell;
+    const coordinate = horizontal ? actor.position.x : actor.position.y;
+    if (coordinate >= target) {
+      if (fell || collided) {
+        break;
+      }
+      return;
+    }
+  }
+
+  throw new Error(
+    `${map.displayName} ${kind} ${rect.id} must remain jump-reachable at 80% speed.`,
+  );
 }
 
 function runJumpSequence(heldFrames: number): {
