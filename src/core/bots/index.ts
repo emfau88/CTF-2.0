@@ -11,6 +11,13 @@ export {
   type BotCombatConfig,
 } from "./BotCombatConfig";
 export {
+  ClassicCtfBotDecisionController,
+  type ClassicCtfBotGoal,
+  type ClassicCtfBotGoalKind,
+  type ClassicCtfBotRole,
+} from "./ClassicCtfBotDecisionController";
+export { ClassicCtfBotController } from "./ClassicCtfBotController";
+export {
   GridBotNavigator,
   type BotNavigationDecision,
   type BotNavigator,

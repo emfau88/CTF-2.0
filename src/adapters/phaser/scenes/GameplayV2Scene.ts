@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { preloadArenaAssets } from "../../../assets";
 import {
+  ClassicCtfBotController,
   ClassicCtfMode,
   createClassicCtfWorldState,
   createOneFlagWorldState,
@@ -120,7 +121,13 @@ export class GameplayV2Scene extends Phaser.Scene {
       ? new AugmentedInputAdapter(
         playerInput,
         () => this.bridge?.snapshot ?? runtime.snapshot,
-        new TdmBotController("red-player", "blue-player"),
+        isClassicCtf
+          ? new ClassicCtfBotController(
+            "red-player",
+            "attacker",
+            selectedMap,
+          )
+          : new TdmBotController("red-player", "blue-player"),
       )
       : playerInput;
     this.bridge = new PhaserGameBridge(runtime, {

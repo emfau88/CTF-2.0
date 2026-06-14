@@ -300,7 +300,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Bot-Jump-Unterstuetzung ueber das gemeinsame Jump-System implementieren.
 - [x] Spezialwaffen ueber normale `fireWeapon`-Actions verwenden.
 - [x] Grundlegendes TDM-Bot-Ziel implementieren.
-- [ ] CTF-Rollen implementieren.
+- [x] CTF-Rollen implementieren.
 - [ ] One-Flag-Ziele fuer Bots implementieren.
 - [x] Navigation und Entscheidung getrennt testen.
 - [ ] Das alte Bot-Bewegungsexperiment bis dahin nicht anwenden.
@@ -356,6 +356,22 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
   bleiben in den gemeinsamen Core-Waffensystemen autoritativ.
 - Entscheidungstests sind von Navigationstests getrennt; Runtime-Smokes
   pruefen Treffer, Ammo und Cooldown fuer Rocket, Rail und Whip.
+
+### Classic-CTF-Botrollen-Slice
+
+- `ClassicCtfBotDecisionController` haelt CTF-Zielwahl getrennt von
+  `GridBotNavigator`, Movement, Jump und Combat.
+- Angreifer holen die gegnerische Flagge, Carrier kehren zur eigenen Basis
+  zurueck, Verteidiger reagieren auf Basis-Eindringlinge und patrouillieren,
+  Support-Bots kontrollieren die Mitte oder eskortieren verbuendete Carrier.
+- Eine gestohlene eigene Flagge ueberschreibt jede Rolle und wird vom
+  gegnerischen Carrier zurueckgeholt.
+- `ClassicCtfBotController` erzeugt ausschliesslich normale `move`-, `aim`-,
+  `jump`- und `fireWeapon`-Actions.
+- Der Solo-CTF-Pfad verwendet den roten Bot als Angreifer; alle drei Rollen
+  besitzen getrennte Entscheidungstests.
+- Ein Runtime-Smoke zwingt den Angreifer zu Flag-Pickup, Rueckweg und Capture
+  durch die normalen Objective-, Navigation- und Jump-Regeln.
 
 ## Meilenstein 9: Mobile, UI und kompletter Spielablauf
 

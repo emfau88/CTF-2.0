@@ -11,6 +11,8 @@ import {
   createPickupState,
   createScoreBoardState,
   createTeamDeathmatchWorldState,
+  ClassicCtfBotController,
+  ClassicCtfBotDecisionController,
   DiagnosticArenaMode,
   fireV1Weapons,
   FLANK_SWITCH_V2,
@@ -358,6 +360,8 @@ function checkWorldMapRegistry(): void {
 }
 
 function checkClassicCtfMode(): void {
+  checkClassicCtfBotRoles();
+  checkClassicCtfBotCapture();
   const world = createClassicCtfWorldState(TRAINING_CROSSING_V2);
   const mode = new ClassicCtfMode(TRAINING_CROSSING_V2, {
     durationMs: 180_000,
@@ -481,6 +485,180 @@ function checkClassicCtfMode(): void {
   ) {
     throw new Error("Classic CTF must end at the configured capture limit.");
   }
+}
+
+function checkClassicCtfBotRoles(): void {
+  const world = createClassicCtfWorldState(TRAINING_CROSSING_V2);
+  const mode = new ClassicCtfMode(TRAINING_CROSSING_V2);
+  mode.initialize(world);
+  const red = world.actors.find((actor) => actor.id === "red-player")!;
+  const blue = world.actors.find((actor) => actor.id === "blue-player")!;
+  const attacker = new ClassicCtfBotDecisionController(
+    "attacker",
+    TRAINING_CROSSING_V2,
+  );
+  const defender = new ClassicCtfBotDecisionController(
+    "defender",
+    TRAINING_CROSSING_V2,
+  );
+  const support = new ClassicCtfBotDecisionController(
+    "support",
+    TRAINING_CROSSING_V2,
+  );
+
+  let snapshot = createWorldSnapshot(world);
+  if (
+    attacker.chooseGoal(red, snapshot).kind !== "attack-flag" ||
+    defender.chooseGoal(red, snapshot).kind !== "patrol-base" ||
+    support.chooseGoal(red, snapshot).kind !== "support-mid"
+  ) {
+    throw new Error(
+      "Classic CTF bot roles must start with distinct attack, patrol and support goals.",
+    );
+  }
+
+  blue.position = centerOfRect(TRAINING_CROSSING_V2.presentation.redBase);
+  snapshot = createWorldSnapshot(world);
+  if (defender.chooseGoal(red, snapshot).kind !== "defend-base") {
+    throw new Error("Classic CTF defenders must engage base invaders.");
+  }
+
+  const redFlag = world.objectives.find((objective) =>
+    objective.id === "red-flag"
+  )!;
+  const redFlagIndex = world.objectives.indexOf(redFlag);
+  world.objectives[redFlagIndex] = {
+    ...redFlag,
+    state: {
+      ...redFlag.state,
+      status: "carried",
+      interactingActorId: blue.id,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  for (const controller of [attacker, defender, support]) {
+    if (controller.chooseGoal(red, snapshot).kind !== "recover-own-flag") {
+      throw new Error(
+        "Every Classic CTF role must urgently recover its stolen flag.",
+      );
+    }
+  }
+
+  const blueFlag = world.objectives.find((objective) =>
+    objective.id === "blue-flag"
+  )!;
+  const blueFlagIndex = world.objectives.indexOf(blueFlag);
+  world.objectives[redFlagIndex] = {
+    ...redFlag,
+    state: {
+      ...redFlag.state,
+      status: "home",
+      interactingActorId: null,
+    },
+  };
+  world.objectives[blueFlagIndex] = {
+    ...blueFlag,
+    state: {
+      ...blueFlag.state,
+      status: "carried",
+      interactingActorId: red.id,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  if (attacker.chooseGoal(red, snapshot).kind !== "return-flag") {
+    throw new Error("Classic CTF flag carriers must return to their own base.");
+  }
+
+  const ally = createActorState({
+    id: "red-support-ally",
+    kind: "bot",
+    teamId: "red",
+    position: { x: 900, y: 410 },
+    radius: 16,
+    maxHealth: 100,
+    maxArmor: 100,
+  });
+  world.actors.push(ally);
+  world.objectives[blueFlagIndex] = {
+    ...blueFlag,
+    state: {
+      ...blueFlag.state,
+      status: "carried",
+      interactingActorId: ally.id,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  if (support.chooseGoal(red, snapshot).kind !== "escort-carrier") {
+    throw new Error("Classic CTF support bots must escort allied carriers.");
+  }
+}
+
+function checkClassicCtfBotCapture(): void {
+  for (
+    const map of [
+      TRAINING_CROSSING_V2,
+      GRAND_ARCHIVE_V2,
+      FLANK_SWITCH_V2,
+    ]
+  ) {
+    checkClassicCtfBotCaptureOnMap(map);
+  }
+}
+
+function checkClassicCtfBotCaptureOnMap(map: WorldMapData): void {
+  const runtime = new GameplayCoreRuntime({
+    mode: new ClassicCtfMode(map),
+    createWorld: () => createClassicCtfWorldState(map),
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  const controller = new ClassicCtfBotController(
+    "red-player",
+    "attacker",
+    map,
+  );
+  let pickedUp = false;
+  let captured = false;
+  let fell = false;
+  for (let sequence = 1; sequence <= 3000; sequence++) {
+    const frame = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: controller.readActions(runtime.snapshot, 34),
+    });
+    pickedUp ||= frame.events.some((event) =>
+      event.type === "objective.flagPickedUp" &&
+      event.sourceActorId === "red-player"
+    );
+    captured ||= frame.events.some((event) =>
+      event.type === "objective.flagCaptured" &&
+      event.sourceActorId === "red-player"
+    );
+    const red = actorById(frame.snapshot.actors, "red-player");
+    fell ||= red.lifeState === "falling";
+    if (captured) break;
+  }
+  const redScore = runtime.snapshot.scoreBoard.entries.find((entry) =>
+    entry.id === "red"
+  )?.score;
+  if (!pickedUp || !captured || redScore !== 1 || fell) {
+    throw new Error(
+      `${map.displayName} CTF attacker bots must capture through normal movement and objective rules.`,
+    );
+  }
+}
+
+function centerOfRect(rect: {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}): { readonly x: number; readonly y: number } {
+  return {
+    x: rect.x + rect.width / 2,
+    y: rect.y + rect.height / 2,
+  };
 }
 
 function checkOneFlagFoundation(): void {

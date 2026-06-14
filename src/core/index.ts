@@ -21,6 +21,8 @@ export {
 } from "./actors";
 export type { GameEvent } from "./events";
 export {
+  ClassicCtfBotController,
+  ClassicCtfBotDecisionController,
   GridBotNavigator,
   TdmBotCombatController,
   TdmBotController,
@@ -28,6 +30,9 @@ export {
   V2_BOT_MOVEMENT_CONFIG,
   V2_BOT_NAVIGATION_CONFIG,
   type BotCombatConfig,
+  type ClassicCtfBotGoal,
+  type ClassicCtfBotGoalKind,
+  type ClassicCtfBotRole,
   type BotMovementConfig,
   type BotNavigationDecision,
   type BotNavigator,
