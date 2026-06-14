@@ -27,6 +27,34 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
       { id: "gap-02", x: 824, y: 534, width: 128, height: 72 },
     ],
   },
+  navigation: {
+    jumpLinks: [
+      {
+        id: "gap-01-north-south",
+        from: { x: 612, y: 180 },
+        to: { x: 612, y: 320 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-01-south-north",
+        from: { x: 612, y: 320 },
+        to: { x: 612, y: 180 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-02-north-south",
+        from: { x: 888, y: 500 },
+        to: { x: 888, y: 640 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-02-south-north",
+        from: { x: 888, y: 640 },
+        to: { x: 888, y: 500 },
+        activationRadius: 44,
+      },
+    ],
+  },
   spawnPoints: [
     {
       id: "blue-player-spawn",

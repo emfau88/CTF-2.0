@@ -44,6 +44,58 @@ export const FLANK_SWITCH_V2: WorldMapData = {
       height: gap.height,
     })),
   },
+  navigation: {
+    jumpLinks: [
+      {
+        id: "gap-01-north-south",
+        from: { x: 1080, y: 116 },
+        to: { x: 1080, y: 252 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-01-south-north",
+        from: { x: 1080, y: 252 },
+        to: { x: 1080, y: 116 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-02-north-south",
+        from: { x: 1420, y: 116 },
+        to: { x: 1420, y: 252 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-02-south-north",
+        from: { x: 1420, y: 252 },
+        to: { x: 1420, y: 116 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-03-north-south",
+        from: { x: 1080, y: 568 },
+        to: { x: 1080, y: 704 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-03-south-north",
+        from: { x: 1080, y: 704 },
+        to: { x: 1080, y: 568 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-04-north-south",
+        from: { x: 1420, y: 568 },
+        to: { x: 1420, y: 704 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-04-south-north",
+        from: { x: 1420, y: 704 },
+        to: { x: 1420, y: 568 },
+        activationRadius: 44,
+      },
+    ],
+  },
   spawnPoints: [
     {
       id: "blue-player-spawn",

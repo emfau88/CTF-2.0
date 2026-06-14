@@ -1,5 +1,6 @@
 import type { WorldPosition } from "../actors";
 import type {
+  WorldJumpLink,
   WorldRect,
   WorldSnapshot,
 } from "../world";
@@ -13,19 +14,34 @@ interface GridCell {
   readonly y: number;
 }
 
+interface PathEdge {
+  readonly from: GridCell;
+  readonly jumpLink?: WorldJumpLink;
+}
+
+interface PathWaypoint {
+  readonly position: WorldPosition;
+  readonly jumpLink?: WorldJumpLink;
+}
+
+export interface BotNavigationDecision {
+  readonly direction: WorldPosition;
+  readonly jump: boolean;
+}
+
 export interface BotNavigator {
-  directionTo(
+  navigate(
     from: WorldPosition,
     target: WorldPosition,
     targetKey: string,
     snapshot: WorldSnapshot,
     deltaMs: number,
-  ): WorldPosition;
+  ): BotNavigationDecision;
   reset(): void;
 }
 
 export class GridBotNavigator implements BotNavigator {
-  private path: WorldPosition[] = [];
+  private path: PathWaypoint[] = [];
   private pathIndex = 0;
   private repathRemainingMs = 0;
   private targetKey = "";
@@ -35,18 +51,27 @@ export class GridBotNavigator implements BotNavigator {
       V2_BOT_NAVIGATION_CONFIG,
   ) {}
 
-  directionTo(
+  navigate(
     from: WorldPosition,
     target: WorldPosition,
     targetKey: string,
     snapshot: WorldSnapshot,
     deltaMs: number,
-  ): WorldPosition {
+  ): BotNavigationDecision {
     this.repathRemainingMs -= Math.max(0, deltaMs);
+    const currentWaypoint = this.path[this.pathIndex];
+    const traversingJump = Boolean(
+      currentWaypoint?.jumpLink &&
+        distance(from, currentWaypoint.position) >
+          this.config.waypointReachDistance,
+    );
     if (
-      this.repathRemainingMs <= 0 ||
-      this.pathIndex >= this.path.length ||
-      targetKey !== this.targetKey
+      !traversingJump &&
+      (
+        this.repathRemainingMs <= 0 ||
+        this.pathIndex >= this.path.length ||
+        targetKey !== this.targetKey
+      )
     ) {
       this.path = findPath(from, target, snapshot, this.config);
       this.pathIndex = 0;
@@ -56,15 +81,20 @@ export class GridBotNavigator implements BotNavigator {
 
     while (
       this.pathIndex < this.path.length - 1 &&
-      distance(from, this.path[this.pathIndex]!) <=
+      distance(from, this.path[this.pathIndex]!.position) <=
         this.config.waypointReachDistance
     ) {
       this.pathIndex++;
     }
-    return normalizedDirection(
-      from,
-      this.path[this.pathIndex] ?? target,
-    );
+    const waypoint = this.path[this.pathIndex];
+    const jumpLink = waypoint?.jumpLink;
+    return {
+      direction: normalizedDirection(from, waypoint?.position ?? target),
+      jump: Boolean(
+        jumpLink &&
+          distance(from, jumpLink.from) <= jumpLink.activationRadius,
+      ),
+    };
   }
 
   reset(): void {
@@ -80,7 +110,7 @@ function findPath(
   to: WorldPosition,
   snapshot: WorldSnapshot,
   config: BotNavigationConfig,
-): WorldPosition[] {
+): PathWaypoint[] {
   const bounds = snapshot.geometry.bounds;
   const cols = Math.max(
     1,
@@ -99,7 +129,7 @@ function findPath(
   const startKey = key(start);
   const goalKey = key(goal);
   const open: GridCell[] = [start];
-  const cameFrom = new Map<string, GridCell>();
+  const cameFrom = new Map<string, PathEdge>();
   const costs = new Map<string, number>([[startKey, 0]]);
   const scores = new Map<string, number>([[
     startKey,
@@ -120,8 +150,18 @@ function findPath(
         config.cellSize,
       );
     }
-    for (const neighbor of neighbors(current, cols, rows)) {
+    for (const candidate of navigationEdges(
+      current,
+      cols,
+      rows,
+      snapshot.navigation.jumpLinks,
+      bounds.minX,
+      bounds.minY,
+      config,
+    )) {
+      const neighbor = candidate.cell;
       if (
+        !candidate.jumpLink &&
         key(neighbor) !== goalKey &&
         blocked(
           centerFor(neighbor, bounds.minX, bounds.minY, config.cellSize),
@@ -132,35 +172,76 @@ function findPath(
         continue;
       }
       const tentative = (costs.get(key(current)) ?? Infinity) +
-        stepCost(current, neighbor);
+        (candidate.jumpLink
+          ? distance(candidate.jumpLink.from, candidate.jumpLink.to) /
+            config.cellSize
+          : stepCost(current, neighbor));
       if (tentative >= (costs.get(key(neighbor)) ?? Infinity)) continue;
-      cameFrom.set(key(neighbor), current);
+      cameFrom.set(key(neighbor), {
+        from: current,
+        jumpLink: candidate.jumpLink,
+      });
       costs.set(key(neighbor), tentative);
       scores.set(key(neighbor), tentative + heuristic(neighbor, goal));
-      if (!open.some((candidate) => key(candidate) === key(neighbor))) {
+      if (!open.some((openCell) => key(openCell) === key(neighbor))) {
         open.push(neighbor);
       }
     }
   }
-  return [to];
+  return [{ position: from }];
+}
+
+function navigationEdges(
+  cell: GridCell,
+  cols: number,
+  rows: number,
+  jumpLinks: readonly WorldJumpLink[],
+  minX: number,
+  minY: number,
+  config: BotNavigationConfig,
+): { readonly cell: GridCell; readonly jumpLink?: WorldJumpLink }[] {
+  const result: {
+    readonly cell: GridCell;
+    readonly jumpLink?: WorldJumpLink;
+  }[] = neighbors(cell, cols, rows).map((neighbor) => ({
+    cell: neighbor,
+  }));
+  const center = centerFor(cell, minX, minY, config.cellSize);
+  for (const jumpLink of jumpLinks) {
+    if (
+      distance(center, jumpLink.from) >
+        config.cellSize * .75 + jumpLink.activationRadius
+    ) {
+      continue;
+    }
+    result.push({
+      cell: cellFor(jumpLink.to, minX, minY, config.cellSize),
+      jumpLink,
+    });
+  }
+  return result;
 }
 
 function reconstructPath(
-  current: GridCell,
-  cameFrom: Map<string, GridCell>,
+  goal: GridCell,
+  cameFrom: Map<string, PathEdge>,
   minX: number,
   minY: number,
   cellSize: number,
-): WorldPosition[] {
-  const cells = [current];
+): PathWaypoint[] {
+  const reversed: PathWaypoint[] = [];
+  let current = goal;
   while (cameFrom.has(key(current))) {
-    current = cameFrom.get(key(current))!;
-    cells.push(current);
+    const edge = cameFrom.get(key(current))!;
+    reversed.push({
+      position: edge.jumpLink
+        ? { ...edge.jumpLink.to }
+        : centerFor(current, minX, minY, cellSize),
+      jumpLink: edge.jumpLink,
+    });
+    current = edge.from;
   }
-  cells.reverse();
-  return cells.slice(1).map((cell) =>
-    centerFor(cell, minX, minY, cellSize)
-  );
+  return reversed.reverse();
 }
 
 function neighbors(

@@ -26,6 +26,7 @@ export {
   V2_BOT_MOVEMENT_CONFIG,
   V2_BOT_NAVIGATION_CONFIG,
   type BotMovementConfig,
+  type BotNavigationDecision,
   type BotNavigator,
   type BotNavigationConfig,
 } from "./bots";
@@ -154,6 +155,8 @@ export {
   type WorldMapData,
   type WorldMapInfo,
   type WorldMapPresentationRect,
+  type WorldJumpLink,
+  type WorldNavigation,
   type WorldRect,
   type WorldSnapshot,
   type WorldState,

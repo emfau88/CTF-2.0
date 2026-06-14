@@ -20,6 +20,13 @@ export function createDiagnosticWorldState(): WorldState {
     })),
     gaps: TRAINING_CROSSING_V2.geometry.gaps.map((gap) => ({ ...gap })),
   };
+  world.navigation = {
+    jumpLinks: TRAINING_CROSSING_V2.navigation.jumpLinks.map((link) => ({
+      ...link,
+      from: { ...link.from },
+      to: { ...link.to },
+    })),
+  };
   world.map = {
     id: TRAINING_CROSSING_V2.id,
     displayName: TRAINING_CROSSING_V2.displayName,

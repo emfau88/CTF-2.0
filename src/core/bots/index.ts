@@ -8,6 +8,7 @@ export {
 } from "./BotMovementConfig";
 export {
   GridBotNavigator,
+  type BotNavigationDecision,
   type BotNavigator,
 } from "./GridBotNavigator";
 export { TdmBotController } from "./TdmBotController";

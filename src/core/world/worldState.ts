@@ -13,6 +13,10 @@ import {
   type WorldGeometry,
 } from "./worldGeometry";
 import type { WorldMapInfo } from "./maps";
+import {
+  createEmptyWorldNavigation,
+  type WorldNavigation,
+} from "./worldNavigation";
 
 export interface WorldState {
   timeMs: number;
@@ -25,6 +29,7 @@ export interface WorldState {
   match: MatchState | null;
   spawnPoints: SpawnPoint[];
   geometry: WorldGeometry;
+  navigation: WorldNavigation;
   map: WorldMapInfo | null;
 }
 
@@ -39,6 +44,7 @@ export interface WorldSnapshot {
   readonly match: Readonly<MatchState> | null;
   readonly spawnPoints: readonly SpawnPoint[];
   readonly geometry: WorldGeometry;
+  readonly navigation: WorldNavigation;
   readonly map: WorldMapInfo | null;
 }
 
@@ -56,6 +62,7 @@ export function createEmptyWorldState(
     match: null,
     spawnPoints: [],
     geometry: createEmptyWorldGeometry(),
+    navigation: createEmptyWorldNavigation(),
     map: null,
   };
 }
@@ -110,6 +117,13 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
       bounds: { ...world.geometry.bounds },
       solids: world.geometry.solids.map((solid) => ({ ...solid })),
       gaps: world.geometry.gaps.map((gap) => ({ ...gap })),
+    },
+    navigation: {
+      jumpLinks: world.navigation.jumpLinks.map((link) => ({
+        ...link,
+        from: { ...link.from },
+        to: { ...link.to },
+      })),
     },
     map: world.map ? { ...world.map } : null,
   };

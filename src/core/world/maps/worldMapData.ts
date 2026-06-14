@@ -2,6 +2,7 @@ import type { WorldPosition } from "../../actors";
 import type { PickupType } from "../../pickups";
 import type { SpawnPoint } from "../../spawning";
 import type { WorldGeometry } from "../worldGeometry";
+import type { WorldNavigation } from "../worldNavigation";
 
 export type WorldMapTheme = "ruins" | "library" | "industrial";
 export type WorldMapWallVisual =
@@ -75,6 +76,7 @@ export interface WorldMapData {
   readonly id: string;
   readonly displayName: string;
   readonly geometry: WorldGeometry;
+  readonly navigation: WorldNavigation;
   readonly spawnPoints: readonly SpawnPoint[];
   readonly pickupSpawns: readonly WorldMapPickupSpawn[];
   readonly presentation: WorldMapPresentation;

@@ -1805,7 +1805,12 @@ function checkBasicAutoShootParity(): void {
 function checkTdmBotController(): void {
   checkBotDecisionAndMovementConfig();
   checkGridBotNavigator();
+  checkBotJumpUsesCoreSystem();
   checkTdmBotNavigation(createTeamDeathmatchWorldState, "Training Crossing");
+  checkTdmBotNavigation(
+    () => createTeamDeathmatchWorldState(GRAND_ARCHIVE_V2),
+    "Grand Archive",
+  );
   checkTdmBotNavigation(
     () => createTeamDeathmatchWorldState(FLANK_SWITCH_V2),
     "Flank Switch",
@@ -1821,7 +1826,10 @@ function checkBotDecisionAndMovementConfig(): void {
     "blue-player",
     { inputMagnitude: .5 },
     {
-      directionTo: () => ({ x: 0, y: 1 }),
+      navigate: () => ({
+        direction: { x: 0, y: 1 },
+        jump: false,
+      }),
       reset: () => {},
     },
   );
@@ -1860,7 +1868,7 @@ function checkGridBotNavigator(): void {
     waypointReachDistance: 24,
     obstaclePadding: 18,
   });
-  const direction = navigator.directionTo(
+  const decision = navigator.navigate(
     { x: 80, y: 200 },
     { x: 320, y: 200 },
     "target:1",
@@ -1868,24 +1876,94 @@ function checkGridBotNavigator(): void {
     34,
   );
   if (
-    direction.x <= 0 ||
-    Math.abs(direction.y) < .1 ||
-    Math.abs(Math.hypot(direction.x, direction.y) - 1) > .001
+    decision.direction.x <= 0 ||
+    Math.abs(decision.direction.y) < .1 ||
+    Math.abs(
+      Math.hypot(decision.direction.x, decision.direction.y) - 1,
+    ) > .001
   ) {
     throw new Error(
       "Grid bot navigation must independently route around blockers.",
     );
   }
   navigator.reset();
-  const direct = navigator.directionTo(
+  const direct = navigator.navigate(
     { x: 60, y: 60 },
     { x: 340, y: 60 },
     "target:2",
     createWorldSnapshot(world),
     34,
   );
-  if (direct.x <= 0 || Math.abs(direct.y) > .1) {
+  if (direct.direction.x <= 0 || Math.abs(direct.direction.y) > .1) {
     throw new Error("Grid bot navigation reset must allow a fresh direct path.");
+  }
+}
+
+function checkBotJumpUsesCoreSystem(): void {
+  const createWorld = () => {
+    const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+    const red = world.actors.find((actor) => actor.id === "red-player")!;
+    const blue = world.actors.find((actor) => actor.id === "blue-player")!;
+    world.geometry = {
+      bounds: { minX: 0, minY: 100, maxX: 400, maxY: 300 },
+      solids: [],
+      gaps: [{
+        id: "jump-gap",
+        x: 170,
+        y: 100,
+        width: 60,
+        height: 200,
+      }],
+    };
+    world.navigation = {
+      jumpLinks: [{
+        id: "jump-gap-west-east",
+        from: { x: 140, y: 200 },
+        to: { x: 260, y: 200 },
+        activationRadius: 44,
+      }],
+    };
+    red.position = { x: 80, y: 200 };
+    red.spawnPosition = { ...red.position };
+    red.lastSafePosition = { ...red.position };
+    blue.position = { x: 320, y: 200 };
+    blue.spawnPosition = { ...blue.position };
+    blue.lastSafePosition = { ...blue.position };
+    return world;
+  };
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld,
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  const controller = new TdmBotController("red-player", "blue-player");
+  let jumped = false;
+  let fell = false;
+  for (let sequence = 1; sequence <= 180; sequence++) {
+    const frame = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: controller.readActions(runtime.snapshot, 34),
+    });
+    jumped ||= frame.events.some((event) =>
+      event.type === "actor.jumped" &&
+      event.sourceActorId === "red-player"
+    );
+    const red = frame.snapshot.actors.find((actor) =>
+      actor.id === "red-player"
+    );
+    fell ||= red?.lifeState === "falling";
+    if ((red?.position.x ?? 0) >= 260) break;
+  }
+  const red = runtime.snapshot.actors.find((actor) =>
+    actor.id === "red-player"
+  );
+  if (!jumped || fell || (red?.position.x ?? 0) < 260) {
+    throw new Error(
+      "Bot jump links must cross gaps through normal core jump actions.",
+    );
   }
 }
 

@@ -295,8 +295,8 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Generische Grid-Navigation fuer Solids und Gaps erstellen.
 - [x] Bots erzeugen dieselben Core-Action-Intents wie Spieler.
 - [x] Geschwindigkeit als Bot-Konfiguration behandeln.
-- [ ] Jump Links als Map-Daten modellieren.
-- [ ] Bot-Jump-Unterstuetzung ueber das gemeinsame Jump-System implementieren.
+- [x] Jump Links als Map-Daten modellieren.
+- [x] Bot-Jump-Unterstuetzung ueber das gemeinsame Jump-System implementieren.
 - [x] Grundlegendes TDM-Bot-Ziel implementieren.
 - [ ] CTF-Rollen implementieren.
 - [ ] One-Flag-Ziele fuer Bots implementieren.
@@ -324,6 +324,22 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - `TdmBotController` entscheidet nur ueber Actor-Ziel, Aim und Action-Intents.
 - Navigation um Blocker, konfigurierbare Movement-Actions und die bestehende
   TDM-Langstreckennavigation werden getrennt im Core-Smoke geprueft.
+
+### Bot-Jump-Link-Slice
+
+- `WorldNavigation` und gerichtete `WorldJumpLink`-Daten bleiben
+  serialisierbarer Core-Zustand und werden aus jeder V2-Karte in den Snapshot
+  kopiert.
+- Alle authored Gaps der drei V2-Karten besitzen beidseitige Jump Links mit
+  sicheren Start- und Landepunkten.
+- `GridBotNavigator` behandelt Jump Links als eigene A*-Kanten und signalisiert
+  den Sprung erst im Aktivierungsradius am Absprungpunkt.
+- `TdmBotController` erzeugt dafuer normale `jump`-Actions mit
+  Press/Hold/Release; Bot-Sonderphysik existiert nicht.
+- Ein Runtime-Smoke zwingt den Bot ueber eine vollstaendig sperrende Gap-Zone
+  und prueft `actor.jumped`, erfolgreiche Landung und ausbleibenden Fall.
+- Langstrecken-Navigation wird auf Training Crossing, Grand Archive und Flank
+  Switch geprueft.
 
 ## Meilenstein 9: Mobile, UI und kompletter Spielablauf
 

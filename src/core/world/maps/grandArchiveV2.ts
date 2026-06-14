@@ -50,6 +50,58 @@ export const GRAND_ARCHIVE_V2: WorldMapData = {
       height: gap.height,
     })),
   },
+  navigation: {
+    jumpLinks: [
+      {
+        id: "gap-01-north-south",
+        from: { x: 1072, y: 156 },
+        to: { x: 1072, y: 290 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-01-south-north",
+        from: { x: 1072, y: 290 },
+        to: { x: 1072, y: 156 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-02-north-south",
+        from: { x: 1428, y: 156 },
+        to: { x: 1428, y: 290 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-02-south-north",
+        from: { x: 1428, y: 290 },
+        to: { x: 1428, y: 156 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-03-north-south",
+        from: { x: 1072, y: 530 },
+        to: { x: 1072, y: 664 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-03-south-north",
+        from: { x: 1072, y: 664 },
+        to: { x: 1072, y: 530 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-04-north-south",
+        from: { x: 1428, y: 530 },
+        to: { x: 1428, y: 664 },
+        activationRadius: 44,
+      },
+      {
+        id: "gap-04-south-north",
+        from: { x: 1428, y: 664 },
+        to: { x: 1428, y: 530 },
+        activationRadius: 44,
+      },
+    ],
+  },
   spawnPoints: [
     {
       id: "blue-player-spawn",

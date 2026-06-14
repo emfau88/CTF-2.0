@@ -19,6 +19,13 @@ export function createTeamDeathmatchWorldState(
     solids: map.geometry.solids.map((solid) => ({ ...solid })),
     gaps: map.geometry.gaps.map((gap) => ({ ...gap })),
   };
+  world.navigation = {
+    jumpLinks: map.navigation.jumpLinks.map((link) => ({
+      ...link,
+      from: { ...link.from },
+      to: { ...link.to },
+    })),
+  };
   world.map = {
     id: map.id,
     displayName: map.displayName,

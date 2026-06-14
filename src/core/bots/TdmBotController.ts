@@ -13,6 +13,8 @@ import {
 } from "./GridBotNavigator";
 
 export class TdmBotController {
+  private jumpHeld = false;
+
   constructor(
     private readonly actorId: string,
     private readonly targetActorId: string,
@@ -28,21 +30,22 @@ export class TdmBotController {
     const actor = findActiveActor(snapshot, this.actorId);
     const target = findActiveActor(snapshot, this.targetActorId);
     if (!actor || !target || snapshot.match?.phase === "ended") {
+      this.jumpHeld = false;
       return [this.stopIntent()];
     }
 
-    const direction = this.navigator.directionTo(
+    const navigation = this.navigator.navigate(
       actor.position,
       target.position,
       `${target.id}:${target.lifeId}`,
       snapshot,
       deltaMs,
     );
-    return [{
+    const actions: CoreActionIntent[] = [{
       action: "move",
       phase: "held",
       actorId: actor.id,
-      direction,
+      direction: navigation.direction,
       magnitude: this.movement.inputMagnitude,
     }, {
       action: "aim",
@@ -50,10 +53,38 @@ export class TdmBotController {
       actorId: actor.id,
       direction: directionBetween(actor.position, target.position),
     }];
+    if (navigation.jump) {
+      if (
+        !this.jumpHeld &&
+        actor.jump.grounded &&
+        actor.jump.cooldownRemainingMs <= 0
+      ) {
+        actions.push({
+          action: "jump",
+          phase: "pressed",
+          actorId: actor.id,
+        });
+      }
+      actions.push({
+        action: "jump",
+        phase: "held",
+        actorId: actor.id,
+      });
+      this.jumpHeld = true;
+    } else if (this.jumpHeld) {
+      actions.push({
+        action: "jump",
+        phase: "released",
+        actorId: actor.id,
+      });
+      this.jumpHeld = false;
+    }
+    return actions;
   }
 
   reset(): void {
     this.navigator.reset();
+    this.jumpHeld = false;
   }
 
   private stopIntent(): CoreActionIntent {

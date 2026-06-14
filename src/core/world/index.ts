@@ -11,6 +11,11 @@ export {
   type WorldRect,
 } from "./worldGeometry";
 export {
+  createEmptyWorldNavigation,
+  type WorldJumpLink,
+  type WorldNavigation,
+} from "./worldNavigation";
+export {
   FLANK_SWITCH_V2,
   GRAND_ARCHIVE_V2,
   getWorldMap,
