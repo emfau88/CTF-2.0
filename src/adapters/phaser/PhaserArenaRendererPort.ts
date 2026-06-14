@@ -45,6 +45,8 @@ export class PhaserArenaRendererPort implements RendererPort {
     new Map<ProjectileId, Phaser.GameObjects.Ellipse | Phaser.GameObjects.Image>();
   private readonly pickupViews =
     new Map<PickupId, Phaser.GameObjects.Container>();
+  private readonly objectiveViews =
+    new Map<string, Phaser.GameObjects.Image>();
   private readonly spawnPadParticleGraphics: Phaser.GameObjects.Graphics;
   private readonly libraryDustGraphics?: Phaser.GameObjects.Graphics;
   private readonly libraryDust: LibraryDustParticle[] = [];
@@ -79,6 +81,7 @@ export class PhaserArenaRendererPort implements RendererPort {
     }
     this.renderProjectiles(snapshot);
     this.renderPickups(snapshot);
+    this.renderObjectives(snapshot);
     this.renderSpawnPadParticles(snapshot);
     this.renderLibraryAtmosphere(snapshot.timeMs);
   }
@@ -89,6 +92,7 @@ export class PhaserArenaRendererPort implements RendererPort {
     this.destroyActorViews();
     this.destroyProjectileViews();
     this.destroyPickupViews();
+    this.destroyObjectiveViews();
     this.resetSpawnPadParticles();
   }
 
@@ -96,6 +100,7 @@ export class PhaserArenaRendererPort implements RendererPort {
     this.destroyActorViews();
     this.destroyProjectileViews();
     this.destroyPickupViews();
+    this.destroyObjectiveViews();
     this.spawnPadParticleGraphics.destroy();
     this.libraryDustGraphics?.destroy();
   }
@@ -312,6 +317,39 @@ export class PhaserArenaRendererPort implements RendererPort {
       view.destroy(true);
     }
     this.pickupViews.clear();
+  }
+
+  private renderObjectives(snapshot: WorldSnapshot): void {
+    const visibleIds = new Set(snapshot.objectives.map((objective) =>
+      objective.id
+    ));
+    for (const [objectiveId, view] of this.objectiveViews) {
+      if (!visibleIds.has(objectiveId)) {
+        view.destroy();
+        this.objectiveViews.delete(objectiveId);
+      }
+    }
+    for (const objective of snapshot.objectives) {
+      if (objective.kind !== "team-flag") continue;
+      const teamId = objective.state.controllingTeamId;
+      if (teamId !== "red" && teamId !== "blue") continue;
+      const view = this.objectiveViews.get(objective.id) ??
+        this.scene.add.image(
+          objective.position.x,
+          objective.position.y - 18,
+          teamId === "red" ? "flagRed" : "flagBlue",
+        ).setDepth(34).setScale(.25);
+      view
+        .setPosition(objective.position.x, objective.position.y - 18)
+        .setScale(.25)
+        .setAlpha(objective.state.status === "carried" ? .94 : 1);
+      this.objectiveViews.set(objective.id, view);
+    }
+  }
+
+  private destroyObjectiveViews(): void {
+    for (const view of this.objectiveViews.values()) view.destroy();
+    this.objectiveViews.clear();
   }
 
   private renderSpawnPadParticles(snapshot: WorldSnapshot): void {

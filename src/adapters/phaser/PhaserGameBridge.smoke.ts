@@ -2,6 +2,7 @@ import {
   applyWorldCollision,
   awardScore,
   createActorState,
+  createClassicCtfWorldState,
   createEmptyWorldState,
   createWorldSnapshot,
   createPickupState,
@@ -9,12 +10,15 @@ import {
   createTeamDeathmatchWorldState,
   DiagnosticArenaMode,
   fireV1Weapons,
+  FLANK_SWITCH_V2,
   GRAND_ARCHIVE_V2,
   getWorldMap,
   GameplayCoreRuntime,
+  ClassicCtfMode,
   resolveWorldMap,
   TeamDeathmatchMode,
   TdmBotController,
+  TRAINING_CROSSING_V2,
   updatePickups,
   updateProjectiles,
   V2_ACTOR_LIFECYCLE_CONFIG,
@@ -200,6 +204,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkScoreSafety();
   checkMobileWeaponTapTargeting();
   checkWorldMapRegistry();
+  checkClassicCtfMode();
   checkTeamDeathmatchSlice();
   checkBasicAutoShootParity();
   checkTdmBotController();
@@ -300,6 +305,7 @@ function checkWorldMapRegistry(): void {
   if (
     getWorldMap("training-crossing-v2")?.displayName !== "Training Crossing" ||
     getWorldMap("grand-archive-v2") !== GRAND_ARCHIVE_V2 ||
+    getWorldMap("flank-switch-v2") !== FLANK_SWITCH_V2 ||
     getWorldMap("missing-map") !== undefined ||
     resolveWorldMap("missing-map").id !== "training-crossing-v2"
   ) {
@@ -320,6 +326,148 @@ function checkWorldMapRegistry(): void {
         ?.spawnPosition.x !== 2355
   ) {
     throw new Error("Grand Archive must populate its complete V2 TDM world.");
+  }
+
+  const flankWorld = createTeamDeathmatchWorldState(FLANK_SWITCH_V2);
+  if (
+    flankWorld.map?.id !== "flank-switch-v2" ||
+    flankWorld.geometry.bounds.maxX !== 2500 ||
+    flankWorld.geometry.bounds.maxY !== 820 ||
+    flankWorld.geometry.solids.length !== 14 ||
+    flankWorld.geometry.gaps.length !== 4 ||
+    flankWorld.pickups.length !== 15 ||
+    flankWorld.actors.find((actor) => actor.id === "red-player")
+        ?.spawnPosition.x !== 150 ||
+    flankWorld.actors.find((actor) => actor.id === "blue-player")
+        ?.spawnPosition.x !== 2350
+  ) {
+    throw new Error("Flank Switch must populate its complete V2 TDM world.");
+  }
+}
+
+function checkClassicCtfMode(): void {
+  const world = createClassicCtfWorldState(TRAINING_CROSSING_V2);
+  const mode = new ClassicCtfMode(TRAINING_CROSSING_V2, {
+    durationMs: 180_000,
+    captureLimit: 3,
+    pickupRadius: 36,
+    initialScores: [
+      { id: "blue", teamId: "blue", score: 0 },
+      { id: "red", teamId: "red", score: 0 },
+    ],
+  });
+  const started = mode.initialize(world);
+  const blue = world.actors.find((actor) => actor.id === "blue-player");
+  const red = world.actors.find((actor) => actor.id === "red-player");
+  if (
+    started[0]?.type !== "match.started" ||
+    world.objectives.length !== 2 ||
+    !blue ||
+    !red
+  ) {
+    throw new Error("Classic CTF must initialize two team flags and players.");
+  }
+
+  const redFlagHome = {
+    x: TRAINING_CROSSING_V2.presentation.redBase.x +
+      TRAINING_CROSSING_V2.presentation.redBase.width / 2,
+    y: TRAINING_CROSSING_V2.presentation.redBase.y +
+      TRAINING_CROSSING_V2.presentation.redBase.height / 2,
+  };
+  blue.position = { ...redFlagHome };
+  world.timeMs = 34;
+  let events = mode.update(world, 34);
+  if (
+    !events.some((event) => event.type === "objective.flagPickedUp") ||
+    world.objectives.find((objective) => objective.id === "red-flag")
+        ?.state.interactingActorId !== blue.id
+  ) {
+    throw new Error("Classic CTF must allow an enemy flag pickup in V1 range.");
+  }
+
+  blue.position = { x: 700, y: 380 };
+  blue.jump.height = 20;
+  world.timeMs = 68;
+  mode.update(world, 34);
+  const carriedRed = world.objectives.find((objective) =>
+    objective.id === "red-flag"
+  );
+  if (
+    carriedRed?.position.x !== 700 ||
+    carriedRed.position.y !== 336
+  ) {
+    throw new Error("Carried CTF flags must follow the actor and jump height.");
+  }
+
+  events = mode.handleEvent({
+    id: "blue-fell",
+    type: "diagnostic.actorFell",
+    timeMs: 68,
+    sourceActorId: blue.id,
+    teamId: blue.teamId ?? undefined,
+    payload: {},
+  }, world);
+  if (
+    !events.some((event) => event.type === "objective.flagReset") ||
+    world.objectives.find((objective) => objective.id === "red-flag")
+        ?.state.status !== "home"
+  ) {
+    throw new Error("Classic CTF must reset a carried flag after a fall.");
+  }
+
+  blue.jump.height = 0;
+  blue.position = { ...redFlagHome };
+  world.timeMs = 102;
+  mode.update(world, 34);
+  events = mode.handleEvent({
+    id: "blue-died",
+    type: "actor.died",
+    timeMs: 102,
+    targetActorId: blue.id,
+    teamId: blue.teamId ?? undefined,
+    payload: { victimLifeId: blue.lifeId },
+  }, world);
+  if (
+    !events.some((event) => event.type === "objective.flagReset") ||
+    world.objectives.find((objective) => objective.id === "red-flag")
+        ?.state.status !== "home"
+  ) {
+    throw new Error("Classic CTF must reset a carried flag after death.");
+  }
+
+  const blueFlagHome = {
+    x: TRAINING_CROSSING_V2.presentation.blueBase.x +
+      TRAINING_CROSSING_V2.presentation.blueBase.width / 2,
+    y: TRAINING_CROSSING_V2.presentation.blueBase.y +
+      TRAINING_CROSSING_V2.presentation.blueBase.height / 2,
+  };
+  const blueBase = blueFlagHome;
+  for (let capture = 1; capture <= 3; capture++) {
+    blue.lifeState = "active";
+    blue.position = { ...redFlagHome };
+    world.timeMs += 34;
+    mode.update(world, 34);
+    if (capture === 1) {
+      red.position = { ...blueFlagHome };
+      mode.update(world, 0);
+    }
+    blue.position = { ...blueBase };
+    world.timeMs += 34;
+    events = mode.update(world, 34);
+    if (
+      !events.some((event) => event.type === "objective.flagCaptured") ||
+      world.scoreBoard.entries.find((entry) => entry.id === "blue")?.score !==
+        capture
+    ) {
+      throw new Error("Classic CTF captures must award exactly one point.");
+    }
+  }
+  if (
+    world.match?.phase !== "ended" ||
+    world.match.result?.kind !== "winner" ||
+    world.match.result.winnerEntryId !== "blue"
+  ) {
+    throw new Error("Classic CTF must end at the configured capture limit.");
   }
 }
 
@@ -1035,6 +1183,7 @@ function checkTeamDeathmatchSlice(): void {
   const initial = runtime.initialize();
   if (
     initial.snapshot.modeId !== "team-deathmatch" ||
+    initial.snapshot.objectives.length !== 0 ||
     initial.snapshot.actors.length !== 2 ||
     initial.snapshot.actors.some((actor) => actor.kind !== "player") ||
     initial.snapshot.pickups.length !== productionWorld.pickups.length ||
@@ -1344,9 +1493,20 @@ function checkBasicAutoShootParity(): void {
 }
 
 function checkTdmBotController(): void {
+  checkTdmBotNavigation(createTeamDeathmatchWorldState, "Training Crossing");
+  checkTdmBotNavigation(
+    () => createTeamDeathmatchWorldState(FLANK_SWITCH_V2),
+    "Flank Switch",
+  );
+}
+
+function checkTdmBotNavigation(
+  createWorld: () => ReturnType<typeof createTeamDeathmatchWorldState>,
+  mapName: string,
+): void {
   const runtime = new GameplayCoreRuntime({
     mode: new TeamDeathmatchMode(),
-    createWorld: createTeamDeathmatchWorldState,
+    createWorld,
     allowManualPrimaryFire: false,
   });
   runtime.initialize();
@@ -1392,10 +1552,14 @@ function checkTdmBotController(): void {
     finalBlue.position.y - finalRed.position.y,
   );
   if (finalDistance >= initialDistance - 500) {
-    throw new Error("TDM bot navigation must close significant distance.");
+    throw new Error(
+      `${mapName} TDM bot navigation must close significant distance.`,
+    );
   }
   if (fell) {
-    throw new Error("TDM bot navigation must avoid authored gap zones.");
+    throw new Error(
+      `${mapName} TDM bot navigation must avoid authored gap zones.`,
+    );
   }
 }
 

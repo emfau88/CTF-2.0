@@ -127,7 +127,10 @@ implements HudPort, FrameDiagnosticsPort {
 
     this.scoreText.setPosition(width / 2, 14).setText([
       `BLUE  ${blueScore}  :  ${redScore}  RED`,
-      `${formatTime(this.hudState.timeRemainingMs ?? 0)}  |  First to 3`,
+      `${formatTime(this.hudState.timeRemainingMs ?? 0)}  |  ${
+        this.hudState.notices[0] ?? "First to 3"
+      }`,
+      ...objectiveStatus(this.hudState),
     ]);
     this.blueText.setText(playerStatus("BLUE P1", blue));
     this.redText.setPosition(width - 14, 14).setText(
@@ -150,6 +153,23 @@ implements HudPort, FrameDiagnosticsPort {
       this.resultText.setVisible(false);
     }
   }
+}
+
+function objectiveStatus(state: ModeHudState): string[] {
+  if (state.modeId !== "classic-ctf") return [];
+  const red = state.objectives.find((objective) => objective.id === "red-flag");
+  const blue = state.objectives.find((objective) =>
+    objective.id === "blue-flag"
+  );
+  return [
+    `FLAGS  RED ${flagLabel(red)}  |  BLUE ${flagLabel(blue)}`,
+  ];
+}
+
+function flagLabel(
+  objective: ModeHudState["objectives"][number] | undefined,
+): string {
+  return objective?.state.status === "carried" ? "TAKEN" : "HOME";
 }
 
 function playerStatus(

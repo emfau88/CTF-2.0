@@ -75,6 +75,11 @@ Shared-Camera-Abweichung.
   Gaps, 15 Pickups, Team-Spawns und Bibliotheksassets. Lesetischkerzen,
   Staub und Spinnen sind Presentation; Projektilinteraktion mit Kerzen ist
   noch offen.
+- Flank Switch verwendet die V1-Bounds `2500x820`, alle 14
+  Industriebarrieren, vier Wartungsgruben, 15 Pickups und Team-Spawns.
+  Metallboden, Team-Basen, Energiekanäle, zentrale Junction sowie
+  Randmaschinen werden über den gemeinsamen mapgetriebenen Renderer
+  dargestellt.
 - Mobile-TDM steuert den roten Gegner ueber normale `move`- und `aim`-Intents.
   Navigation meidet Solids und Gaps; Bot-Jumps und Rollen sind noch offen.
 - Rocket, Railgun und Whip verwenden in V2 die V1-Werte aus
@@ -118,5 +123,9 @@ Shared-Camera-Abweichung.
   keinen Todesburst, entsprechend dem V1-Verhalten.
 - Temporaere Ammo-Drops nach einem Tod bleiben ein Gameplay-Paritaetspunkt
   und sind nicht Teil dieses Presentation-Slices.
+- `ClassicCtfMode` bildet die V1-Regeln mit zwei Team-Flags, Pickup-Radius
+  `36`, sofortigem Reset bei Tod/Fall und Capture im eigenen Basisrechteck
+  ab. Wie in V1 ist ein Capture auch bei gestohlener eigener Flagge erlaubt.
+  Capture-Limit und Matchdauer bleiben `3` beziehungsweise `180000 ms`.
 - Vollständige subjektive Parität benötigt weiterhin direkten Gerätetest auf
   Desktop und Mobile.

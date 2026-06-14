@@ -11,6 +11,7 @@ export {
   type WorldRect,
 } from "./worldGeometry";
 export {
+  FLANK_SWITCH_V2,
   GRAND_ARCHIVE_V2,
   getWorldMap,
   resolveWorldMap,
@@ -18,4 +19,5 @@ export {
   WORLD_MAPS,
   type WorldMapData,
   type WorldMapInfo,
+  type WorldMapPresentationRect,
 } from "./maps";

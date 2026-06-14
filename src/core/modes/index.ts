@@ -1,3 +1,8 @@
+export {
+  ClassicCtfMode,
+  V2_CLASSIC_CTF_CONFIG,
+  type ClassicCtfModeConfig,
+} from "./ClassicCtfMode";
 export type {
   GameMode,
   GameModeId,

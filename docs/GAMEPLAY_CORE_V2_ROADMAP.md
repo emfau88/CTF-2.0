@@ -196,15 +196,14 @@ sich wie ihre V1-Version an.
 
 Nur `ClassicCtfMode` besitzt:
 
-- [ ] Zwei Team-Flags.
-- [ ] Flag Pickup und Carry.
-- [ ] Flag Drop.
-- [ ] Flag Return und Auto-Return.
-- [ ] Capture-Regeln.
-- [ ] Capture-Score.
-- [ ] CTF-Endbedingungen.
-- [ ] CTF-spezifische HUD-Daten.
-- [ ] CTF-Spawns und Objective-Zustand.
+- [x] Zwei Team-Flags.
+- [x] Flag Pickup und Carry.
+- [x] V1-konformer sofortiger Reset bei Tod oder Fall.
+- [x] Capture-Regeln.
+- [x] Capture-Score.
+- [x] CTF-Endbedingungen.
+- [x] CTF-spezifische HUD-Daten.
+- [x] CTF-Spawns und Objective-Zustand.
 
 Gemeinsam bleiben:
 
@@ -215,7 +214,8 @@ Gemeinsam bleiben:
 - [ ] Damage und Respawn.
 - [ ] Match-Timer und generische Matchphasen.
 
-**Architekturtest:** TDM erzeugt keinerlei Flag- oder CTF-Zustand.
+**Architekturtest:** TDM erzeugt keinerlei Flag- oder CTF-Zustand. Dieser
+Vertrag ist durch den Core-Smoke abgesichert.
 
 ## Meilenstein 6: One Flag / Center Flag
 
@@ -233,7 +233,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 
 ## Meilenstein 7: Maps und Content
 
-- [ ] Alle drei V1-Maps als Plain Data migrieren.
+- [x] Alle drei V1-Maps als Plain Data migrieren.
 - [x] Allgemeine V2-Map-Registry implementieren.
 - [x] Map-Auswahl an World-Factory und Renderer durchreichen.
 - [x] Renderer von Training Crossing entkoppeln.
@@ -249,6 +249,11 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Grand Archive: Solids, Gaps, Team-Spawns und Pickups migrieren.
 - [x] Grand Archive: Bibliotheksassets, Lesetische, Kerzen, Staub und
       Spinnen als Phaser-Praesentation migrieren.
+- [x] Flank Switch: Industriebarrieren, Wartungsgruben, Team-Spawns und
+      Pickups migrieren.
+- [x] Flank Switch: Metallboden, Basen, Energieleitungen, Junction und
+      Randmaschinen als Phaser-Praesentation migrieren.
+- [x] Flank Switch: TDM-Botnavigation gegen Solids und Gaps pruefen.
 - [x] Neue Maps ohne Renderer- oder Scene-Sonderfall ladbar machen.
 - [ ] Kerzenreaktionen auf Rocket- und Rail-Treffer migrieren.
 
@@ -265,6 +270,8 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
   Produktionshaertung.
 - Build, kompletter Core-Smoke, V2-Menue, Grand Archive Desktop/Local,
   Grand Archive Touch/Bot und Browser-Konsole wurden am 13.06.2026 geprueft.
+- Flank Switch wurde am 14.06.2026 mit komplettem Core-Smoke,
+  Touch/Bot-TDM, Desktop/Local-TDM und fehlerfreier Browser-Konsole geprueft.
 
 ## Meilenstein 8: Bots
 

@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import { preloadArenaAssets } from "../../../assets";
 import {
+  ClassicCtfMode,
+  createClassicCtfWorldState,
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   resolveWorldMap,
@@ -46,14 +48,20 @@ export class GameplayV2Scene extends Phaser.Scene {
   create(): void {
     const search = new URLSearchParams(window.location.search);
     const isTeamDeathmatch = search.get("mode") === "tdm";
+    const isClassicCtf = search.get("mode") === "ctf";
+    const isArenaMode = isTeamDeathmatch || isClassicCtf;
     const selectedMap = resolveWorldMap(search.get("map"));
-    const useMobileControls = isTeamDeathmatch && prefersMobileControls(search);
-    const useBotOpponent = isTeamDeathmatch &&
+    const useMobileControls = isArenaMode && prefersMobileControls(search);
+    const useBotOpponent = isArenaMode &&
       prefersBotOpponent(search, useMobileControls);
-    const runtime = isTeamDeathmatch
+    const runtime = isArenaMode
       ? new GameplayCoreRuntime({
-        mode: new TeamDeathmatchMode(),
-        createWorld: () => createTeamDeathmatchWorldState(selectedMap),
+        mode: isClassicCtf
+          ? new ClassicCtfMode(selectedMap)
+          : new TeamDeathmatchMode(),
+        createWorld: () => isClassicCtf
+          ? createClassicCtfWorldState(selectedMap)
+          : createTeamDeathmatchWorldState(selectedMap),
         basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
         allowManualPrimaryFire: false,
       })
@@ -85,7 +93,7 @@ export class GameplayV2Scene extends Phaser.Scene {
         () => this.bridge?.snapshot ?? runtime.snapshot,
       )
       : undefined;
-    const hud = isTeamDeathmatch
+    const hud = isArenaMode
       ? new PhaserTeamDeathmatchHudPort(
         this,
         useMobileControls,
@@ -97,7 +105,7 @@ export class GameplayV2Scene extends Phaser.Scene {
       ? mobileInput
       : new PhaserDiagnosticInputAdapter(
         this,
-        isTeamDeathmatch
+        isArenaMode
           ? useBotOpponent ? "tdm-solo" : "tdm"
           : "diagnostic",
       );
@@ -109,25 +117,25 @@ export class GameplayV2Scene extends Phaser.Scene {
       )
       : playerInput;
     this.bridge = new PhaserGameBridge(runtime, {
-      renderer: isTeamDeathmatch
+      renderer: isArenaMode
         ? new PhaserArenaRendererPort(
           this,
           selectedMap,
           useMobileControls ? "blue-player" : undefined,
         )
         : new PhaserDiagnosticRendererPort(this),
-      audio: isTeamDeathmatch
+      audio: isArenaMode
         ? new PhaserArenaAudioPort(this, "blue-player")
         : new NoopAudioPort(),
       diagnostics: hud,
-      effects: isTeamDeathmatch
+      effects: isArenaMode
         ? new PhaserWeaponEffectsPort(this, "blue-player")
         : new NoopEffectsPort(),
       hud,
     });
     this.bridge.initialize();
 
-    if (!isTeamDeathmatch) {
+    if (!isArenaMode) {
       this.scale.on("resize", this.centerDiagnostic, this);
     }
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);

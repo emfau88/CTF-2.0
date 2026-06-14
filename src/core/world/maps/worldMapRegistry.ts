@@ -1,3 +1,4 @@
+import { FLANK_SWITCH_V2 } from "./flankSwitchV2";
 import { GRAND_ARCHIVE_V2 } from "./grandArchiveV2";
 import { TRAINING_CROSSING_V2 } from "./trainingCrossingV2";
 import type { WorldMapData } from "./worldMapData";
@@ -5,6 +6,7 @@ import type { WorldMapData } from "./worldMapData";
 export const WORLD_MAPS: readonly WorldMapData[] = [
   TRAINING_CROSSING_V2,
   GRAND_ARCHIVE_V2,
+  FLANK_SWITCH_V2,
 ];
 
 const WORLD_MAP_BY_ID = new Map(

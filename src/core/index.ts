@@ -54,6 +54,9 @@ export type {
   ModeHudState,
 } from "./modes";
 export {
+  ClassicCtfMode,
+  V2_CLASSIC_CTF_CONFIG,
+  type ClassicCtfModeConfig,
   createMatchState,
   DiagnosticArenaMode,
   V2_DIAGNOSTIC_ARENA_MODE_CONFIG,
@@ -98,6 +101,7 @@ export {
   type PickupUpdateResult,
 } from "./pickups";
 export {
+  createClassicCtfWorldState,
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   type CoreFrameResult,
@@ -124,6 +128,7 @@ export {
   createEmptyWorldState,
   createWorldSnapshot,
   createEmptyWorldGeometry,
+  FLANK_SWITCH_V2,
   GRAND_ARCHIVE_V2,
   getWorldMap,
   resolveWorldMap,
@@ -133,6 +138,7 @@ export {
   type WorldGeometry,
   type WorldMapData,
   type WorldMapInfo,
+  type WorldMapPresentationRect,
   type WorldRect,
   type WorldSnapshot,
   type WorldState,
