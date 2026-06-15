@@ -232,20 +232,7 @@ implements HudPort, FrameDiagnosticsPort {
 
   private layoutResult(width: number, height: number): void {
     this.resultText.setPosition(width / 2, height / 2);
-    const result = this.hudState?.matchResult;
-    if (this.hudState?.phase === "ended" && result) {
-      const headline = result.kind === "draw"
-        ? "DRAW"
-        : `${result.winnerEntryId.toUpperCase()} WINS`;
-      this.resultText.setText([
-        headline,
-        this.mobileControls
-          ? "Tap to restart\nMenu button for main menu"
-          : "Press R to restart\nPress M for menu",
-      ]).setVisible(true);
-    } else {
-      this.resultText.setVisible(false);
-    }
+    this.resultText.setVisible(false);
   }
 }
 

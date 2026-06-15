@@ -10,55 +10,91 @@
     <div id="game"></div>
     <div id="v2-main-menu" class="v2-main-menu is-hidden">
       <div class="v2-menu-card">
-        <div class="v2-menu-kicker">ARENA PROTOCOL</div>
-        <h1>CORE ARENA</h1>
-        <p class="v2-menu-intro">
-          Choose a mode, arena and local play setup.
-        </p>
         <div id="v2-menu-status" class="v2-menu-status is-hidden" role="status" aria-live="polite"></div>
-
-        <div class="v2-menu-section">
-          <div class="v2-menu-section-title">Play</div>
-          <label>Mode
-            <select id="v2-menu-mode">
-              <option value="tdm">Team Deathmatch</option>
-              <option value="ctf">Classic CTF</option>
-              <option value="one-flag">One Flag</option>
-            </select>
-          </label>
-          <label>Arena
-            <select id="v2-menu-map">
-              <option value="training-crossing-v2">Training Crossing</option>
-              <option value="grand-archive-v2">Grand Archive</option>
-              <option value="flank-switch-v2">Flank Switch</option>
-            </select>
-          </label>
-          <label>Match
-            <select id="v2-menu-players">
-              <option value="bot">Solo vs Bot</option>
-              <option value="local">Local 2 Player</option>
-            </select>
-          </label>
-          <label>Controls
-            <select id="v2-menu-controls">
-              <option value="auto">Auto detect</option>
-              <option value="touch">Touch overlay + keyboard</option>
-              <option value="keyboard">Keyboard only</option>
-            </select>
-          </label>
-          <label>SFX
-            <select id="v2-menu-sfx">
-              <option value="on">On</option>
-              <option value="off">Muted</option>
-            </select>
-          </label>
+        <div id="v2-menu-home" class="v2-menu-view">
+          <div class="v2-menu-kicker">ARENA PROTOCOL</div>
+          <h1>CORE ARENA</h1>
+          <p class="v2-menu-intro">
+            Mobile-first arena shell for Team Deathmatch, Classic CTF and One Flag.
+          </p>
+          <button id="v2-menu-play" type="button">Play</button>
+          <div class="v2-menu-help">
+            V2 stays opt-in. V1 remains available as the frozen default.
+          </div>
+          <a class="v2-menu-v1-link" href="./">Play frozen V1 Classic CTF</a>
         </div>
-
-        <button id="v2-menu-play" type="button">Play</button>
-        <div class="v2-menu-help">
-          P1: WASD + Space &nbsp; | &nbsp; Touch controls remain keyboard-compatible
+        <div id="v2-menu-setup" class="v2-menu-view is-hidden">
+          <div class="v2-menu-kicker">MATCH SETUP</div>
+          <h2>Choose Mode</h2>
+          <p class="v2-menu-intro">
+            Pick a mode and start with the current V2 arena rules.
+          </p>
+          <div class="v2-menu-section">
+            <label>Mode
+              <select id="v2-menu-mode">
+                <option value="tdm">Team Deathmatch</option>
+                <option value="ctf">Classic CTF</option>
+                <option value="one-flag">One Flag</option>
+              </select>
+            </label>
+            <label>Arena
+              <select id="v2-menu-map">
+                <option value="training-crossing-v2">Training Crossing</option>
+                <option value="grand-archive-v2">Grand Archive</option>
+                <option value="flank-switch-v2">Flank Switch</option>
+              </select>
+            </label>
+            <label>Match
+              <select id="v2-menu-players">
+                <option value="bot">Solo vs Bot</option>
+                <option value="local">Local 2 Player (Experimental)</option>
+              </select>
+            </label>
+            <label>Controls
+              <select id="v2-menu-controls">
+                <option value="auto">Auto detect</option>
+                <option value="touch">Touch overlay + keyboard</option>
+                <option value="keyboard">Keyboard only</option>
+              </select>
+            </label>
+            <label>SFX
+              <select id="v2-menu-sfx">
+                <option value="on">On</option>
+                <option value="off">Muted</option>
+              </select>
+            </label>
+          </div>
+          <div class="v2-menu-actions">
+            <button id="v2-menu-back" class="v2-menu-secondary" type="button">Back</button>
+            <button id="v2-menu-start" type="button">Start Match</button>
+          </div>
+          <div class="v2-menu-help">
+            P1: WASD + Space &nbsp; | &nbsp; Touch controls remain keyboard-compatible
+          </div>
         </div>
-        <a class="v2-menu-v1-link" href="./">Play frozen V1 Classic CTF</a>
+      </div>
+    </div>
+    <div id="v2-pause-overlay" class="v2-flow-overlay is-hidden">
+      <div class="v2-flow-card">
+        <div class="v2-menu-kicker">PAUSED</div>
+        <h2>Match Paused</h2>
+        <p class="v2-menu-intro">Resume the current match, restart it, or return to the fullscreen main menu.</p>
+        <div class="v2-flow-actions">
+          <button id="v2-pause-resume" type="button">Resume</button>
+          <button id="v2-pause-restart" class="v2-menu-secondary" type="button">Restart</button>
+          <button id="v2-pause-main-menu" class="v2-menu-secondary" type="button">Main Menu</button>
+        </div>
+      </div>
+    </div>
+    <div id="v2-result-overlay" class="v2-flow-overlay is-hidden">
+      <div class="v2-flow-card">
+        <div class="v2-menu-kicker">RESULT</div>
+        <h2 id="v2-result-title">Blue Wins</h2>
+        <p id="v2-result-detail" class="v2-menu-intro">BLUE 3 : RED 2</p>
+        <div class="v2-flow-actions">
+          <button id="v2-result-play-again" type="button">Play Again</button>
+          <button id="v2-result-main-menu" class="v2-menu-secondary" type="button">Main Menu</button>
+        </div>
       </div>
     </div>
     <button id="v2-game-menu-button" class="v2-game-menu-button is-hidden" type="button">

@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { preloadArenaAssets } from "../../../assets";
-import { buildV2MenuSearch, readV2Route } from "../../../v2Route";
+import { readV2Route } from "../../../v2Route";
 import {
   ClassicCtfBotController,
   ClassicCtfMode,
@@ -34,7 +34,9 @@ export class GameplayV2Scene extends Phaser.Scene {
   private inputAdapter?: InputAdapterPort;
   private menuKey?: Phaser.Input.Keyboard.Key;
   private pauseForVisibility = false;
+  private pauseForOverlay = false;
   private skipNextFrame = false;
+  private lastReportedMatchSignature = "";
 
   constructor() {
     super("GameplayV2Scene");
@@ -137,7 +139,9 @@ export class GameplayV2Scene extends Phaser.Scene {
       hud,
     });
     this.bridge.initialize();
+    this.publishMatchState();
     window.addEventListener("v2-sfx-changed", this.handleSfxChanged);
+    window.addEventListener("v2-overlay-state", this.handleOverlayState);
     document.addEventListener(
       "visibilitychange",
       this.handleVisibilityChange,
@@ -155,11 +159,11 @@ export class GameplayV2Scene extends Phaser.Scene {
     if (!this.bridge || !this.inputAdapter) {
       return;
     }
-    if (this.pauseForVisibility || document.hidden) {
+    if (this.pauseForVisibility || this.pauseForOverlay || document.hidden) {
       return;
     }
     if (this.menuKey && Phaser.Input.Keyboard.JustDown(this.menuKey)) {
-      window.location.search = buildV2MenuSearch(readV2Route());
+      window.dispatchEvent(new CustomEvent("v2-request-pause"));
       return;
     }
     if (this.skipNextFrame) {
@@ -168,10 +172,12 @@ export class GameplayV2Scene extends Phaser.Scene {
       return;
     }
     this.bridge.advance(this.inputAdapter.readFrame(delta));
+    this.publishMatchState();
   }
 
   private shutdown(): void {
     window.removeEventListener("v2-sfx-changed", this.handleSfxChanged);
+    window.removeEventListener("v2-overlay-state", this.handleOverlayState);
     document.removeEventListener(
       "visibilitychange",
       this.handleVisibilityChange,
@@ -183,7 +189,9 @@ export class GameplayV2Scene extends Phaser.Scene {
     this.inputAdapter = undefined;
     this.menuKey = undefined;
     this.pauseForVisibility = false;
+    this.pauseForOverlay = false;
     this.skipNextFrame = false;
+    this.lastReportedMatchSignature = "";
   }
 
   private readonly handleSfxChanged = (event: Event): void => {
@@ -203,6 +211,37 @@ export class GameplayV2Scene extends Phaser.Scene {
     this.pauseForVisibility = false;
     this.skipNextFrame = true;
   };
+
+  private readonly handleOverlayState = (event: Event): void => {
+    this.pauseForOverlay = Boolean(
+      (event as CustomEvent<{ paused?: boolean }>).detail?.paused,
+    );
+    if (this.pauseForOverlay) {
+      this.inputAdapter?.reset();
+    }
+  };
+
+  private publishMatchState(): void {
+    const hudState = this.bridge?.hudState;
+    if (!hudState) {
+      return;
+    }
+    const resultKey = hudState.matchResult?.kind === "winner"
+      ? `${hudState.matchResult.kind}:${hudState.matchResult.winnerEntryId}`
+      : hudState.matchResult?.kind ?? "none";
+    const signature = `${hudState.phase}:${resultKey}`;
+    if (signature === this.lastReportedMatchSignature) {
+      return;
+    }
+    this.lastReportedMatchSignature = signature;
+    window.dispatchEvent(new CustomEvent("v2-match-state", {
+      detail: {
+        phase: hudState.phase,
+        result: hudState.matchResult ?? null,
+        scores: hudState.scores,
+      },
+    }));
+  }
 }
 
 function prefersMobileControls(route: { controls: string; players: string }): boolean {

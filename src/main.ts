@@ -2,13 +2,21 @@ import Phaser from "phaser";
 import { GameplayV2Scene } from "./adapters/phaser";
 import {
   getWorldMap,
+  type MatchResult,
+  type ScoreEntry,
   validateWorldMapForMode,
 } from "./core";
 import { ArenaScene } from "./scenes/ArenaScene";
-import { showGameplayV2Menu } from "./v2Menu";
+import {
+  goToGameplayV2Menu,
+  hideGameplayV2Pause,
+  hideGameplayV2Result,
+  showGameplayV2Menu,
+  showGameplayV2Pause,
+  showGameplayV2Result,
+} from "./v2Menu";
 import {
   buildV2MatchSearch,
-  buildV2MenuSearch,
   readV2RouteState,
 } from "./v2Route";
 
@@ -45,11 +53,51 @@ if (showV2Menu) {
     const menuButton = document.querySelector<HTMLButtonElement>(
       "#v2-game-menu-button",
     );
+    const setIngameButtonsVisible = (visible: boolean): void => {
+      menuButton?.classList.toggle("is-hidden", !visible);
+      audioButton?.classList.toggle("is-hidden", !visible);
+    };
+    const releaseOverlayPause = (): void => {
+      window.dispatchEvent(
+        new CustomEvent("v2-overlay-state", { detail: { paused: false } }),
+      );
+    };
+    const showMenuRoute = (): void => {
+      hideGameplayV2Pause();
+      hideGameplayV2Result();
+      releaseOverlayPause();
+      if (activeRoute) {
+        goToGameplayV2Menu(activeRoute);
+      }
+    };
+    const restartCurrentMatch = (): void => {
+      hideGameplayV2Pause();
+      hideGameplayV2Result();
+      releaseOverlayPause();
+      if (activeRoute) {
+        window.location.search = buildV2MatchSearch(activeRoute);
+      }
+    };
+    const closePauseOverlay = (): void => {
+      hideGameplayV2Pause();
+      releaseOverlayPause();
+      setIngameButtonsVisible(true);
+    };
+    const openPauseOverlay = (): void => {
+      hideGameplayV2Result();
+      window.dispatchEvent(
+        new CustomEvent("v2-overlay-state", { detail: { paused: true } }),
+      );
+      setIngameButtonsVisible(false);
+      showGameplayV2Pause({
+        onResume: closePauseOverlay,
+        onRestart: restartCurrentMatch,
+        onMainMenu: showMenuRoute,
+      });
+    };
     menuButton?.classList.remove("is-hidden");
     if (menuButton && activeRoute) {
-      menuButton.onclick = () => {
-        window.location.search = buildV2MenuSearch(activeRoute);
-      };
+      menuButton.onclick = openPauseOverlay;
     }
     const audioButton = document.querySelector<HTMLButtonElement>(
       "#v2-audio-button",
@@ -81,6 +129,28 @@ if (showV2Menu) {
         );
       };
     }
+    window.addEventListener("v2-request-pause", openPauseOverlay);
+    window.addEventListener("v2-match-state", (event) => {
+      const detail = (event as CustomEvent<{
+        phase?: string;
+        result?: MatchResult | null;
+        scores?: readonly ScoreEntry[];
+      }>).detail;
+      if (detail.phase !== "ended" || !detail.result || !activeRoute) {
+        return;
+      }
+      setIngameButtonsVisible(false);
+      hideGameplayV2Pause();
+      releaseOverlayPause();
+      showGameplayV2Result({
+        headline: detail.result.kind === "draw"
+          ? "Draw"
+          : `${detail.result.winnerEntryId.toUpperCase()} Wins`,
+        detail: formatResultScores(detail.scores ?? []),
+        onPlayAgain: restartCurrentMatch,
+        onMainMenu: showMenuRoute,
+      });
+    });
   }
   new Phaser.Game({
     type: Phaser.AUTO,
@@ -103,4 +173,10 @@ function modeIdForRoute(mode: "tdm" | "ctf" | "one-flag") {
     : mode === "ctf"
     ? "classic-ctf"
     : "one-flag";
+}
+
+function formatResultScores(scores: readonly ScoreEntry[]): string {
+  const blue = scores.find((entry) => entry.teamId === "blue")?.score ?? 0;
+  const red = scores.find((entry) => entry.teamId === "red")?.score ?? 0;
+  return `BLUE ${blue} : RED ${red}`;
 }
