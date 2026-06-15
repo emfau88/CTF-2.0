@@ -2313,6 +2313,7 @@ function checkBasicAutoShootParity(): void {
 
 function checkTdmBotController(): void {
   checkBotDecisionAndMovementConfig();
+  checkBotStandoffBehavior();
   checkTdmBotCombatDecision();
   checkTdmBotSpecialWeapons();
   checkGridBotNavigator();
@@ -2534,7 +2535,12 @@ function createStationaryBotController(): TdmBotController {
   return new TdmBotController(
     "red-player",
     "blue-player",
-    { inputMagnitude: 0 },
+    {
+      inputMagnitude: 0,
+      standoffMinRange: 96,
+      standoffDesiredRange: 160,
+      standoffMaxRange: 210,
+    },
     {
       navigate: () => ({
         direction: { x: 0, y: 0 },
@@ -2608,7 +2614,12 @@ function checkBotDecisionAndMovementConfig(): void {
   const controller = new TdmBotController(
     "red-player",
     "blue-player",
-    { inputMagnitude: .5 },
+    {
+      inputMagnitude: .5,
+      standoffMinRange: 96,
+      standoffDesiredRange: 160,
+      standoffMaxRange: 210,
+    },
     {
       navigate: () => ({
         direction: { x: 0, y: 1 },
@@ -2630,6 +2641,67 @@ function checkBotDecisionAndMovementConfig(): void {
     throw new Error(
       "TDM bot decisions must delegate navigation and honor movement config.",
     );
+  }
+}
+
+function checkBotStandoffBehavior(): void {
+  const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+  const mode = new TeamDeathmatchMode();
+  mode.initialize(world);
+  world.geometry = {
+    ...world.geometry,
+    solids: [],
+    gaps: [],
+  };
+  const capturedTargets: { x: number; y: number }[] = [];
+  const controller = new TdmBotController(
+    "red-player",
+    "blue-player",
+    {
+      inputMagnitude: 1,
+      standoffMinRange: 96,
+      standoffDesiredRange: 160,
+      standoffMaxRange: 210,
+    },
+    {
+      navigate: (_from, target) => {
+        capturedTargets.push({ ...target });
+        return {
+          direction: { x: 1, y: 0 },
+          jump: false,
+        };
+      },
+      reset: () => {},
+    },
+  );
+  const red = world.actors.find((actor) => actor.id === "red-player");
+  const blue = world.actors.find((actor) => actor.id === "blue-player");
+  if (!red || !blue) {
+    throw new Error("TDM bot standoff smoke requires both players.");
+  }
+  red.position = { x: 300, y: 200 };
+  blue.position = { x: 340, y: 200 };
+  let actions = controller.readActions(createWorldSnapshot(world), 34);
+  const retreatMove = actions.find((action) => action.action === "move");
+  if (
+    retreatMove?.magnitude !== 1 ||
+    retreatMove.direction?.x !== 1 ||
+    capturedTargets[0]?.x !== 180
+  ) {
+    throw new Error("TDM bots must back away toward a standoff target when too close.");
+  }
+
+  capturedTargets.length = 0;
+  red.position = { x: 120, y: 200 };
+  blue.position = { x: 300, y: 200 };
+  actions = controller.readActions(createWorldSnapshot(world), 34);
+  const holdMove = actions.find((action) => action.action === "move");
+  if (
+    holdMove?.magnitude !== 0 ||
+    holdMove.direction?.x !== 0 ||
+    capturedTargets.length !== 0
+  ) {
+    throw new Error("TDM bots must hold a usable standoff distance instead of overlapping.");
   }
 }
 

@@ -2,7 +2,7 @@ import type {
   ActorState,
 } from "../actors";
 import type { CoreActionIntent } from "../input";
-import type { WorldSnapshot } from "../world";
+import type { WorldRect, WorldSnapshot } from "../world";
 import {
   V2_BOT_MOVEMENT_CONFIG,
   type BotMovementConfig,
@@ -11,7 +11,12 @@ import {
   GridBotNavigator,
   type BotNavigator,
 } from "./GridBotNavigator";
-import { TdmBotCombatController } from "./TdmBotCombatController";
+import {
+  directionBetween,
+  distanceBetween,
+  hasLineOfSight,
+  TdmBotCombatController,
+} from "./TdmBotCombatController";
 
 export class TdmBotController {
   private jumpHeld = false;
@@ -38,19 +43,36 @@ export class TdmBotController {
       return [this.stopIntent()];
     }
 
-    const navigation = this.navigator.navigate(
+    const engagement = planEngagement(
       actor.position,
       target.position,
-      `${target.id}:${target.lifeId}`,
-      snapshot,
-      deltaMs,
+      hasLineOfSight(actor.position, target.position, snapshot.geometry.solids),
+      crossesGap(
+        actor.position,
+        target.position,
+        snapshot.geometry.gaps,
+        this.movement.standoffMinRange * .5,
+      ),
+      this.movement,
     );
+    const navigation = engagement.holdPosition
+      ? {
+        direction: { x: 0, y: 0 } as const,
+        jump: false,
+      }
+      : this.navigator.navigate(
+        actor.position,
+        engagement.targetPosition,
+        `${target.id}:${target.lifeId}:${engagement.key}`,
+        snapshot,
+        deltaMs,
+      );
     const actions: CoreActionIntent[] = [{
       action: "move",
       phase: "held",
       actorId: actor.id,
       direction: navigation.direction,
-      magnitude: this.movement.inputMagnitude,
+      magnitude: engagement.holdPosition ? 0 : this.movement.inputMagnitude,
     }, {
       action: "aim",
       phase: "held",
@@ -112,6 +134,12 @@ export class TdmBotController {
   }
 }
 
+interface EngagementPlan {
+  readonly holdPosition: boolean;
+  readonly key: string;
+  readonly targetPosition: ActorState["position"];
+}
+
 function findActiveActor(
   snapshot: WorldSnapshot,
   actorId: string,
@@ -121,12 +149,86 @@ function findActiveActor(
   ) ?? null;
 }
 
-function directionBetween(
+function planEngagement(
+  actor: ActorState["position"],
+  target: ActorState["position"],
+  lineOfSight: boolean,
+  gapBetween: boolean,
+  movement: BotMovementConfig,
+): EngagementPlan {
+  if (!lineOfSight || gapBetween) {
+    return {
+      holdPosition: false,
+      key: "pursue",
+      targetPosition: target,
+    };
+  }
+  const distance = distanceBetween(actor, target);
+  if (
+    distance >= movement.standoffMinRange &&
+    distance <= movement.standoffMaxRange
+  ) {
+    return {
+      holdPosition: true,
+      key: "hold",
+      targetPosition: actor,
+    };
+  }
+  const axis = directionBetween(actor, target);
+  const fallbackAxis = axis.x === 0 && axis.y === 0 ? { x: -1, y: 0 } : axis;
+  return {
+    holdPosition: false,
+    key: distance < movement.standoffMinRange ? "retreat" : "close",
+    targetPosition: {
+      x: target.x - fallbackAxis.x * movement.standoffDesiredRange,
+      y: target.y - fallbackAxis.y * movement.standoffDesiredRange,
+    },
+  };
+}
+
+function crossesGap(
   from: ActorState["position"],
   to: ActorState["position"],
-): ActorState["position"] {
+  gaps: readonly WorldRect[],
+  padding: number,
+): boolean {
+  return gaps.some((gap) =>
+    lineIntersectsRect(from, to, {
+      ...gap,
+      x: gap.x - padding,
+      y: gap.y - padding,
+      width: gap.width + padding * 2,
+      height: gap.height + padding * 2,
+    })
+  );
+}
+
+function lineIntersectsRect(
+  from: ActorState["position"],
+  to: ActorState["position"],
+  rect: WorldRect,
+): boolean {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  return length > .0001 ? { x: dx / length, y: dy / length } : { x: 0, y: 0 };
+  let near = 0;
+  let far = 1;
+  for (const [origin, direction, min, max] of [
+    [from.x, dx, rect.x, rect.x + rect.width],
+    [from.y, dy, rect.y, rect.y + rect.height],
+  ] as const) {
+    if (Math.abs(direction) < .0001) {
+      if (origin < min || origin > max) {
+        return false;
+      }
+      continue;
+    }
+    const first = (min - origin) / direction;
+    const second = (max - origin) / direction;
+    near = Math.max(near, Math.min(first, second));
+    far = Math.min(far, Math.max(first, second));
+    if (near > far) {
+      return false;
+    }
+  }
+  return far >= 0 && near <= 1;
 }

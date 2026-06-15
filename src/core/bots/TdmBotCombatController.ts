@@ -97,7 +97,7 @@ export class TdmBotCombatController {
   }
 }
 
-function directionBetween(
+export function directionBetween(
   from: WorldPosition,
   to: WorldPosition,
 ): WorldPosition {
@@ -107,11 +107,11 @@ function directionBetween(
   return length > .0001 ? { x: dx / length, y: dy / length } : { x: 0, y: 0 };
 }
 
-function distanceBetween(a: WorldPosition, b: WorldPosition): number {
+export function distanceBetween(a: WorldPosition, b: WorldPosition): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function hasLineOfSight(
+export function hasLineOfSight(
   from: WorldPosition,
   to: WorldPosition,
   solids: readonly WorldRect[],
