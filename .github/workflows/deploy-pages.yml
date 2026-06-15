@@ -29,6 +29,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Linux Rollup binary
+        if: runner.os == 'Linux'
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu
+
       - name: Build
         run: npm run build
 
