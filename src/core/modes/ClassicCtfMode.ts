@@ -61,13 +61,13 @@ export class ClassicCtfMode implements GameMode {
       createFlagObjective({
         id: "red-flag",
         kind: "team-flag",
-        position: centerOf(this.map.presentation.redBase),
+        position: centerOf(this.map.gameplay.redBase),
         teamId: "red",
       }),
       createFlagObjective({
         id: "blue-flag",
         kind: "team-flag",
-        position: centerOf(this.map.presentation.blueBase),
+        position: centerOf(this.map.gameplay.blueBase),
         teamId: "blue",
       }),
     ];
@@ -134,7 +134,7 @@ export class ClassicCtfMode implements GameMode {
   handleEvent(event: GameEvent, world: WorldState): readonly GameEvent[] {
     if (
       event.type !== "actor.died" &&
-      event.type !== "diagnostic.actorFell"
+      event.type !== "actor.fell"
     ) {
       return [];
     }
@@ -262,8 +262,8 @@ export class ClassicCtfMode implements GameMode {
 
   private baseFor(teamId: TeamId): WorldMapPresentationRect {
     return teamId === "red"
-      ? this.map.presentation.redBase
-      : this.map.presentation.blueBase;
+      ? this.map.gameplay.redBase
+      : this.map.gameplay.blueBase;
   }
 
   private resetFlagToHome(

@@ -260,8 +260,8 @@ function baseFor(
   teamId: TeamId | null,
 ): WorldMapPresentationRect {
   return teamId === "red"
-    ? map.presentation.redBase
-    : map.presentation.blueBase;
+    ? map.gameplay.redBase
+    : map.gameplay.blueBase;
 }
 
 function opposingTeam(teamId: TeamId | null): TeamId {

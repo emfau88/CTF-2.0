@@ -170,6 +170,7 @@ export {
   type WorldBounds,
   type WorldGeometry,
   type WorldMapData,
+  type WorldMapGameplay,
   type WorldMapInfo,
   type WorldMapPresentationRect,
   type WorldMapValidationIssue,

@@ -129,11 +129,14 @@ export const FLANK_SWITCH_V2: WorldMapData = {
     { id: "rocket-bottom", type: "rocket", position: { x: 1250, y: 715 } },
     { id: "armor-center", type: "armor", position: { x: 1250, y: 410 } },
   ],
+  gameplay: {
+    redBase: { x: 75, y: 275, width: 190, height: 270 },
+    blueBase: { x: 2235, y: 275, width: 190, height: 270 },
+    combatZone: { x: 1050, y: 274, width: 400, height: 272 },
+  },
   presentation: {
     theme: "industrial",
     plan: "A wide industrial switchyard with three distinct routes, cross-lane switches, and longer flag runs.",
-    redBase: { x: 75, y: 275, width: 190, height: 270 },
-    blueBase: { x: 2235, y: 275, width: 190, height: 270 },
     walls,
     gaps,
     decorations: [
@@ -146,7 +149,6 @@ export const FLANK_SWITCH_V2: WorldMapData = {
       { kind: "industrial-edge-turbine", x: 1168, y: -42, width: 164, height: 164 },
       { kind: "industrial-edge-turbine", x: 1168, y: 698, width: 164, height: 164 },
     ],
-    combatZone: { x: 1050, y: 274, width: 400, height: 272 },
     botRoutes: {
       attacker: [
         { x: 2150, y: 690 }, { x: 1880, y: 690 },

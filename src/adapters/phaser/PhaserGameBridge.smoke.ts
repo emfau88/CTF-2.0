@@ -375,8 +375,8 @@ function checkWorldMapRegistry(): void {
   }
   const invalidOneFlagMap = {
     ...TRAINING_CROSSING_V2,
-    presentation: {
-      ...TRAINING_CROSSING_V2.presentation,
+    gameplay: {
+      ...TRAINING_CROSSING_V2.gameplay,
       combatZone: undefined,
     },
   };
@@ -447,10 +447,10 @@ function checkClassicCtfMode(): void {
   }
 
   const redFlagHome = {
-    x: TRAINING_CROSSING_V2.presentation.redBase.x +
-      TRAINING_CROSSING_V2.presentation.redBase.width / 2,
-    y: TRAINING_CROSSING_V2.presentation.redBase.y +
-      TRAINING_CROSSING_V2.presentation.redBase.height / 2,
+    x: TRAINING_CROSSING_V2.gameplay.redBase.x +
+      TRAINING_CROSSING_V2.gameplay.redBase.width / 2,
+    y: TRAINING_CROSSING_V2.gameplay.redBase.y +
+      TRAINING_CROSSING_V2.gameplay.redBase.height / 2,
   };
   blue.position = { ...redFlagHome };
   world.timeMs = 34;
@@ -479,7 +479,7 @@ function checkClassicCtfMode(): void {
 
   events = mode.handleEvent({
     id: "blue-fell",
-    type: "diagnostic.actorFell",
+    type: "actor.fell",
     timeMs: 68,
     sourceActorId: blue.id,
     teamId: blue.teamId ?? undefined,
@@ -514,10 +514,10 @@ function checkClassicCtfMode(): void {
   }
 
   const blueFlagHome = {
-    x: TRAINING_CROSSING_V2.presentation.blueBase.x +
-      TRAINING_CROSSING_V2.presentation.blueBase.width / 2,
-    y: TRAINING_CROSSING_V2.presentation.blueBase.y +
-      TRAINING_CROSSING_V2.presentation.blueBase.height / 2,
+    x: TRAINING_CROSSING_V2.gameplay.blueBase.x +
+      TRAINING_CROSSING_V2.gameplay.blueBase.width / 2,
+    y: TRAINING_CROSSING_V2.gameplay.blueBase.y +
+      TRAINING_CROSSING_V2.gameplay.blueBase.height / 2,
   };
   const blueBase = blueFlagHome;
   for (let capture = 1; capture <= 3; capture++) {
@@ -579,7 +579,7 @@ function checkClassicCtfBotRoles(): void {
     );
   }
 
-  blue.position = centerOfRect(TRAINING_CROSSING_V2.presentation.redBase);
+  blue.position = centerOfRect(TRAINING_CROSSING_V2.gameplay.redBase);
   snapshot = createWorldSnapshot(world);
   if (defender.chooseGoal(red, snapshot).kind !== "defend-base") {
     throw new Error("Classic CTF defenders must engage base invaders.");
@@ -735,7 +735,7 @@ function checkOneFlagFoundation(): void {
     const mode = new OneFlagMode(map);
     const started = mode.initialize(world);
     const objective = world.objectives[0];
-    const zone = map.presentation.combatZone;
+    const zone = map.gameplay.combatZone;
     const expectedX = zone
       ? zone.x + zone.width / 2
       : (map.geometry.bounds.minX + map.geometry.bounds.maxX) / 2;
@@ -781,22 +781,22 @@ function checkOneFlagFoundation(): void {
   const blue = world.actors.find((actor) => actor.id === "blue-player");
   if (!blue) throw new Error("One Flag smoke requires the blue player.");
   const center = {
-    x: TRAINING_CROSSING_V2.presentation.combatZone!.x +
-      TRAINING_CROSSING_V2.presentation.combatZone!.width / 2,
-    y: TRAINING_CROSSING_V2.presentation.combatZone!.y +
-      TRAINING_CROSSING_V2.presentation.combatZone!.height / 2,
+    x: TRAINING_CROSSING_V2.gameplay.combatZone!.x +
+      TRAINING_CROSSING_V2.gameplay.combatZone!.width / 2,
+    y: TRAINING_CROSSING_V2.gameplay.combatZone!.y +
+      TRAINING_CROSSING_V2.gameplay.combatZone!.height / 2,
   };
   const redBase = {
-    x: TRAINING_CROSSING_V2.presentation.redBase.x +
-      TRAINING_CROSSING_V2.presentation.redBase.width / 2,
-    y: TRAINING_CROSSING_V2.presentation.redBase.y +
-      TRAINING_CROSSING_V2.presentation.redBase.height / 2,
+    x: TRAINING_CROSSING_V2.gameplay.redBase.x +
+      TRAINING_CROSSING_V2.gameplay.redBase.width / 2,
+    y: TRAINING_CROSSING_V2.gameplay.redBase.y +
+      TRAINING_CROSSING_V2.gameplay.redBase.height / 2,
   };
   const blueBase = {
-    x: TRAINING_CROSSING_V2.presentation.blueBase.x +
-      TRAINING_CROSSING_V2.presentation.blueBase.width / 2,
-    y: TRAINING_CROSSING_V2.presentation.blueBase.y +
-      TRAINING_CROSSING_V2.presentation.blueBase.height / 2,
+    x: TRAINING_CROSSING_V2.gameplay.blueBase.x +
+      TRAINING_CROSSING_V2.gameplay.blueBase.width / 2,
+    y: TRAINING_CROSSING_V2.gameplay.blueBase.y +
+      TRAINING_CROSSING_V2.gameplay.blueBase.height / 2,
   };
 
   blue.position = { ...center };
@@ -828,7 +828,7 @@ function checkOneFlagFoundation(): void {
 
   events = mode.handleEvent({
     id: "one-flag-blue-fell",
-    type: "diagnostic.actorFell",
+    type: "actor.fell",
     timeMs: 68,
     sourceActorId: blue.id,
     teamId: blue.teamId ?? undefined,
@@ -1012,7 +1012,7 @@ function checkOneFlagBotEscortRuntime(): void {
         id: "red-one-flag-ally",
         kind: "bot",
         teamId: "red",
-        position: centerOfRect(TRAINING_CROSSING_V2.presentation.combatZone!),
+        position: centerOfRect(TRAINING_CROSSING_V2.gameplay.combatZone!),
         radius: 16,
         maxHealth: 100,
         maxArmor: 100,
@@ -1063,7 +1063,7 @@ function checkOneFlagBotChaseRuntime(): void {
   const runtime = createOneFlagBotRuntime(
     TRAINING_CROSSING_V2,
     (world) => {
-      const center = centerOfRect(TRAINING_CROSSING_V2.presentation.combatZone!);
+      const center = centerOfRect(TRAINING_CROSSING_V2.gameplay.combatZone!);
       const blue = world.actors.find((actor) => actor.id === "blue-player")!;
       blue.position = { ...center };
       blue.spawnPosition = { ...center };
@@ -1422,7 +1422,7 @@ function checkCollisionAndGapGroundwork(): void {
   if (
     !fallResult.fell ||
     gapActor.lifeState !== "falling" ||
-    fallResult.events[0]?.type !== "diagnostic.actorFell"
+    fallResult.events[0]?.type !== "actor.fell"
   ) {
     throw new Error("Grounded actor inside a gap must start falling.");
   }

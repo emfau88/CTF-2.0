@@ -25,6 +25,7 @@ export {
   validateWorldMapForMode,
   WORLD_MAPS,
   type WorldMapData,
+  type WorldMapGameplay,
   type WorldMapInfo,
   type WorldMapPresentationRect,
   type WorldMapValidationIssue,

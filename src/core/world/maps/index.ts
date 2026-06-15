@@ -13,6 +13,7 @@ export {
 } from "./worldMapValidation";
 export type {
   WorldMapData,
+  WorldMapGameplay,
   WorldMapDecoration,
   WorldMapDecorationKind,
   WorldMapGapPresentation,

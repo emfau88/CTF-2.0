@@ -71,7 +71,7 @@ export class OneFlagBotDecisionController {
 
     return goal(
       "control-mid",
-      centerOf(this.map.presentation.combatZone ?? boundsRect(this.map)),
+      centerOf(this.map.gameplay.combatZone ?? boundsRect(this.map)),
       `mid:${this.map.id}`,
     );
   }
@@ -143,8 +143,8 @@ function captureBaseFor(
   teamId: TeamId | null,
 ): WorldMapPresentationRect {
   return teamId === "red"
-    ? map.presentation.blueBase
-    : map.presentation.redBase;
+    ? map.gameplay.blueBase
+    : map.gameplay.redBase;
 }
 
 function escortPoint(

@@ -135,11 +135,14 @@ export const GRAND_ARCHIVE_V2: WorldMapData = {
     { id: "rocket-bottom", type: "rocket", position: { x: 1250, y: 715 } },
     { id: "armor-center", type: "armor", position: { x: 1250, y: 410 } },
   ],
+  gameplay: {
+    redBase: { x: 65, y: 285, width: 195, height: 250 },
+    blueBase: { x: 2240, y: 285, width: 195, height: 250 },
+    combatZone: { x: 970, y: 270, width: 560, height: 280 },
+  },
   presentation: {
     theme: "library",
     plan: "A wide library arena with long gallery lanes, an open central reading hall, and simple collapsed-floor shortcuts.",
-    redBase: { x: 65, y: 285, width: 195, height: 250 },
-    blueBase: { x: 2240, y: 285, width: 195, height: 250 },
     walls,
     gaps,
     decorations: [
@@ -153,7 +156,6 @@ export const GRAND_ARCHIVE_V2: WorldMapData = {
       { kind: "cobweb-spider", x: 392, y: 96, width: 72, height: 58 },
       { kind: "cobweb-spider", x: 2036, y: 666, width: 72, height: 58 },
     ],
-    combatZone: { x: 970, y: 270, width: 560, height: 280 },
     botRoutes: {
       attacker: [
         { x: 2150, y: 752 }, { x: 1850, y: 752 },

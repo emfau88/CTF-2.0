@@ -51,15 +51,18 @@ export interface WorldMapDecoration extends WorldMapPresentationRect {
   readonly kind: WorldMapDecorationKind;
 }
 
+export interface WorldMapGameplay {
+  readonly redBase: WorldMapPresentationRect;
+  readonly blueBase: WorldMapPresentationRect;
+  readonly combatZone?: WorldMapPresentationRect;
+}
+
 export interface WorldMapPresentation {
   readonly theme: WorldMapTheme;
   readonly plan: string;
-  readonly redBase: WorldMapPresentationRect;
-  readonly blueBase: WorldMapPresentationRect;
   readonly walls: readonly WorldMapWallPresentation[];
   readonly gaps: readonly WorldMapGapPresentation[];
   readonly decorations?: readonly WorldMapDecoration[];
-  readonly combatZone?: WorldMapPresentationRect;
   readonly botRoutes: {
     readonly attacker: readonly WorldPosition[];
     readonly defender: readonly WorldPosition[];
@@ -79,6 +82,7 @@ export interface WorldMapData {
   readonly navigation: WorldNavigation;
   readonly spawnPoints: readonly SpawnPoint[];
   readonly pickupSpawns: readonly WorldMapPickupSpawn[];
+  readonly gameplay: WorldMapGameplay;
   readonly presentation: WorldMapPresentation;
   readonly diagnosticSpawn: WorldPosition;
 }

@@ -24,13 +24,13 @@ export function validateWorldMapForMode(
       message: `${map.id} must define positive world bounds.`,
     });
   }
-  if (!isValidRect(map.presentation.redBase)) {
+  if (!isValidRect(map.gameplay.redBase)) {
     issues.push({
       code: "missing-red-base",
       message: `${map.id} must define a red base area.`,
     });
   }
-  if (!isValidRect(map.presentation.blueBase)) {
+  if (!isValidRect(map.gameplay.blueBase)) {
     issues.push({
       code: "missing-blue-base",
       message: `${map.id} must define a blue base area.`,
@@ -48,7 +48,7 @@ export function validateWorldMapForMode(
       message: `${map.id} must define the blue player spawn.`,
     });
   }
-  if (modeId === "one-flag" && !isValidRect(map.presentation.combatZone)) {
+  if (modeId === "one-flag" && !isValidRect(map.gameplay.combatZone)) {
     issues.push({
       code: "missing-combat-zone",
       message: `${map.id} must define a combat zone for One Flag.`,

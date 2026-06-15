@@ -105,11 +105,14 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
     { id: "rail-blue", type: "rail", position: { x: 1285, y: 500 } },
     { id: "whip-blue", type: "whip", position: { x: 1215, y: 410 } },
   ],
+  gameplay: {
+    redBase: { x: 70, y: 280, width: 190, height: 260 },
+    blueBase: { x: 1240, y: 280, width: 190, height: 260 },
+    combatZone: { x: 600, y: 288, width: 300, height: 244 },
+  },
   presentation: {
     theme: "ruins",
     plan: "Balanced starter arena with a contested central power-up court and clear jump flanks.",
-    redBase: { x: 70, y: 280, width: 190, height: 260 },
-    blueBase: { x: 1240, y: 280, width: 190, height: 260 },
     walls: [
       { x: 320, y: 112, width: 60, height: 194 },
       { x: 320, y: 514, width: 60, height: 194 },
@@ -136,7 +139,6 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
       { kind: "ruins-overgrowth", x: 390, y: 746, width: 176, height: 74 },
       { kind: "ruins-overgrowth", x: 934, y: 0, width: 176, height: 74 },
     ],
-    combatZone: { x: 600, y: 288, width: 300, height: 244 },
     botRoutes: {
       attacker: [
         { x: 1160, y: 72 }, { x: 900, y: 62 },

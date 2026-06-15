@@ -38,6 +38,7 @@ implements HudPort, FrameDiagnosticsPort {
     this.input = input;
     this.eventCount = result.events.length;
     const lifecycleEvent = [...result.events].reverse().find((event) =>
+      event.type === "actor.fell" ||
       event.type === "actor.damaged" ||
       event.type === "actor.died" ||
       event.type === "actor.respawned"

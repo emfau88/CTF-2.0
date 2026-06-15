@@ -59,7 +59,7 @@ export class OneFlagMode implements GameMode {
         id: "center-flag",
         kind: "neutral-flag",
         position: centerOf(
-          this.map.presentation.combatZone ??
+          this.map.gameplay.combatZone ??
             boundsRect(this.map),
         ),
       }),
@@ -119,7 +119,7 @@ export class OneFlagMode implements GameMode {
   handleEvent(event: GameEvent, world: WorldState): readonly GameEvent[] {
     if (
       event.type !== "actor.died" &&
-      event.type !== "diagnostic.actorFell"
+      event.type !== "actor.fell"
     ) {
       return [];
     }
@@ -245,7 +245,7 @@ export class OneFlagMode implements GameMode {
     replaceObjective(world, flag.id, {
       ...flag,
       position: centerOf(
-        this.map.presentation.combatZone ?? boundsRect(this.map),
+        this.map.gameplay.combatZone ?? boundsRect(this.map),
       ),
       state: {
         ...flag.state,
@@ -257,8 +257,8 @@ export class OneFlagMode implements GameMode {
 
   private captureTargetFor(teamId: TeamId): WorldMapPresentationRect {
     return teamId === "red"
-      ? this.map.presentation.blueBase
-      : this.map.presentation.redBase;
+      ? this.map.gameplay.blueBase
+      : this.map.gameplay.redBase;
   }
 
   private endMatch(

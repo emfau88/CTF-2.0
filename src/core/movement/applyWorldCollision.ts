@@ -20,11 +20,19 @@ export function applyWorldCollision(
     const respawned = updateFallRespawn(actor, ms);
     if (respawned) {
       events.push({
-        id: `diagnostic-respawn-${timeMs}`,
-        type: "diagnostic.actorRespawned",
+        id: `actor-respawned-${actor.id}-${timeMs}`,
+        type: "actor.respawned",
         timeMs,
-        sourceActorId: actor.id,
-        payload: { position: { ...actor.position } },
+        targetActorId: actor.id,
+        teamId: actor.teamId ?? undefined,
+        payload: {
+          lifeId: actor.lifeId,
+          spawnPointId: actor.spawnPointId,
+          position: { ...actor.position },
+          health: actor.health,
+          armor: actor.armor,
+          reason: "fall",
+        },
       });
     }
     return { collided: false, fell: false, respawned, events };
@@ -54,10 +62,11 @@ export function applyWorldCollision(
   if (insideGap && !clearsGap) {
     startFalling(actor, config);
     events.push({
-      id: `diagnostic-fall-${timeMs}`,
-      type: "diagnostic.actorFell",
+      id: `actor-fell-${actor.id}-${timeMs}`,
+      type: "actor.fell",
       timeMs,
       sourceActorId: actor.id,
+      teamId: actor.teamId ?? undefined,
       payload: {
         position: { ...actor.position },
         lastSafePosition: { ...actor.lastSafePosition },

@@ -597,8 +597,8 @@ function toPresentationLevel(map: WorldMapData): LevelData {
     height: bounds.maxY - bounds.minY,
     redSpawn: { ...redSpawn },
     blueSpawn: { ...blueSpawn },
-    redBase: rect(map.presentation.redBase),
-    blueBase: rect(map.presentation.blueBase),
+    redBase: rect(map.gameplay.redBase),
+    blueBase: rect(map.gameplay.blueBase),
     walls: map.presentation.walls.map((wall) => ({
       ...rect(wall),
       visual: wall.visual,
@@ -611,8 +611,8 @@ function toPresentationLevel(map: WorldMapData): LevelData {
       ...rect(decoration),
       kind: decoration.kind,
     })),
-    combatZone: map.presentation.combatZone
-      ? rect(map.presentation.combatZone)
+    combatZone: map.gameplay.combatZone
+      ? rect(map.gameplay.combatZone)
       : undefined,
     pickups: map.pickupSpawns.map((pickup) => ({
       kind: pickup.type,
