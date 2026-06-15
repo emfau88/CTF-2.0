@@ -48,6 +48,16 @@ canvas { display: block; }
   color: #526963;
   font-weight: 700;
 }
+.v2-menu-status {
+  padding: 10px 12px;
+  border: 1px solid rgb(183 39 45 / .24);
+  border-radius: 10px;
+  background: rgb(255 237 236 / .92);
+  color: #8c1e25;
+  font-size: 12px;
+  font-weight: 800;
+}
+.v2-menu-status.is-hidden { display: none; }
 .v2-menu-section {
   display: grid;
   grid-template-columns: 1fr 1fr;

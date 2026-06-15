@@ -12,3 +12,8 @@ export {
   GameplayCoreRuntime,
   type GameplayCoreRuntimeOptions,
 } from "./GameplayCoreRuntime";
+export {
+  clampRuntimeDeltaMs,
+  V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
+  type GameplayRuntimeTimingConfig,
+} from "./GameplayRuntimeTiming";

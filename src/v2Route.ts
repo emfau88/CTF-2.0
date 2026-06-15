@@ -13,6 +13,12 @@ export interface V2RouteConfig {
   readonly menu: boolean;
 }
 
+export interface V2RouteState {
+  readonly route: V2RouteConfig;
+  readonly issues: readonly string[];
+  readonly canStartMatch: boolean;
+}
+
 const DEFAULT_ROUTE: V2RouteConfig = {
   scene: "v2",
   mode: "tdm",
@@ -23,18 +29,50 @@ const DEFAULT_ROUTE: V2RouteConfig = {
   menu: true,
 };
 
+export function readV2RouteState(
+  search: URLSearchParams = new URLSearchParams(window.location.search),
+): V2RouteState {
+  const hasMode = search.has("mode");
+  const modeValue = search.get("mode");
+  const playersValue = search.get("players");
+  const controlsValue = search.get("controls");
+  const mapValue = search.get("map");
+  const route: V2RouteConfig = {
+    scene: "v2",
+    mode: readMode(modeValue),
+    map: mapValue ?? DEFAULT_ROUTE.map,
+    players: readPlayers(playersValue),
+    controls: readControls(controlsValue),
+    sfx: readSfx(search.get("sfx")),
+    menu: search.get("menu") === "1" || !hasMode,
+  };
+  const issues: string[] = [];
+  if (hasMode && !isMode(modeValue)) {
+    issues.push(`Unsupported V2 mode: ${modeValue ?? "missing"}.`);
+  }
+  if (hasMode && !mapValue) {
+    issues.push("Missing V2 arena map.");
+  }
+  if (hasMode && !isPlayersMode(playersValue)) {
+    issues.push(`Unsupported V2 players mode: ${playersValue ?? "missing"}.`);
+  }
+  if (hasMode && !isControlsMode(controlsValue)) {
+    issues.push(`Unsupported V2 controls mode: ${controlsValue ?? "missing"}.`);
+  }
+  return {
+    route: {
+      ...route,
+      menu: route.menu || issues.length > 0,
+    },
+    issues,
+    canStartMatch: hasMode && issues.length === 0 && route.menu === false,
+  };
+}
+
 export function readV2Route(
   search: URLSearchParams = new URLSearchParams(window.location.search),
 ): V2RouteConfig {
-  return {
-    scene: "v2",
-    mode: readMode(search.get("mode")),
-    map: search.get("map") ?? DEFAULT_ROUTE.map,
-    players: readPlayers(search.get("players")),
-    controls: readControls(search.get("controls")),
-    sfx: readSfx(search.get("sfx")),
-    menu: search.get("menu") === "1" || !search.has("mode"),
-  };
+  return readV2RouteState(search).route;
 }
 
 export function buildV2RouteSearch(
@@ -67,21 +105,29 @@ export function buildV2MatchSearch(
 }
 
 function readMode(value: string | null): V2ModeId {
-  return value === "ctf" || value === "one-flag" || value === "tdm"
-    ? value
-    : DEFAULT_ROUTE.mode;
+  return isMode(value) ? value : DEFAULT_ROUTE.mode;
 }
 
 function readPlayers(value: string | null): V2PlayersMode {
-  return value === "local" || value === "bot" ? value : DEFAULT_ROUTE.players;
+  return isPlayersMode(value) ? value : DEFAULT_ROUTE.players;
 }
 
 function readControls(value: string | null): V2ControlsMode {
-  return value === "touch" || value === "keyboard" || value === "auto"
-    ? value
-    : DEFAULT_ROUTE.controls;
+  return isControlsMode(value) ? value : DEFAULT_ROUTE.controls;
 }
 
 function readSfx(value: string | null): V2SfxMode {
   return value === "off" ? "off" : "on";
+}
+
+function isMode(value: string | null): value is V2ModeId {
+  return value === "ctf" || value === "one-flag" || value === "tdm";
+}
+
+function isPlayersMode(value: string | null): value is V2PlayersMode {
+  return value === "local" || value === "bot";
+}
+
+function isControlsMode(value: string | null): value is V2ControlsMode {
+  return value === "touch" || value === "keyboard" || value === "auto";
 }

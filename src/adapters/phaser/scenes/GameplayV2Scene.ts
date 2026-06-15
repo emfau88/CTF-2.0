@@ -42,6 +42,8 @@ export class GameplayV2Scene extends Phaser.Scene {
   private inputAdapter?: InputAdapterPort;
   private diagnosticText?: Phaser.GameObjects.Text;
   private menuKey?: Phaser.Input.Keyboard.Key;
+  private pauseForVisibility = false;
+  private skipNextFrame = false;
 
   constructor() {
     super("GameplayV2Scene");
@@ -158,6 +160,10 @@ export class GameplayV2Scene extends Phaser.Scene {
     });
     this.bridge.initialize();
     window.addEventListener("v2-sfx-changed", this.handleSfxChanged);
+    document.addEventListener(
+      "visibilitychange",
+      this.handleVisibilityChange,
+    );
 
     if (!isArenaMode) {
       this.scale.on("resize", this.centerDiagnostic, this);
@@ -173,8 +179,16 @@ export class GameplayV2Scene extends Phaser.Scene {
     if (!this.bridge || !this.inputAdapter) {
       return;
     }
+    if (this.pauseForVisibility || document.hidden) {
+      return;
+    }
     if (this.menuKey && Phaser.Input.Keyboard.JustDown(this.menuKey)) {
       window.location.search = buildV2MenuSearch(readV2Route());
+      return;
+    }
+    if (this.skipNextFrame) {
+      this.skipNextFrame = false;
+      this.inputAdapter.reset();
       return;
     }
     this.bridge.advance(this.inputAdapter.readFrame(delta));
@@ -203,6 +217,10 @@ export class GameplayV2Scene extends Phaser.Scene {
   private shutdown(): void {
     this.scale.off("resize", this.centerDiagnostic, this);
     window.removeEventListener("v2-sfx-changed", this.handleSfxChanged);
+    document.removeEventListener(
+      "visibilitychange",
+      this.handleVisibilityChange,
+    );
     this.bridge?.dispose();
     this.inputAdapter?.dispose();
     this.menuKey?.destroy();
@@ -210,6 +228,8 @@ export class GameplayV2Scene extends Phaser.Scene {
     this.inputAdapter = undefined;
     this.diagnosticText = undefined;
     this.menuKey = undefined;
+    this.pauseForVisibility = false;
+    this.skipNextFrame = false;
   }
 
   private readonly handleSfxChanged = (event: Event): void => {
@@ -217,6 +237,17 @@ export class GameplayV2Scene extends Phaser.Scene {
       (event as CustomEvent<{ enabled?: boolean }>).detail?.enabled,
     );
     this.sound.mute = !enabled;
+  };
+
+  private readonly handleVisibilityChange = (): void => {
+    if (document.hidden) {
+      this.pauseForVisibility = true;
+      this.skipNextFrame = true;
+      this.inputAdapter?.reset();
+      return;
+    }
+    this.pauseForVisibility = false;
+    this.skipNextFrame = true;
   };
 }
 

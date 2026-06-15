@@ -174,7 +174,8 @@ sich wie ihre V1-Version an.
 - [x] Teamseiten, Health-/Armor-Pickups und Pickup-Werte entsprechen V1.
 - [x] Mobile-TDM besitzt einen einfachen Red Bot als Einzelspieler-Gegner.
 - [x] TDM-Bots navigieren, springen und verwenden Spezialwaffen.
-- [ ] CTF-Rollen und One-Flag-Ziele folgen spaeter.
+- [x] CTF-Rollen und One-Flag-Ziele sind ueber getrennte
+      Entscheidungscontroller angebunden.
 
 ### Aktueller V2-Audio-Slice
 
@@ -254,10 +255,10 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Training Crossing: Gaps migrieren.
 - [x] Training Crossing: Team-Spawns migrieren.
 - [x] Training Crossing: Health-/Armor-Pickup-Platzierungen migrieren.
-- [ ] Objective-Slots beziehungsweise Flag-Basen migrieren.
-- [ ] Map-Daten beim Laden validieren.
-- [ ] Mode-Kompatibilitaet einer Map validieren.
-- [ ] Keine Phaser-GameObjects in Map-Daten speichern.
+- [x] Objective-Slots beziehungsweise Flag-Basen migrieren.
+- [x] Map-Daten beim Laden validieren.
+- [x] Mode-Kompatibilitaet einer Map validieren.
+- [x] Keine Phaser-GameObjects in Map-Daten speichern.
 - [x] Training Crossing: V1-Optik und Platzierungen beibehalten.
 - [x] Grand Archive: Solids, Gaps, Team-Spawns und Pickups migrieren.
 - [x] Grand Archive: Bibliotheksassets, Lesetische, Kerzen, Staub und
@@ -278,9 +279,9 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
   aus der ausgewaehlten Map.
 - `PhaserArenaRendererPort` uebersetzt die Plain-Data-Praesentation am
   Adapterrand in das vorhandene Arena-Rendering.
-- Unbekannte Map-IDs fallen derzeit sicher auf Training Crossing zurueck.
-  Strikte Ablehnung und Mode-Kompatibilitaetsvalidierung bleiben Teil der
-  Produktionshaertung.
+- Unbekannte Map-IDs und inkompatible Mode-/Map-Konfigurationen werden vor
+  Matchstart strikt abgelehnt und mit sichtbarer Ursache ins V2-Menue
+  zurueckgefuehrt.
 - Build, kompletter Core-Smoke, V2-Menue, Grand Archive Desktop/Local,
   Grand Archive Touch/Bot und Browser-Konsole wurden am 13.06.2026 geprueft.
 - Flank Switch wurde am 14.06.2026 mit komplettem Core-Smoke,
@@ -400,7 +401,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 - [x] Touch-Steuerung mit V1-Paritaet anbinden.
 - [x] Touch-Overlay und WASD/Space koennen denselben P1 steuern.
 - [x] Settings und Audiooptionen integrieren.
-- [ ] UI konfiguriert nur Matchdaten und enthaelt keine Spielregeln.
+- [x] UI konfiguriert nur Matchdaten und enthaelt keine Spielregeln.
 
 ### Arena-Flow-/Settings-Slice
 
@@ -418,20 +419,55 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 
 ## Meilenstein 10: Produktionsqualitaet
 
-- [ ] Simulationsschritte und `dt`-Grenzen festlegen.
-- [ ] Tab-Wechsel und lange Frame-Pausen korrekt behandeln.
+- [x] Simulationsschritte und `dt`-Grenzen festlegen.
+- [x] Tab-Wechsel und lange Frame-Pausen korrekt behandeln.
 - [ ] Performance mit vielen Actors und Projectiles messen.
 - [ ] Objekt-Pooling nur bei nachgewiesenem Bedarf einsetzen.
 - [ ] Audio- und Effekt-Events vollstaendig abdecken.
-- [ ] Pause-Verhalten definieren.
-- [ ] Verschiedene Aufloesungen testen.
-- [ ] Desktop-Browser testen.
+- [x] Pause-Verhalten definieren.
+- [x] Verschiedene Aufloesungen testen.
+- [x] Desktop-Browser testen.
 - [ ] Relevante Mobile-Browser testen.
-- [ ] Deterministische Core-Tests ausbauen.
-- [ ] Regressionstests fuer jeden Modus pflegen.
-- [ ] Ungueltige Maps und Konfigurationen sauber ablehnen.
-- [ ] Production Build pruefen.
+- [x] Deterministische Core-Tests ausbauen.
+- [x] Regressionstests fuer jeden Modus pflegen.
+- [x] Ungueltige Maps und Konfigurationen sauber ablehnen.
+- [x] Production Build pruefen.
 - [ ] V2 erst nach vollstaendiger Abnahme zum Standard machen.
+
+### Runtime-Haertungs-/Validierungs-Slice
+
+- `GameplayCoreRuntime` klemmt uebergrosse Frame-Deltas zentral auf einen
+  verbindlichen Maximalwert, statt Match-, Actor-, Pickup- und Combat-Zeit
+  ungebremst fortzuschreiben.
+- `GameplayV2Scene` pausiert die Simulation bei `document.hidden` und
+  verwirft den ersten Rueckkehr-Frame, damit Tab-Wechsel und Fokusverlust nicht
+  zu einem grossen Nachhol-Update fuehren.
+- V2-Routen werden vor Matchstart strikt geprueft; ungueltige `mode`-,
+  `map`-, `players`- oder `controls`-Werte starten kein Match mehr, sondern
+  fuehren mit sichtbarer Ursache ins V2-Menue zurueck.
+- `validateWorldMapForMode()` und `assertWorldMapSupportsMode()` sichern Bases,
+  Team-Spawns und fuer One Flag die Combat-Zone als mode-relevante
+  Mindestvertraege ab.
+
+### Abschlussabnahme vom 15.06.2026
+
+- Production Build und vollstaendiger Core-Smoke sind erfolgreich; als einzige
+  Build-Meldung bleibt die bekannte Vite-Warnung zur Chunkgroesse.
+- Die komplette V2-Matrix aus drei Modi, drei Karten und den Setups
+  Desktop/Local, Desktop/Bot und Touch/Bot wurde in 27 Browserstarts ohne
+  Konsolenfehler geprueft.
+- Desktop-Input, Touch-Stick, Touch-Jump, gemeinsamer Menu-Pfad und
+  SFX-Umschaltung wurden im laufenden Match direkt ausgeloest.
+- Desktop `1280x720`, Mobile Portrait `390x844` und Mobile Landscape
+  `844x390` halten Canvas, HUD und Touch-Bedienelemente innerhalb des
+  sichtbaren Bereichs.
+- V1 startet weiterhin unter `/CTF/`; V2 bleibt opt-in und lehnt ungueltige
+  Routen sichtbar ab.
+- Offen bleiben reale Mobile-Browser-/Geraetetests, Lastmessungen mit vielen
+  Actors und Projectiles, die verbindliche Damage-/Hurt-Sound-Entscheidung,
+  Kerzenreaktionen sowie die finale Desktop-/Mobile-HUD-Politur.
+- V2 wird erst nach Schliessen dieser Produktluecken und einer ausdruecklichen
+  finalen Abnahme zum Standard.
 
 ## Qualitaets-Gate fuer jeden Meilenstein
 

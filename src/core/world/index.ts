@@ -18,11 +18,14 @@ export {
 export {
   FLANK_SWITCH_V2,
   GRAND_ARCHIVE_V2,
+  assertWorldMapSupportsMode,
   getWorldMap,
   resolveWorldMap,
   TRAINING_CROSSING_V2,
+  validateWorldMapForMode,
   WORLD_MAPS,
   type WorldMapData,
   type WorldMapInfo,
   type WorldMapPresentationRect,
+  type WorldMapValidationIssue,
 } from "./maps";

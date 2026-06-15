@@ -7,6 +7,7 @@ import {
 
 interface V2MenuElements {
   readonly root: HTMLElement;
+  readonly status: HTMLElement;
   readonly mode: HTMLSelectElement;
   readonly map: HTMLSelectElement;
   readonly players: HTMLSelectElement;
@@ -15,7 +16,7 @@ interface V2MenuElements {
   readonly play: HTMLButtonElement;
 }
 
-export function showGameplayV2Menu(): void {
+export function showGameplayV2Menu(statusMessage?: string): void {
   const elements = readMenuElements();
   const route = readV2Route();
   document.documentElement.style.setProperty(
@@ -27,6 +28,8 @@ export function showGameplayV2Menu(): void {
   elements.players.value = route.players;
   elements.controls.value = route.controls;
   elements.sfx.value = route.sfx;
+  elements.status.textContent = statusMessage ?? "";
+  elements.status.classList.toggle("is-hidden", !statusMessage);
   elements.root.classList.remove("is-hidden");
   const syncControls = (): void => {
     const localMatch = elements.players.value === "local";
@@ -52,6 +55,7 @@ function readMenuElements(): V2MenuElements {
   const root = requiredElement<HTMLElement>("v2-main-menu");
   return {
     root,
+    status: requiredElement<HTMLElement>("v2-menu-status"),
     mode: requiredElement<HTMLSelectElement>("v2-menu-mode"),
     map: requiredElement<HTMLSelectElement>("v2-menu-map"),
     players: requiredElement<HTMLSelectElement>("v2-menu-players"),

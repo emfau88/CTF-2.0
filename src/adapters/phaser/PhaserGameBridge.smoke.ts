@@ -11,6 +11,7 @@ import {
   createPickupState,
   createScoreBoardState,
   createTeamDeathmatchWorldState,
+  clampRuntimeDeltaMs,
   ClassicCtfBotController,
   ClassicCtfBotDecisionController,
   DiagnosticArenaMode,
@@ -31,12 +32,14 @@ import {
   TRAINING_CROSSING_V2,
   updatePickups,
   updateProjectiles,
+  validateWorldMapForMode,
   V2_ACTOR_LIFECYCLE_CONFIG,
   V2_ARENA_PICKUP_PARITY_CONFIG,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_COLLISION_GROUNDWORK_CONFIG,
   V2_DIAGNOSTIC_BLASTER_CONFIG,
   V2_DIAGNOSTIC_PICKUP_CONFIG,
+  V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
   V2_GROUND_PARITY_CONFIG,
   V2_JUMP_PARITY_CONFIG,
 } from "../../core";
@@ -50,6 +53,7 @@ import type {
 import type { WorldGeometry } from "../../core";
 import { createDiagnosticWorldState } from "../../core/runtime/createDiagnosticWorldState";
 import { PhaserGameBridge } from "./PhaserGameBridge";
+import { readV2RouteState } from "../../v2Route";
 import {
   resolveMobileWeaponReleaseDirection,
   resolveMobileWeaponTapDirection,
@@ -218,6 +222,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkMatchLifecycle();
   checkScoreSafety();
   checkMobileWeaponTapTargeting();
+  checkRuntimeTimingAndRouteValidation();
   checkWorldMapRegistry();
   checkClassicCtfMode();
   checkOneFlagFoundation();
@@ -318,6 +323,39 @@ function checkMobileWeaponTapTargeting(): void {
   }
 }
 
+function checkRuntimeTimingAndRouteValidation(): void {
+  if (
+    clampRuntimeDeltaMs(-40) !== 0 ||
+    clampRuntimeDeltaMs(34) !== 34 ||
+    clampRuntimeDeltaMs(900) !== V2_GAMEPLAY_RUNTIME_TIMING_CONFIG.maxFrameDeltaMs
+  ) {
+    throw new Error("Gameplay runtime must clamp frame deltas to the approved range.");
+  }
+
+  const runtime = new GameplayCoreRuntime();
+  runtime.initialize();
+  const advanced = runtime.advance({
+    sequence: 1,
+    timeMs: 999,
+    deltaMs: 999,
+    actions: [],
+  });
+  if (advanced.snapshot.timeMs !== V2_GAMEPLAY_RUNTIME_TIMING_CONFIG.maxFrameDeltaMs) {
+    throw new Error("Gameplay runtime must not advance time by an oversized frame.");
+  }
+
+  const invalidRoute = readV2RouteState(new URLSearchParams(
+    "scene=v2&mode=invalid&map=missing-map&players=weird&controls=broken",
+  ));
+  if (
+    invalidRoute.canStartMatch ||
+    invalidRoute.issues.length < 3 ||
+    invalidRoute.route.menu !== true
+  ) {
+    throw new Error("Invalid V2 routes must be rejected into the menu path.");
+  }
+}
+
 function checkWorldMapRegistry(): void {
   if (
     getWorldMap("training-crossing-v2")?.displayName !== "Training Crossing" ||
@@ -327,6 +365,27 @@ function checkWorldMapRegistry(): void {
     resolveWorldMap("missing-map").id !== "training-crossing-v2"
   ) {
     throw new Error("V2 map registry must resolve known maps and fallback safely.");
+  }
+  if (
+    validateWorldMapForMode(TRAINING_CROSSING_V2, "team-deathmatch").length !== 0 ||
+    validateWorldMapForMode(TRAINING_CROSSING_V2, "classic-ctf").length !== 0 ||
+    validateWorldMapForMode(TRAINING_CROSSING_V2, "one-flag").length !== 0
+  ) {
+    throw new Error("Playable V2 maps must validate for supported modes.");
+  }
+  const invalidOneFlagMap = {
+    ...TRAINING_CROSSING_V2,
+    presentation: {
+      ...TRAINING_CROSSING_V2.presentation,
+      combatZone: undefined,
+    },
+  };
+  if (
+    !validateWorldMapForMode(invalidOneFlagMap, "one-flag").some((issue) =>
+      issue.code === "missing-combat-zone"
+    )
+  ) {
+    throw new Error("One Flag map validation must reject missing combat zones.");
   }
 
   const world = createTeamDeathmatchWorldState(GRAND_ARCHIVE_V2);
@@ -1748,23 +1807,33 @@ function checkMatchLifecycle(): void {
 
   const ended = runtime.advance({
     sequence: 2,
-    timeMs: 15_034,
-    deltaMs: 15_000,
+    timeMs: 68,
+    deltaMs: 34,
     actions: [],
   });
+  let timedEnd = ended;
+  for (let sequence = 3; sequence <= 152; sequence++) {
+    timedEnd = runtime.advance({
+      sequence,
+      timeMs: sequence * 100,
+      deltaMs: 100,
+      actions: [],
+    });
+    if (timedEnd.snapshot.match?.phase === "ended") break;
+  }
   if (
-    ended.snapshot.match?.phase !== "ended" ||
-    ended.snapshot.match.remainingMs !== 0 ||
-    ended.snapshot.match.result?.kind !== "winner" ||
-    ended.snapshot.match.result.winnerEntryId !== "blue" ||
-    !ended.events.some((event) => event.type === "match.ended")
+    timedEnd.snapshot.match?.phase !== "ended" ||
+    timedEnd.snapshot.match.remainingMs !== 0 ||
+    timedEnd.snapshot.match.result?.kind !== "winner" ||
+    timedEnd.snapshot.match.result.winnerEntryId !== "blue" ||
+    !timedEnd.events.some((event) => event.type === "match.ended")
   ) {
     throw new Error("Diagnostic match must end by timer with a result.");
   }
 
   const rejectedScore = runtime.advance({
-    sequence: 3,
-    timeMs: 15_068,
+    sequence: 153,
+    timeMs: 15_300,
     deltaMs: 34,
     actions: [
       { action: "debugScore", phase: "pressed" },
@@ -1788,25 +1857,34 @@ function checkMatchLifecycle(): void {
     rejectedScore.snapshot.scoreBoard.entries.find((entry) =>
         entry.id === "blue"
       )?.score !== 1 ||
-    rejectedScore.snapshot.timeMs !== ended.snapshot.timeMs ||
+    rejectedScore.snapshot.timeMs !== timedEnd.snapshot.timeMs ||
     rejectedScore.snapshot.projectiles.length !==
-      ended.snapshot.projectiles.length ||
+      timedEnd.snapshot.projectiles.length ||
     rejectedScore.snapshot.actors[0]?.position.x !==
-      ended.snapshot.actors[0]?.position.x ||
+      timedEnd.snapshot.actors[0]?.position.x ||
     rejectedScore.snapshot.actors[0]?.position.y !==
-      ended.snapshot.actors[0]?.position.y
+      timedEnd.snapshot.actors[0]?.position.y
   ) {
     throw new Error("Ended matches must freeze gameplay simulation.");
   }
 
   const drawRuntime = new GameplayCoreRuntime();
   drawRuntime.initialize();
-  const draw = drawRuntime.advance({
+  let draw = drawRuntime.advance({
     sequence: 1,
-    timeMs: 15_000,
-    deltaMs: 15_000,
+    timeMs: 34,
+    deltaMs: 34,
     actions: [],
   });
+  for (let sequence = 2; sequence <= 151; sequence++) {
+    draw = drawRuntime.advance({
+      sequence,
+      timeMs: sequence * 100,
+      deltaMs: 100,
+      actions: [],
+    });
+    if (draw.snapshot.match?.phase === "ended") break;
+  }
   if (draw.snapshot.match?.result?.kind !== "draw") {
     throw new Error("Tied diagnostic score boards must end in a draw.");
   }

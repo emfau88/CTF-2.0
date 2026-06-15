@@ -6,6 +6,11 @@ export {
   resolveWorldMap,
   WORLD_MAPS,
 } from "./worldMapRegistry";
+export {
+  assertWorldMapSupportsMode,
+  validateWorldMapForMode,
+  type WorldMapValidationIssue,
+} from "./worldMapValidation";
 export type {
   WorldMapData,
   WorldMapDecoration,

@@ -1,25 +1,45 @@
 import Phaser from "phaser";
 import { GameplayV2Scene } from "./adapters/phaser";
+import {
+  getWorldMap,
+  validateWorldMapForMode,
+} from "./core";
 import { ArenaScene } from "./scenes/ArenaScene";
 import { showGameplayV2Menu } from "./v2Menu";
 import {
   buildV2MatchSearch,
   buildV2MenuSearch,
-  readV2Route,
+  readV2RouteState,
 } from "./v2Route";
 
 const search = new URLSearchParams(window.location.search);
 const useGameplayV2Shell = search.get("scene") === "v2";
-const route = useGameplayV2Shell ? readV2Route(search) : null;
-const activeRoute = route ? { ...route } : null;
-const showV2Menu = useGameplayV2Shell && Boolean(activeRoute?.menu);
+const routeState = useGameplayV2Shell ? readV2RouteState(search) : null;
+const activeRoute = routeState ? { ...routeState.route } : null;
+const routeIssues = routeState ? [...routeState.issues] : [];
+if (useGameplayV2Shell && activeRoute && routeState?.canStartMatch) {
+  const map = getWorldMap(activeRoute.map);
+  if (!map) {
+    routeIssues.push(`Unknown V2 arena map: ${activeRoute.map}.`);
+    activeRoute.menu = true;
+  } else {
+    for (const issue of validateWorldMapForMode(map, modeIdForRoute(activeRoute.mode))) {
+      routeIssues.push(issue.message);
+    }
+    if (routeIssues.length > 0) {
+      activeRoute.menu = true;
+    }
+  }
+}
+const showV2Menu = useGameplayV2Shell &&
+  Boolean(activeRoute?.menu || routeIssues.length > 0);
 
 if (useGameplayV2Shell) {
   document.querySelector<HTMLElement>("#hud")?.setAttribute("hidden", "");
 }
 
 if (showV2Menu) {
-  showGameplayV2Menu();
+  showGameplayV2Menu(routeIssues[0]);
 } else {
   if (useGameplayV2Shell) {
     const menuButton = document.querySelector<HTMLButtonElement>(
@@ -75,4 +95,12 @@ if (showV2Menu) {
     render: { antialias: true },
     scene: [useGameplayV2Shell ? GameplayV2Scene : ArenaScene],
   });
+}
+
+function modeIdForRoute(mode: "tdm" | "ctf" | "one-flag") {
+  return mode === "tdm"
+    ? "team-deathmatch"
+    : mode === "ctf"
+    ? "classic-ctf"
+    : "one-flag";
 }

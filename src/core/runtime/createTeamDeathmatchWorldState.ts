@@ -4,6 +4,7 @@ import {
   V2_ARENA_PICKUP_PARITY_CONFIG,
 } from "../pickups";
 import {
+  assertWorldMapSupportsMode,
   createEmptyWorldState,
   TRAINING_CROSSING_V2,
   type WorldMapData,
@@ -13,6 +14,7 @@ import {
 export function createTeamDeathmatchWorldState(
   map: WorldMapData = TRAINING_CROSSING_V2,
 ): WorldState {
+  assertWorldMapSupportsMode(map, "team-deathmatch");
   const world = createEmptyWorldState("team-deathmatch");
   world.geometry = {
     bounds: { ...map.geometry.bounds },

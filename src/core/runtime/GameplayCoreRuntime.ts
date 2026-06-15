@@ -18,6 +18,7 @@ import {
 import type { CoreFrameResult, CoreRuntime } from "./coreRuntime";
 import { createDiagnosticWorldState } from "./createDiagnosticWorldState";
 import { dispatchModeEvents } from "./dispatchModeEvents";
+import { clampRuntimeDeltaMs } from "./GameplayRuntimeTiming";
 import { updateActorWorld } from "./updateActorWorld";
 import { updateCombatWorld } from "./updateCombatWorld";
 import { updateDiagnosticControlledActor } from "./updateDiagnosticControlledActor";
@@ -60,6 +61,11 @@ export class GameplayCoreRuntime implements CoreRuntime {
   }
 
   advance(input: CoreInputFrame): CoreFrameResult {
+    const deltaMs = clampRuntimeDeltaMs(input.deltaMs);
+    const sanitizedInput = {
+      ...input,
+      deltaMs,
+    };
     if (isMatchEnded(this.world) && hasRestartAction(input)) {
       return this.initialize();
     }
@@ -68,34 +74,34 @@ export class GameplayCoreRuntime implements CoreRuntime {
       return this.createFrameResult();
     }
 
-    this.world.timeMs += Math.max(0, input.deltaMs);
+    this.world.timeMs += deltaMs;
     const events: GameEvent[] = [];
-    events.push(...this.mode.update(this.world, input.deltaMs));
+    events.push(...this.mode.update(this.world, deltaMs));
     if (isMatchEnded(this.world)) {
       this.currentEvents = events;
       return this.createFrameResult();
     }
 
-    updateActorWorld(this.world, this.mode, input.deltaMs, events);
+    updateActorWorld(this.world, this.mode, deltaMs, events);
     if (isMatchEnded(this.world)) {
       return this.finishFrame(events);
     }
-    updateDiagnosticModeInput(this.world, this.mode, input, events);
-    this.updateControlledActor(input, events);
+    updateDiagnosticModeInput(this.world, this.mode, sanitizedInput, events);
+    this.updateControlledActor(sanitizedInput, events);
     if (isMatchEnded(this.world)) {
       return this.finishFrame(events);
     }
     updateCombatWorld(
       this.world,
       this.mode,
-      input.deltaMs,
+      deltaMs,
       events,
       this.basicAutoAttack,
     );
     if (isMatchEnded(this.world)) {
       return this.finishFrame(events);
     }
-    updatePickupWorld(this.world, this.mode, input.deltaMs, events);
+    updatePickupWorld(this.world, this.mode, deltaMs, events);
 
     return this.finishFrame(events);
   }
