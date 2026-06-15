@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { GameplayV2Scene } from "./adapters/phaser";
+import { shouldUseGameplayV2Shell } from "./bootSceneSelection";
 import {
   getWorldMap,
   type MatchResult,
@@ -21,7 +22,10 @@ import {
 } from "./v2Route";
 
 const search = new URLSearchParams(window.location.search);
-const useGameplayV2Shell = search.get("scene") === "v2";
+const useGameplayV2Shell = shouldUseGameplayV2Shell(
+  window.location,
+  import.meta.env.BASE_URL,
+);
 const routeState = useGameplayV2Shell ? readV2RouteState(search) : null;
 const activeRoute = routeState ? { ...routeState.route } : null;
 const routeIssues = routeState ? [...routeState.issues] : [];

@@ -13,6 +13,7 @@ import {
   clampRuntimeDeltaMs,
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
 } from "../src/core";
+import { shouldUseGameplayV2Shell } from "../src/bootSceneSelection";
 import { readV2RouteState } from "../src/v2Route";
 
 test("gameplay core smoke passes the full phaser game bridge check", () => {
@@ -40,6 +41,25 @@ test("v2 route validation rejects invalid match routes", () => {
     "Unsupported V2 players mode: ???.",
     "Unsupported V2 controls mode: bad.",
   ]);
+});
+
+test("scene selection keeps /CTF/ on v1 and defaults /CTF-2.0/ to v2", () => {
+  assert.equal(shouldUseGameplayV2Shell({
+    pathname: "/CTF/",
+    search: "",
+  }), false);
+  assert.equal(shouldUseGameplayV2Shell({
+    pathname: "/CTF-2.0/",
+    search: "",
+  }), true);
+  assert.equal(shouldUseGameplayV2Shell({
+    pathname: "/CTF-2.0/",
+    search: "?scene=v1",
+  }), false);
+  assert.equal(shouldUseGameplayV2Shell({
+    pathname: "/CTF/",
+    search: "?scene=v2",
+  }), true);
 });
 
 test("production arena modes do not emit diagnostic movement events", () => {
