@@ -185,8 +185,8 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   ) {
     throw new Error("Diagnostic actor must accelerate with V2 ground movement.");
   }
-  if (next.events[0]?.type !== "diagnostic.actorMoved") {
-    throw new Error("Diagnostic movement must emit a serializable event.");
+  if (next.events[0]?.type !== "actor.moved") {
+    throw new Error("Diagnostic movement must emit a serializable actor event.");
   }
   const deceleratedActor = decelerated.snapshot.actors[0];
   if (

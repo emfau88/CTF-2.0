@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { runPhaserGameBridgeSmokeCheck } from "../src/adapters/phaser/PhaserGameBridge.smoke";
 import {
-  runPhaserGameBridgeSmokeCheck,
-} from "../src/adapters/phaser/PhaserGameBridge.smoke";
-import {
+  ClassicCtfMode,
+  createClassicCtfWorldState,
+  createOneFlagWorldState,
+  createTeamDeathmatchWorldState,
+  GameplayCoreRuntime,
+  OneFlagMode,
+  TeamDeathmatchMode,
+  TRAINING_CROSSING_V2,
   clampRuntimeDeltaMs,
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
 } from "../src/core";
@@ -34,4 +40,46 @@ test("v2 route validation rejects invalid match routes", () => {
     "Unsupported V2 players mode: ???.",
     "Unsupported V2 controls mode: bad.",
   ]);
+});
+
+test("production arena modes do not emit diagnostic movement events", () => {
+  const runtimes = [
+    new GameplayCoreRuntime({
+      mode: new TeamDeathmatchMode(),
+      createWorld: () => createTeamDeathmatchWorldState(TRAINING_CROSSING_V2),
+    }),
+    new GameplayCoreRuntime({
+      mode: new ClassicCtfMode(TRAINING_CROSSING_V2),
+      createWorld: () => createClassicCtfWorldState(TRAINING_CROSSING_V2),
+    }),
+    new GameplayCoreRuntime({
+      mode: new OneFlagMode(TRAINING_CROSSING_V2),
+      createWorld: () => createOneFlagWorldState(TRAINING_CROSSING_V2),
+    }),
+  ];
+
+  for (const runtime of runtimes) {
+    runtime.initialize();
+    const result = runtime.advance({
+      sequence: 1,
+      timeMs: 16,
+      deltaMs: 16,
+      actions: [{
+        action: "move",
+        phase: "held",
+        actorId: "blue-player",
+        direction: { x: 1, y: 0 },
+        magnitude: 1,
+      }, {
+        action: "aim",
+        phase: "held",
+        actorId: "blue-player",
+        direction: { x: 1, y: 0 },
+      }],
+    });
+    assert.equal(
+      result.events.some((event) => event.type === "diagnostic.actorMoved"),
+      false,
+    );
+  }
 });

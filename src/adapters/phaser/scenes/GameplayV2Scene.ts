@@ -16,20 +16,12 @@ import {
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
 } from "../../../core";
 import {
-  NoopAudioPort,
-  NoopEffectsPort,
-} from "../../noop";
-import {
   AugmentedInputAdapter,
   type InputAdapterPort,
 } from "../../input";
-import { PhaserDiagnosticHudPort } from "../PhaserDiagnosticHudPort";
 import {
   PhaserDiagnosticInputAdapter,
 } from "../PhaserDiagnosticInputAdapter";
-import {
-  PhaserDiagnosticRendererPort,
-} from "../PhaserDiagnosticRendererPort";
 import { PhaserArenaAudioPort } from "../PhaserArenaAudioPort";
 import { PhaserArenaRendererPort } from "../PhaserArenaRendererPort";
 import { PhaserGameBridge } from "../PhaserGameBridge";
@@ -40,7 +32,6 @@ import { PhaserWeaponEffectsPort } from "../PhaserWeaponEffectsPort";
 export class GameplayV2Scene extends Phaser.Scene {
   private bridge?: PhaserGameBridge;
   private inputAdapter?: InputAdapterPort;
-  private diagnosticText?: Phaser.GameObjects.Text;
   private menuKey?: Phaser.Input.Keyboard.Key;
   private pauseForVisibility = false;
   private skipNextFrame = false;
@@ -58,28 +49,25 @@ export class GameplayV2Scene extends Phaser.Scene {
     const isTeamDeathmatch = route.mode === "tdm";
     const isClassicCtf = route.mode === "ctf";
     const isOneFlag = route.mode === "one-flag";
-    const isArenaMode = isTeamDeathmatch || isClassicCtf || isOneFlag;
     const selectedMap = resolveWorldMap(route.map);
-    const useMobileControls = isArenaMode && prefersMobileControls(route);
-    const useBotOpponent = isArenaMode &&
-      prefersBotOpponent(route.players, useMobileControls);
+    // Product V2 routes only resolve arena modes via readV2Route().
+    const useMobileControls = prefersMobileControls(route);
+    const useBotOpponent = prefersBotOpponent(route.players, useMobileControls);
     this.sound.mute = route.sfx === "off";
-    const runtime = isArenaMode
-      ? new GameplayCoreRuntime({
-        mode: isClassicCtf
-          ? new ClassicCtfMode(selectedMap)
-          : isOneFlag
-          ? new OneFlagMode(selectedMap)
-          : new TeamDeathmatchMode(),
-        createWorld: () => isClassicCtf
-          ? createClassicCtfWorldState(selectedMap)
-          : isOneFlag
-          ? createOneFlagWorldState(selectedMap)
-          : createTeamDeathmatchWorldState(selectedMap),
-        basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
-        allowManualPrimaryFire: false,
-      })
-      : new GameplayCoreRuntime();
+    const runtime = new GameplayCoreRuntime({
+      mode: isClassicCtf
+        ? new ClassicCtfMode(selectedMap)
+        : isOneFlag
+        ? new OneFlagMode(selectedMap)
+        : new TeamDeathmatchMode(),
+      createWorld: () => isClassicCtf
+        ? createClassicCtfWorldState(selectedMap)
+        : isOneFlag
+        ? createOneFlagWorldState(selectedMap)
+        : createTeamDeathmatchWorldState(selectedMap),
+      basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+      allowManualPrimaryFire: false,
+    });
     const mobileInput = useMobileControls
       ? new PhaserMobileInputAdapter(
         this,
@@ -107,21 +95,17 @@ export class GameplayV2Scene extends Phaser.Scene {
         () => this.bridge?.snapshot ?? runtime.snapshot,
       )
       : undefined;
-    const hud = isArenaMode
-      ? new PhaserArenaHudPort(
-        this,
-        useMobileControls,
-        useBotOpponent,
-        () => mobileInput?.requestRestart(),
-      )
-      : this.createDiagnosticHud();
+    const hud = new PhaserArenaHudPort(
+      this,
+      useMobileControls,
+      useBotOpponent,
+      () => mobileInput?.requestRestart(),
+    );
     const playerInput = useMobileControls && mobileInput
       ? mobileInput
       : new PhaserDiagnosticInputAdapter(
         this,
-        isArenaMode
-          ? useBotOpponent ? "tdm-solo" : "tdm"
-          : "diagnostic",
+        useBotOpponent ? "tdm-solo" : "tdm",
       );
     this.inputAdapter = useBotOpponent
       ? new AugmentedInputAdapter(
@@ -142,20 +126,14 @@ export class GameplayV2Scene extends Phaser.Scene {
       )
       : playerInput;
     this.bridge = new PhaserGameBridge(runtime, {
-      renderer: isArenaMode
-        ? new PhaserArenaRendererPort(
-          this,
-          selectedMap,
-          useMobileControls ? "blue-player" : undefined,
-        )
-        : new PhaserDiagnosticRendererPort(this),
-      audio: isArenaMode
-        ? new PhaserArenaAudioPort(this, "blue-player")
-        : new NoopAudioPort(),
+      renderer: new PhaserArenaRendererPort(
+        this,
+        selectedMap,
+        useMobileControls ? "blue-player" : undefined,
+      ),
+      audio: new PhaserArenaAudioPort(this, "blue-player"),
       diagnostics: hud,
-      effects: isArenaMode
-        ? new PhaserWeaponEffectsPort(this, "blue-player")
-        : new NoopEffectsPort(),
+      effects: new PhaserWeaponEffectsPort(this, "blue-player"),
       hud,
     });
     this.bridge.initialize();
@@ -165,9 +143,7 @@ export class GameplayV2Scene extends Phaser.Scene {
       this.handleVisibilityChange,
     );
 
-    if (!isArenaMode) {
-      this.scale.on("resize", this.centerDiagnostic, this);
-    } else if (this.input.keyboard) {
+    if (this.input.keyboard) {
       this.menuKey = this.input.keyboard.addKey(
         Phaser.Input.Keyboard.KeyCodes.M,
       );
@@ -194,28 +170,7 @@ export class GameplayV2Scene extends Phaser.Scene {
     this.bridge.advance(this.inputAdapter.readFrame(delta));
   }
 
-  private createDiagnosticHud(): PhaserDiagnosticHudPort {
-    this.diagnosticText = this.add.text(
-      this.scale.width / 2,
-      this.scale.height / 2,
-      "Gameplay Core V2 Shell",
-      {
-        fontFamily: "Consolas, monospace",
-        fontSize: "11px",
-        color: "#17302d",
-        align: "center",
-        lineSpacing: 0,
-      },
-    ).setOrigin(.5).setScrollFactor(0).setDepth(1000);
-    return new PhaserDiagnosticHudPort(this.diagnosticText);
-  }
-
-  private centerDiagnostic(gameSize: Phaser.Structs.Size): void {
-    this.diagnosticText?.setPosition(gameSize.width / 2, gameSize.height / 2);
-  }
-
   private shutdown(): void {
-    this.scale.off("resize", this.centerDiagnostic, this);
     window.removeEventListener("v2-sfx-changed", this.handleSfxChanged);
     document.removeEventListener(
       "visibilitychange",
@@ -226,7 +181,6 @@ export class GameplayV2Scene extends Phaser.Scene {
     this.menuKey?.destroy();
     this.bridge = undefined;
     this.inputAdapter = undefined;
-    this.diagnosticText = undefined;
     this.menuKey = undefined;
     this.pauseForVisibility = false;
     this.skipNextFrame = false;

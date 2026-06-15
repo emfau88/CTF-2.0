@@ -95,8 +95,8 @@ export function updateDiagnosticControlledActor(
     actor.position.y !== previousPosition.y
   ) {
     events.push({
-      id: `diagnostic-move-${input.sequence}`,
-      type: "diagnostic.actorMoved",
+      id: `actor-moved-${actor.id}-${input.sequence}`,
+      type: "actor.moved",
       timeMs: world.timeMs,
       sourceActorId: actor.id,
       teamId: actor.teamId ?? undefined,
