@@ -7,12 +7,14 @@ import {
 } from "./BotMovementConfig";
 import {
   ClassicCtfBotDecisionController,
+  type ClassicCtfBotGoal,
   type ClassicCtfBotRole,
 } from "./ClassicCtfBotDecisionController";
 import {
   GridBotNavigator,
   type BotNavigator,
 } from "./GridBotNavigator";
+import { planCombatStandoff } from "./BotCombatStandoff";
 import { TdmBotCombatController } from "./TdmBotCombatController";
 
 export class ClassicCtfBotController {
@@ -43,14 +45,32 @@ export class ClassicCtfBotController {
     }
 
     const goal = this.decision.chooseGoal(actor, snapshot);
-    const navigation = this.navigator.navigate(
-      actor.position,
-      goal.position,
-      goal.targetKey,
-      snapshot,
-      deltaMs,
-    );
     const combatTarget = nearestActiveEnemy(snapshot, actor);
+    const shouldApplyStandoff = combatTarget &&
+      isCombatChaseGoal(goal.kind) &&
+      positionsMatch(goal.position, combatTarget.position);
+    const navigationTarget = shouldApplyStandoff
+      ? planCombatStandoff(
+        actor.position,
+        combatTarget.position,
+        snapshot,
+        this.movement,
+      )
+      : null;
+    const navigation = navigationTarget?.holdPosition
+      ? {
+        direction: { x: 0, y: 0 } as const,
+        jump: false,
+      }
+      : this.navigator.navigate(
+        actor.position,
+        navigationTarget?.targetPosition ?? goal.position,
+        navigationTarget
+          ? `${goal.targetKey}:${navigationTarget.key}`
+          : goal.targetKey,
+        snapshot,
+        deltaMs,
+      );
     const aimDirection = combatTarget
       ? directionBetween(actor.position, combatTarget.position)
       : directionBetween(actor.position, goal.position);
@@ -59,7 +79,7 @@ export class ClassicCtfBotController {
       phase: "held",
       actorId: actor.id,
       direction: navigation.direction,
-      magnitude: this.movement.inputMagnitude,
+      magnitude: navigationTarget?.holdPosition ? 0 : this.movement.inputMagnitude,
     }, {
       action: "aim",
       phase: "held",
@@ -177,4 +197,12 @@ function directionBetween(
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy);
   return length > .0001 ? { x: dx / length, y: dy / length } : { x: 0, y: 0 };
+}
+
+function isCombatChaseGoal(kind: ClassicCtfBotGoal["kind"]): boolean {
+  return kind === "recover-own-flag" || kind === "defend-base";
+}
+
+function positionsMatch(left: WorldPosition, right: WorldPosition): boolean {
+  return Math.abs(left.x - right.x) < .001 && Math.abs(left.y - right.y) < .001;
 }
