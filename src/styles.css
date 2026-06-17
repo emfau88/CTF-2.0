@@ -164,23 +164,23 @@ canvas { display: block; }
 .v2-game-menu-button {
   position: fixed;
   z-index: 1900;
-  top: max(84px, calc(env(safe-area-inset-top) + 76px));
-  right: max(14px, env(safe-area-inset-right));
-  min-width: 68px;
-  height: 34px;
+  top: max(72px, calc(env(safe-area-inset-top) + 64px));
+  right: max(10px, env(safe-area-inset-right));
+  min-width: 58px;
+  height: 30px;
   border: 1px solid rgb(255 255 255 / .2);
-  border-radius: 8px;
+  border-radius: 7px;
   background: rgb(23 48 45 / .86);
   color: #f5fbfa;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: .08em;
-  box-shadow: 0 8px 22px rgb(0 0 0 / .18);
+  letter-spacing: .06em;
+  box-shadow: 0 6px 18px rgb(0 0 0 / .16);
   cursor: pointer;
 }
 .v2-game-menu-button:active { transform: translateY(1px); }
-.v2-audio-button { top: max(44px, calc(env(safe-area-inset-top) + 36px)); min-width: 92px; }
+.v2-audio-button { top: max(38px, calc(env(safe-area-inset-top) + 30px)); min-width: 74px; }
 #hud { position: fixed; inset: 0; pointer-events: none; color: #17302d; font-size: 13px; }
 .score { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); display: flex; justify-content: space-between; align-items: center; }
 .score-team, #debug, .hud-actions button, .settings-panel { background: rgb(255 255 255 / .78); border: 1px solid rgb(30 50 45 / .15); border-radius: 8px; box-shadow: 0 8px 22px rgb(20 40 34 / .12); backdrop-filter: blur(10px); }
@@ -236,7 +236,17 @@ canvas { display: block; }
   #debug.is-visible { display: block; }
   .score-team { min-width: 64px; height: 32px; gap: 6px; padding: 0 7px; font-size: 15px; }
   .score-label { font-size: 8px; }
-  .hud-actions button { width: 32px; height: 32px; font-size: 18px; }
+  .hud-actions button { width: 30px; height: 30px; font-size: 17px; }
   #status-toast { top: max(45px, calc(env(safe-area-inset-top) + 41px)); padding: 6px 10px; font-size: 11px; }
   .settings-panel { top: max(45px, calc(env(safe-area-inset-top) + 41px)); max-height: calc(100vh - 54px); overflow-y: auto; }
+  .v2-game-menu-button {
+    top: max(62px, calc(env(safe-area-inset-top) + 56px));
+    min-width: 54px;
+    height: 28px;
+    font-size: 10px;
+  }
+  .v2-audio-button {
+    top: max(32px, calc(env(safe-area-inset-top) + 24px));
+    min-width: 68px;
+  }
 }

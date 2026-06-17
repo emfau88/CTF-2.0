@@ -48,22 +48,22 @@ implements HudPort, FrameDiagnosticsPort {
     private readonly requestRestart?: () => void,
   ) {
     this.scorePanel = createGraphics(scene);
-    this.blueScoreText = createText(scene, BLUE, "22px", "bold")
+    this.blueScoreText = createText(scene, BLUE, "20px", "bold")
       .setOrigin(1, 0);
-    this.redScoreText = createText(scene, RED, "22px", "bold");
-    this.timerText = createText(scene, NEUTRAL, "18px", "bold")
+    this.redScoreText = createText(scene, RED, "20px", "bold");
+    this.timerText = createText(scene, NEUTRAL, "16px", "bold")
       .setOrigin(.5, 0);
-    this.ruleText = createText(scene, MUTED, "10px", "bold")
+    this.ruleText = createText(scene, MUTED, "9px", "bold")
       .setOrigin(.5, 0)
-      .setLetterSpacing(1.2);
-    this.objectiveText = createText(scene, NEUTRAL, "11px", "bold")
+      .setLetterSpacing(.8);
+    this.objectiveText = createText(scene, NEUTRAL, "10px", "bold")
       .setOrigin(.5, 0)
-      .setLetterSpacing(.6);
+      .setLetterSpacing(.35);
     this.bluePanel = createPlayerPanel(scene, BLUE);
     this.redPanel = createPlayerPanel(scene, RED);
-    this.controlsText = createText(scene, "#dceae8", "11px", "bold")
+    this.controlsText = createText(scene, "#dceae8", "10px", "bold")
       .setOrigin(.5, 1)
-      .setPadding(9, 6)
+      .setPadding(7, 4)
       .setBackgroundColor("#102320d9");
     this.resultText = createText(scene, NEUTRAL, "30px", "bold")
       .setOrigin(.5)
@@ -140,6 +140,7 @@ implements HudPort, FrameDiagnosticsPort {
     const objective = objectiveStatus(this.hudState, compact);
 
     this.layoutMatchHeader(
+      this.hudState,
       width,
       compact,
       blueScore,
@@ -152,6 +153,7 @@ implements HudPort, FrameDiagnosticsPort {
   }
 
   private layoutMatchHeader(
+    state: ModeHudState,
     width: number,
     compact: boolean,
     blueScore: number,
@@ -159,26 +161,31 @@ implements HudPort, FrameDiagnosticsPort {
     objective: string,
   ): void {
     const centerX = width / 2;
-    const panelWidth = compact ? 180 : 252;
-    const panelHeight = objective ? 70 : 56;
+    const panelWidth = compact ? 168 : 224;
+    const panelHeight = objective ? (compact ? 54 : 60) : (compact ? 42 : 48);
     const panelX = centerX - panelWidth / 2;
-    const panelY = 12;
-    drawPanel(this.scorePanel, panelX, panelY, panelWidth, panelHeight, 12);
+    const panelY = compact ? 8 : 10;
+    drawPanel(this.scorePanel, panelX, panelY, panelWidth, panelHeight, compact ? 10 : 11);
 
     this.blueScoreText
-      .setPosition(centerX - 48, panelY + 7)
-      .setText(compact ? `B  ${blueScore}` : `BLUE  ${blueScore}`);
+      .setPosition(centerX - (compact ? 36 : 42), panelY + (compact ? 4 : 6))
+      .setFontSize(compact ? "17px" : "19px")
+      .setText(compact ? `B ${blueScore}` : `BLUE ${blueScore}`);
     this.redScoreText
-      .setPosition(centerX + 48, panelY + 7)
-      .setText(compact ? `${redScore}  R` : `${redScore}  RED`);
+      .setPosition(centerX + (compact ? 36 : 42), panelY + (compact ? 4 : 6))
+      .setFontSize(compact ? "17px" : "19px")
+      .setText(compact ? `${redScore} R` : `${redScore} RED`);
     this.timerText
-      .setPosition(centerX, panelY + 9)
-      .setText(formatTime(this.hudState?.timeRemainingMs ?? 0));
+      .setPosition(centerX, panelY + (compact ? 5 : 7))
+      .setFontSize(compact ? "14px" : "16px")
+      .setText(formatTime(state.timeRemainingMs ?? 0));
     this.ruleText
-      .setPosition(centerX, panelY + 36)
-      .setText((this.hudState?.notices[0] ?? "First to 3").toUpperCase());
+      .setPosition(centerX, panelY + (compact ? 23 : 28))
+      .setFontSize(compact ? "8px" : "9px")
+      .setText(shortRuleText(state).toUpperCase());
     this.objectiveText
-      .setPosition(centerX, panelY + 51)
+      .setPosition(centerX, panelY + (compact ? 36 : 43))
+      .setFontSize(compact ? "9px" : "10px")
       .setText(objective)
       .setVisible(Boolean(objective));
   }
@@ -190,11 +197,11 @@ implements HudPort, FrameDiagnosticsPort {
     blue: WorldSnapshot["actors"][number] | undefined,
     red: WorldSnapshot["actors"][number] | undefined,
   ): void {
-    const panelWidth = compact ? 176 : 208;
-    const panelHeight = 76;
-    const edge = compact ? 10 : 14;
+    const panelWidth = compact ? 154 : 184;
+    const panelHeight = compact ? 62 : 68;
+    const edge = compact ? 8 : 12;
     const desktopY = height - panelHeight - edge;
-    const mobileY = 92;
+    const mobileY = compact ? 70 : 82;
 
     updatePlayerPanel(
       this.bluePanel,
@@ -258,11 +265,11 @@ function createPlayerPanel(scene: Phaser.Scene, accent: string): PlayerPanel {
   return {
     background: createGraphics(scene),
     bars: createGraphics(scene),
-    label: createText(scene, accent, "12px", "bold").setLetterSpacing(1),
-    state: createText(scene, MUTED, "10px", "bold").setOrigin(1, 0),
-    health: createText(scene, NEUTRAL, "11px", "bold"),
-    armor: createText(scene, NEUTRAL, "11px", "bold"),
-    ammo: createText(scene, MUTED, "10px", "bold"),
+    label: createText(scene, accent, "11px", "bold").setLetterSpacing(.8),
+    state: createText(scene, MUTED, "9px", "bold").setOrigin(1, 0),
+    health: createText(scene, NEUTRAL, "10px", "bold"),
+    armor: createText(scene, NEUTRAL, "10px", "bold"),
+    ammo: createText(scene, MUTED, "9px", "bold"),
   };
 }
 
@@ -297,23 +304,31 @@ function updatePlayerPanel(
   accent: string,
 ): void {
   setPlayerPanelVisible(panel, true);
-  drawPanel(panel.background, x, y, width, height, 10);
-  panel.label.setPosition(x + 10, y + 8).setText(label);
+  const compact = width <= 160;
+  drawPanel(panel.background, x, y, width, height, compact ? 9 : 10);
+  panel.label
+    .setPosition(x + (compact ? 8 : 9), y + (compact ? 6 : 7))
+    .setFontSize(compact ? "10px" : "11px")
+    .setText(label);
   panel.state
-    .setPosition(x + width - 10, y + 8)
+    .setPosition(x + width - (compact ? 8 : 9), y + (compact ? 6 : 7))
+    .setFontSize(compact ? "8px" : "9px")
     .setText(lifeLabel(actor));
   panel.health
-    .setPosition(x + 10, y + 27)
+    .setPosition(x + (compact ? 8 : 9), y + (compact ? 22 : 24))
+    .setFontSize(compact ? "10px" : "10px")
     .setText(`HP ${actor?.health ?? 0}`);
   panel.armor
-    .setPosition(x + width - 67, y + 27)
+    .setPosition(x + width - (compact ? 58 : 62), y + (compact ? 22 : 24))
+    .setFontSize(compact ? "10px" : "10px")
     .setText(`AR ${actor?.armor ?? 0}`);
   panel.ammo
-    .setPosition(x + 10, y + 56)
+    .setPosition(x + (compact ? 8 : 9), y + (compact ? 45 : 49))
+    .setFontSize(compact ? "8px" : "9px")
     .setText(
-      `RKT ${actor?.weapons.rocketAmmo ?? 0}   RAIL ${
+      `R ${actor?.weapons.rocketAmmo ?? 0}  RL ${
         actor?.weapons.railAmmo ?? 0
-      }   WHIP ${actor?.weapons.whipAmmo ?? 0}`,
+      }  W ${actor?.weapons.whipAmmo ?? 0}`,
     );
 
   const healthRatio = actor
@@ -322,18 +337,19 @@ function updatePlayerPanel(
   const armorRatio = actor
     ? Phaser.Math.Clamp(actor.armor / Math.max(1, actor.maxArmor), 0, 1)
     : 0;
-  const gap = 8;
-  const barY = y + 43;
-  const healthWidth = Math.floor((width - 28) * .64);
-  const armorWidth = width - 20 - gap - healthWidth;
+  const gap = compact ? 6 : 7;
+  const barY = y + (compact ? 35 : 38);
+  const inset = compact ? 8 : 9;
+  const healthWidth = Math.floor((width - inset * 2 - gap) * .64);
+  const armorWidth = width - inset * 2 - gap - healthWidth;
   panel.bars.clear();
-  drawBar(panel.bars, x + 10, barY, healthWidth, 5, healthRatio, 0x56c98c);
+  drawBar(panel.bars, x + inset, barY, healthWidth, 4, healthRatio, 0x56c98c);
   drawBar(
     panel.bars,
-    x + 10 + healthWidth + gap,
+    x + inset + healthWidth + gap,
     barY,
     armorWidth,
-    5,
+    4,
     armorRatio,
     Phaser.Display.Color.HexStringToColor(accent).color,
   );
@@ -380,8 +396,8 @@ function objectiveStatus(state: ModeHudState, compact: boolean): string {
       objective.id === "blue-flag"
     );
     return compact
-      ? `R ${flagLabel(red)}   |   B ${flagLabel(blue)}`
-      : `RED FLAG ${flagLabel(red)}   |   BLUE FLAG ${flagLabel(blue)}`;
+      ? `R ${flagLabel(red)}  |  B ${flagLabel(blue)}`
+      : `RED ${flagLabel(red)}  |  BLUE ${flagLabel(blue)}`;
   }
   if (state.modeId === "one-flag") {
     const center = state.objectives.find((objective) =>
@@ -389,7 +405,7 @@ function objectiveStatus(state: ModeHudState, compact: boolean): string {
     );
     return compact
       ? `FLAG ${flagLabel(center)}`
-      : `CENTER FLAG ${flagLabel(center)}`;
+      : `CENTER ${flagLabel(center)}`;
   }
   return "";
 }
@@ -397,7 +413,7 @@ function objectiveStatus(state: ModeHudState, compact: boolean): string {
 function flagLabel(
   objective: ModeHudState["objectives"][number] | undefined,
 ): string {
-  return objective?.state.status === "carried" ? "TAKEN" : "HOME";
+  return objective?.state.status === "carried" ? "OUT" : "HOME";
 }
 
 function lifeLabel(
@@ -418,4 +434,19 @@ function formatTime(timeMs: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = String(totalSeconds % 60).padStart(2, "0");
   return `${minutes}:${seconds}`;
+}
+
+function shortRuleText(state: ModeHudState): string {
+  if (state.modeId === "classic-ctf") {
+    return "FIRST TO 3";
+  }
+  if (state.modeId === "one-flag") {
+    const center = state.objectives.find((objective) =>
+      objective.id === "center-flag"
+    );
+    return center?.state.status === "carried"
+      ? "TAKE FLAG TO ENEMY BASE"
+      : "SECURE CENTER FLAG";
+  }
+  return "FIRST TO 3";
 }

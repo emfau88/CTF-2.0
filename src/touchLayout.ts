@@ -1,34 +1,34 @@
 export function calculateTouchLayout(width: number, height: number) {
   const compact = width <= 720 || height <= 520;
-  const jumpX = width - Math.max(compact ? 60 : 84, width * (compact ? .07 : .09));
-  const jumpY = height - (compact ? 66 : 94);
+  const jumpX = width - Math.max(compact ? 58 : 80, width * (compact ? .065 : .085));
+  const jumpY = height - (compact ? 60 : 88);
 
   return {
     joy: {
-      r: compact ? 50 : 62,
+      r: compact ? 46 : 56,
       knobR: compact ? 18 : 22,
       ox: Math.max(compact ? 70 : 96, width * (compact ? .09 : .12)),
-      oy: height - (compact ? 68 : 96),
+      oy: height - (compact ? 62 : 88),
     },
     jump: {
-      r: compact ? 44 : 52,
+      r: compact ? 40 : 48,
       x: jumpX,
       y: jumpY,
     },
     rocket: {
-      r: compact ? 35 : 43,
-      x: jumpX - (compact ? 76 : 96),
-      y: jumpY + (compact ? 5 : 10),
+      r: compact ? 31 : 38,
+      x: jumpX - (compact ? 70 : 88),
+      y: jumpY + (compact ? 3 : 8),
     },
     rail: {
-      r: compact ? 35 : 43,
-      x: jumpX - (compact ? 55 : 190),
-      y: jumpY - (compact ? 68 : -10),
+      r: compact ? 31 : 38,
+      x: jumpX - (compact ? 50 : 170),
+      y: jumpY - (compact ? 60 : -4),
     },
     whip: {
-      r: compact ? 35 : 43,
-      x: jumpX - (compact ? 128 : 112),
-      y: jumpY - (compact ? 62 : 84),
+      r: compact ? 31 : 38,
+      x: jumpX - (compact ? 116 : 104),
+      y: jumpY - (compact ? 56 : 74),
     },
   };
 }

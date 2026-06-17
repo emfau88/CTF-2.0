@@ -417,7 +417,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.jump.radius = layout.jump.r;
     this.jump.x = layout.jump.x;
     this.jump.y = layout.jump.y;
-    this.fire.radius = compact ? 38 : 46;
+    this.fire.radius = compact ? 34 : 40;
     this.fire.x = layout.rocket.x;
     this.fire.y = layout.rocket.y;
     this.fireLabel.setPosition(this.fire.x, this.fire.y)
@@ -541,7 +541,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
       const available = status.ammo > 0;
       const control = this.weaponControls[weaponId];
       const compact = control.radius <= 36;
-      const badgeOffset = compact ? 24 : 31;
+      const badgeOffset = compact ? 21 : 27;
       const badge = this.weaponBadges[weaponId];
       const active = control.held && status.cooldownMs <= 0;
       const baseScale = weaponId === "whip"
@@ -557,12 +557,12 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
         );
       badge.image
         .setPosition(control.x + badgeOffset, control.y + badgeOffset)
-        .setScale(compact ? .12 : .16)
+        .setScale(compact ? .1 : .14)
         .setAlpha(.95)
         .setVisible(available);
       badge.text
         .setPosition(control.x + badgeOffset, control.y + badgeOffset)
-        .setFontSize(compact ? 14 : 17)
+        .setFontSize(compact ? 12 : 15)
         .setText(String(status.ammo))
         .setVisible(available);
       if (available) {
