@@ -12,6 +12,7 @@ import type {
 import { renderArena } from "../../arenaRenderer";
 import type { LevelData } from "../../level";
 import type { RendererPort } from "../rendering";
+import type { V2PlayerSkinId } from "../../v2Route";
 
 interface ArenaActorView {
   readonly shadow: Phaser.GameObjects.Ellipse;
@@ -61,10 +62,11 @@ export class PhaserArenaRendererPort implements RendererPort {
     private readonly scene: Phaser.Scene,
     map: WorldMapData,
     private readonly followActorId?: ActorId,
+    private readonly playerSkinId: V2PlayerSkinId = "alien-runner",
   ) {
     const level = toPresentationLevel(map);
     ensureLibraryCandleAnimation(scene);
-    ensureAlienRunnerAnimations(scene);
+    ensurePlayerSkinAnimations(scene);
     renderArena(scene, level, (x, y) => this.addLibraryCandles(x, y));
     if (map.presentation.theme === "library") {
       this.libraryDustGraphics = scene.add.graphics().setDepth(8);
@@ -140,7 +142,7 @@ export class PhaserArenaRendererPort implements RendererPort {
       0x000000,
       .2,
     ).setDepth(20);
-    const character = characterPresentation(actor);
+    const character = characterPresentation(actor, this.playerSkinId);
     const sprite = this.scene.add.sprite(
       0,
       0,
@@ -666,30 +668,68 @@ function isWeaponPickup(type: PickupState["type"]): boolean {
 }
 
 type CharacterPresentation = {
-  readonly kind: "arena-character" | "alien-runner";
+  readonly kind: "arena-character" | "player-skin";
   readonly texture: string;
   readonly initialFrame: number;
   readonly scale: number;
+  readonly skin?: PlayerSkinConfig;
 };
 
-type AlienRunnerDirection = "down" | "right" | "up" | "left";
+type PlayerSkinDirection = "down" | "right" | "up" | "left";
 
-const ALIEN_RUNNER_DIRECTIONS: readonly AlienRunnerDirection[] = [
+type PlayerSkinConfig = {
+  readonly id: V2PlayerSkinId;
+  readonly texture: string;
+  readonly scale: number;
+  readonly columns: number;
+  readonly idleColumns: readonly number[];
+  readonly runColumns: readonly number[];
+  readonly idleFrameRate: number;
+  readonly runFrameRate: number;
+};
+
+const PLAYER_SKIN_DIRECTIONS: readonly PlayerSkinDirection[] = [
   "down",
   "right",
   "up",
   "left",
 ];
 
+const PLAYER_SKINS: Record<V2PlayerSkinId, PlayerSkinConfig> = {
+  "alien-runner": {
+    id: "alien-runner",
+    texture: "alienRunner",
+    scale: .64,
+    columns: 4,
+    idleColumns: [0],
+    runColumns: [1, 2, 3],
+    idleFrameRate: 1,
+    runFrameRate: 9,
+  },
+  "riot-droid": {
+    id: "riot-droid",
+    texture: "riotDroidRunner",
+    scale: .64,
+    columns: 6,
+    idleColumns: [0, 1, 2],
+    runColumns: [3, 4, 5],
+    idleFrameRate: 3,
+    runFrameRate: 9,
+  },
+};
+
 function characterPresentation(
   actor: Readonly<ActorState>,
+  playerSkinId: V2PlayerSkinId,
 ): CharacterPresentation {
   if (actor.id === "blue-player") {
+    const skin = PLAYER_SKINS[playerSkinId];
     return {
-      kind: "alien-runner",
-      texture: "alienRunner",
-      initialFrame: alienRunnerIdleFrame(actor),
-      scale: .64,
+      kind: "player-skin",
+      texture: skin.texture,
+      initialFrame: playerSkinFrame(skin, actor, skin.idleColumns[0] ?? 0),
+      scale: skin.scale,
+      skin,
     };
   }
 
@@ -706,8 +746,8 @@ function updateActorSprite(
   character: CharacterPresentation,
   actor: Readonly<ActorState>,
 ): void {
-  if (character.kind === "alien-runner") {
-    updateAlienRunnerSprite(sprite, actor);
+  if (character.kind === "player-skin" && character.skin) {
+    updatePlayerSkinSprite(sprite, character.skin, actor);
     return;
   }
 
@@ -717,23 +757,26 @@ function updateActorSprite(
   sprite.setFrame(characterFrame(actor));
 }
 
-function updateAlienRunnerSprite(
+function updatePlayerSkinSprite(
   sprite: Phaser.GameObjects.Sprite,
+  skin: PlayerSkinConfig,
   actor: Readonly<ActorState>,
 ): void {
-  const direction = alienRunnerDirection(actor);
+  const direction = playerSkinDirection(actor);
   const isMoving = actor.lifeState === "active" &&
     Math.hypot(actor.velocity.x, actor.velocity.y) > 8;
 
   if (isMoving) {
-    sprite.play(alienRunnerAnimationKey(direction), true);
+    sprite.play(playerSkinAnimationKey(skin, direction, "run"), true);
     return;
   }
 
-  if (sprite.anims.isPlaying) {
+  if (skin.idleColumns.length > 1) {
+    sprite.play(playerSkinAnimationKey(skin, direction, "idle"), true);
+  } else {
     sprite.stop();
+    sprite.setFrame(playerSkinFrame(skin, actor, skin.idleColumns[0] ?? 0));
   }
-  sprite.setFrame(alienRunnerIdleFrame(actor));
 }
 
 function characterFrame(actor: Readonly<ActorState>): number {
@@ -744,41 +787,67 @@ function characterFrame(actor: Readonly<ActorState>): number {
   return row * 4 + direction;
 }
 
-function alienRunnerIdleFrame(actor: Readonly<ActorState>): number {
-  return alienRunnerDirectionRow(alienRunnerDirection(actor)) * 4;
+function playerSkinFrame(
+  skin: PlayerSkinConfig,
+  actor: Readonly<ActorState>,
+  column: number,
+): number {
+  return playerSkinDirectionRow(playerSkinDirection(actor)) * skin.columns +
+    column;
 }
 
-function alienRunnerDirection(actor: Readonly<ActorState>): AlienRunnerDirection {
+function playerSkinDirection(
+  actor: Readonly<ActorState>,
+): PlayerSkinDirection {
   return Math.abs(actor.facing.x) > Math.abs(actor.facing.y)
     ? actor.facing.x >= 0 ? "right" : "left"
     : actor.facing.y >= 0 ? "down" : "up";
 }
 
-function alienRunnerDirectionRow(direction: AlienRunnerDirection): number {
-  return ALIEN_RUNNER_DIRECTIONS.indexOf(direction);
+function playerSkinDirectionRow(direction: PlayerSkinDirection): number {
+  return PLAYER_SKIN_DIRECTIONS.indexOf(direction);
 }
 
-function alienRunnerAnimationKey(direction: AlienRunnerDirection): string {
-  return `alien-runner-${direction}-run`;
+function playerSkinAnimationKey(
+  skin: PlayerSkinConfig,
+  direction: PlayerSkinDirection,
+  state: "idle" | "run",
+): string {
+  return `${skin.id}-${direction}-${state}`;
 }
 
-function ensureAlienRunnerAnimations(scene: Phaser.Scene): void {
-  for (const direction of ALIEN_RUNNER_DIRECTIONS) {
-    const key = alienRunnerAnimationKey(direction);
-    if (scene.anims.exists(key)) {
-      continue;
+function ensurePlayerSkinAnimations(scene: Phaser.Scene): void {
+  for (const skin of Object.values(PLAYER_SKINS)) {
+    for (const direction of PLAYER_SKIN_DIRECTIONS) {
+      ensurePlayerSkinAnimation(scene, skin, direction, "run");
+      if (skin.idleColumns.length > 1) {
+        ensurePlayerSkinAnimation(scene, skin, direction, "idle");
+      }
     }
-    const row = alienRunnerDirectionRow(direction);
-    scene.anims.create({
-      key,
-      frames: scene.anims.generateFrameNumbers("alienRunner", {
-        start: row * 4 + 1,
-        end: row * 4 + 3,
-      }),
-      frameRate: 9,
-      repeat: -1,
-    });
   }
+}
+
+function ensurePlayerSkinAnimation(
+  scene: Phaser.Scene,
+  skin: PlayerSkinConfig,
+  direction: PlayerSkinDirection,
+  state: "idle" | "run",
+): void {
+  const key = playerSkinAnimationKey(skin, direction, state);
+  if (scene.anims.exists(key)) {
+    return;
+  }
+  const row = playerSkinDirectionRow(direction);
+  const columns = state === "idle" ? skin.idleColumns : skin.runColumns;
+  scene.anims.create({
+    key,
+    frames: columns.map((column) => ({
+      key: skin.texture,
+      frame: row * skin.columns + column,
+    })),
+    frameRate: state === "idle" ? skin.idleFrameRate : skin.runFrameRate,
+    repeat: -1,
+  });
 }
 
 function ensureSpawnPadAnimation(scene: Phaser.Scene): void {

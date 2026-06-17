@@ -135,6 +135,7 @@ export class GameplayV2Scene extends Phaser.Scene {
         this,
         selectedMap,
         useMobileControls ? "blue-player" : undefined,
+        route.skin,
       ),
       audio: new PhaserArenaAudioPort(this, "blue-player"),
       diagnostics: hud,

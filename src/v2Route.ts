@@ -2,6 +2,7 @@ export type V2ModeId = "tdm" | "ctf" | "one-flag";
 export type V2PlayersMode = "bot" | "local";
 export type V2ControlsMode = "auto" | "touch" | "keyboard";
 export type V2SfxMode = "on" | "off";
+export type V2PlayerSkinId = "alien-runner" | "riot-droid";
 
 export interface V2RouteConfig {
   readonly scene: "v2";
@@ -9,6 +10,7 @@ export interface V2RouteConfig {
   readonly map: string;
   readonly players: V2PlayersMode;
   readonly controls: V2ControlsMode;
+  readonly skin: V2PlayerSkinId;
   readonly sfx: V2SfxMode;
   readonly menu: boolean;
 }
@@ -25,6 +27,7 @@ const DEFAULT_ROUTE: V2RouteConfig = {
   map: "training-crossing-v2",
   players: "bot",
   controls: "auto",
+  skin: "alien-runner",
   sfx: "on",
   menu: true,
 };
@@ -36,6 +39,7 @@ export function readV2RouteState(
   const modeValue = search.get("mode");
   const playersValue = search.get("players");
   const controlsValue = search.get("controls");
+  const skinValue = search.get("skin");
   const mapValue = search.get("map");
   const route: V2RouteConfig = {
     scene: "v2",
@@ -43,6 +47,7 @@ export function readV2RouteState(
     map: mapValue ?? DEFAULT_ROUTE.map,
     players: readPlayers(playersValue),
     controls: readControls(controlsValue),
+    skin: readSkin(skinValue),
     sfx: readSfx(search.get("sfx")),
     menu: search.get("menu") === "1" || !hasMode,
   };
@@ -58,6 +63,9 @@ export function readV2RouteState(
   }
   if (hasMode && !isControlsMode(controlsValue)) {
     issues.push(`Unsupported V2 controls mode: ${controlsValue ?? "missing"}.`);
+  }
+  if (hasMode && skinValue !== null && !isPlayerSkin(skinValue)) {
+    issues.push(`Unsupported V2 player skin: ${skinValue ?? "missing"}.`);
   }
   return {
     route: {
@@ -85,6 +93,7 @@ export function buildV2RouteSearch(
   params.set("map", resolved.map);
   params.set("players", resolved.players);
   params.set("controls", resolved.controls);
+  params.set("skin", resolved.skin);
   params.set("sfx", resolved.sfx);
   if (resolved.menu) {
     params.set("menu", "1");
@@ -116,6 +125,10 @@ function readControls(value: string | null): V2ControlsMode {
   return isControlsMode(value) ? value : DEFAULT_ROUTE.controls;
 }
 
+function readSkin(value: string | null): V2PlayerSkinId {
+  return isPlayerSkin(value) ? value : DEFAULT_ROUTE.skin;
+}
+
 function readSfx(value: string | null): V2SfxMode {
   return value === "off" ? "off" : "on";
 }
@@ -130,4 +143,8 @@ function isPlayersMode(value: string | null): value is V2PlayersMode {
 
 function isControlsMode(value: string | null): value is V2ControlsMode {
   return value === "touch" || value === "keyboard" || value === "auto";
+}
+
+function isPlayerSkin(value: string | null): value is V2PlayerSkinId {
+  return value === "alien-runner" || value === "riot-droid";
 }

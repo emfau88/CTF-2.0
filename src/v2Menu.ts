@@ -3,6 +3,7 @@ import {
   buildV2MenuSearch,
   readV2Route,
   type V2ControlsMode,
+  type V2PlayerSkinId,
   type V2RouteConfig,
   type V2PlayersMode,
 } from "./v2Route";
@@ -18,6 +19,7 @@ interface V2MenuElements {
   readonly map: HTMLSelectElement;
   readonly players: HTMLSelectElement;
   readonly controls: HTMLSelectElement;
+  readonly skin: HTMLSelectElement;
   readonly sfx: HTMLSelectElement;
   readonly start: HTMLButtonElement;
 }
@@ -48,6 +50,7 @@ export function showGameplayV2Menu(statusMessage?: string): void {
   elements.map.value = route.map;
   elements.players.value = route.players;
   elements.controls.value = route.controls;
+  elements.skin.value = route.skin;
   elements.sfx.value = route.sfx;
   elements.status.textContent = statusMessage ?? "";
   elements.status.classList.toggle("is-hidden", !statusMessage);
@@ -80,6 +83,7 @@ export function showGameplayV2Menu(statusMessage?: string): void {
       map: elements.map.value,
       players: elements.players.value as V2PlayersMode,
       controls: elements.controls.value as V2ControlsMode,
+      skin: elements.skin.value as V2PlayerSkinId,
       sfx: elements.sfx.value === "off" ? "off" : "on",
     });
   };
@@ -142,6 +146,7 @@ function readMenuElements(): V2MenuElements {
     map: requiredElement<HTMLSelectElement>("v2-menu-map"),
     players: requiredElement<HTMLSelectElement>("v2-menu-players"),
     controls: requiredElement<HTMLSelectElement>("v2-menu-controls"),
+    skin: requiredElement<HTMLSelectElement>("v2-menu-skin"),
     sfx: requiredElement<HTMLSelectElement>("v2-menu-sfx"),
     start: requiredElement<HTMLButtonElement>("v2-menu-start"),
   };

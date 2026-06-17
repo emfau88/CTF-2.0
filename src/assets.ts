@@ -46,6 +46,10 @@ export function preloadArenaAssets(scene: Phaser.Scene) {
     frameWidth: 128,
     frameHeight: 128,
   });
+  scene.load.spritesheet("riotDroidRunner", assetUrl("riot-droid-spritesheet-6x4.png"), {
+    frameWidth: 128,
+    frameHeight: 128,
+  });
   scene.load.image("ruinsFloorStone", assetUrl("ruins/floor-stone.png"));
   scene.load.image("ruinsWallHorizontal", assetUrl("ruins/wall-horizontal.png"));
   scene.load.image("ruinsWallVertical", assetUrl("ruins/wall-vertical.png"));
