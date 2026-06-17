@@ -48,6 +48,7 @@ export interface ActorJumpState {
 
 export interface ActorWeaponState {
   rocketAmmo: number;
+  rocketCooldownMs: number;
   railAmmo: number;
   railCooldownMs: number;
   whipAmmo: number;
@@ -151,6 +152,7 @@ export function createActorState(input: CreateActorStateInput): ActorState {
     primaryFireCooldownMs: input.primaryFireCooldownMs ?? 0,
     weapons: {
       rocketAmmo: input.weapons?.rocketAmmo ?? 0,
+      rocketCooldownMs: input.weapons?.rocketCooldownMs ?? 0,
       railAmmo: input.weapons?.railAmmo ?? 0,
       railCooldownMs: input.weapons?.railCooldownMs ?? 0,
       whipAmmo: input.weapons?.whipAmmo ?? 0,

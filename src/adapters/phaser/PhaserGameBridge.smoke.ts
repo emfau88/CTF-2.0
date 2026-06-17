@@ -42,6 +42,7 @@ import {
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
   V2_GROUND_PARITY_CONFIG,
   V2_JUMP_PARITY_CONFIG,
+  V2_V1_WEAPON_PARITY_CONFIG,
 } from "../../core";
 import type {
   ActorState,
@@ -2489,6 +2490,8 @@ function checkTdmBotRocketRuntime(): void {
     !fired ||
     !damaged ||
     red.weapons.rocketAmmo !== 0 ||
+    red.weapons.rocketCooldownMs <= 0 ||
+    red.weapons.rocketCooldownMs > V2_V1_WEAPON_PARITY_CONFIG.rocketCooldownMs ||
     blue.health >= blue.maxHealth ||
     blue.velocity.x <= 0
   ) {
@@ -2574,6 +2577,7 @@ function createOneFlagBotRuntime(
 
 function zeroWeapons(actor: ActorState): void {
   actor.weapons.rocketAmmo = 0;
+  actor.weapons.rocketCooldownMs = 0;
   actor.weapons.railAmmo = 0;
   actor.weapons.whipAmmo = 0;
   actor.weapons.railCooldownMs = 0;
@@ -2900,10 +2904,18 @@ function checkRocketParity(): void {
   const fired = fireV1Weapons(world, owner, weaponInput("rocket"));
   if (
     owner.weapons.rocketAmmo !== 0 ||
+    owner.weapons.rocketCooldownMs !== V2_V1_WEAPON_PARITY_CONFIG.rocketCooldownMs ||
     world.projectiles[0]?.weaponId !== "rocket" ||
     !fired.some((event) => event.type === "weapon.rocketFired")
   ) {
     throw new Error("Rocket must consume ammo and create a rocket projectile.");
+  }
+  fireV1Weapons(world, owner, weaponInput("rocket"));
+  if (
+    owner.weapons.rocketAmmo !== 0 ||
+    world.projectiles.length !== 1
+  ) {
+    throw new Error("Rocket cooldown must reject repeated fire before expiry.");
   }
   for (let frame = 0; frame < 20 && world.projectiles.length > 0; frame++) {
     world.timeMs += 34;

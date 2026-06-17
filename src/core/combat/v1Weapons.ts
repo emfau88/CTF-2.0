@@ -48,10 +48,14 @@ function fireRocket(
   direction: WorldPosition,
   config: V1WeaponConfig,
 ): readonly GameEvent[] {
-  if (actor.weapons.rocketAmmo <= 0) {
+  if (
+    actor.weapons.rocketAmmo <= 0 ||
+    actor.weapons.rocketCooldownMs > 0
+  ) {
     return [];
   }
   actor.weapons.rocketAmmo--;
+  actor.weapons.rocketCooldownMs = config.rocketCooldownMs;
   const offset = actor.radius + config.rocketRadius + 3;
   const projectile: ProjectileState = {
     id: `rocket-${actor.id}-${actor.lifeId}-${world.timeMs}`,
@@ -86,6 +90,7 @@ function fireRocket(
       position: { ...projectile.position },
       direction,
       remainingAmmo: actor.weapons.rocketAmmo,
+      cooldownMs: config.rocketCooldownMs,
     },
   }, {
     id: `projectile-spawned-${projectile.id}`,

@@ -61,6 +61,7 @@ export function applyDamage(
     actor.velocity.y = 0;
     actor.armor = 0;
     actor.weapons.rocketAmmo = 0;
+    actor.weapons.rocketCooldownMs = 0;
     actor.weapons.railAmmo = 0;
     actor.weapons.railCooldownMs = 0;
     actor.weapons.whipAmmo = 0;

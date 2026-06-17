@@ -81,7 +81,10 @@ export class GameplayV2Scene extends Phaser.Scene {
           );
           if (!actor) return { ammo: 0, cooldownMs: 0 };
           if (weaponId === "rocket") {
-            return { ammo: actor.weapons.rocketAmmo, cooldownMs: 0 };
+            return {
+              ammo: actor.weapons.rocketAmmo,
+              cooldownMs: actor.weapons.rocketCooldownMs,
+            };
           }
           if (weaponId === "rail") {
             return {

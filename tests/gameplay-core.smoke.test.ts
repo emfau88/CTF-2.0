@@ -3,15 +3,19 @@ import test from "node:test";
 import { runPhaserGameBridgeSmokeCheck } from "../src/adapters/phaser/PhaserGameBridge.smoke";
 import {
   ClassicCtfMode,
+  createActorState,
   createClassicCtfWorldState,
+  createEmptyWorldState,
   createOneFlagWorldState,
   createTeamDeathmatchWorldState,
+  fireV1Weapons,
   GameplayCoreRuntime,
   OneFlagMode,
   TeamDeathmatchMode,
   TRAINING_CROSSING_V2,
   clampRuntimeDeltaMs,
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
+  V2_V1_WEAPON_PARITY_CONFIG,
 } from "../src/core";
 import { shouldUseGameplayV2Shell } from "../src/bootSceneSelection";
 import { readV2RouteState } from "../src/v2Route";
@@ -102,4 +106,105 @@ test("production arena modes do not emit diagnostic movement events", () => {
       false,
     );
   }
+});
+
+test("rocket cooldown blocks repeated fire until the cooldown expires", () => {
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld: () => {
+      const world = createEmptyWorldState("team-deathmatch");
+      world.actors.push(
+        createActorState({
+          id: "blue-player",
+          kind: "player",
+          teamId: "blue",
+          position: { x: 100, y: 100 },
+          radius: 16,
+          maxHealth: 100,
+          maxArmor: 0,
+          weapons: { rocketAmmo: 2 },
+        }),
+        createActorState({
+          id: "red-player",
+          kind: "player",
+          teamId: "red",
+          position: { x: 260, y: 100 },
+          radius: 16,
+          maxHealth: 100,
+          maxArmor: 0,
+        }),
+      );
+      return world;
+    },
+  });
+  runtime.initialize();
+
+  const readFireFrame = (sequence: number, timeMs: number, deltaMs: number) =>
+    runtime.advance({
+      sequence,
+      timeMs,
+      deltaMs,
+      actions: [{
+        action: "aim",
+        phase: "held",
+        actorId: "blue-player",
+        direction: { x: 1, y: 0 },
+      }, {
+        action: "fireWeapon",
+        phase: "pressed",
+        actorId: "blue-player",
+        direction: { x: 1, y: 0 },
+        payload: { weaponId: "rocket" },
+      }],
+    });
+
+  const first = readFireFrame(1, 34, 34);
+  assert.equal(
+    first.events.filter((event) => event.type === "weapon.rocketFired").length,
+    1,
+  );
+  assert.equal(
+    first.snapshot.actors.find((actor) => actor.id === "blue-player")?.weapons
+      .rocketCooldownMs,
+    V2_V1_WEAPON_PARITY_CONFIG.rocketCooldownMs,
+  );
+
+  const blocked = readFireFrame(2, 68, 34);
+  assert.equal(
+    blocked.events.some((event) => event.type === "weapon.rocketFired"),
+    false,
+  );
+  assert.equal(
+    blocked.snapshot.actors.find((actor) => actor.id === "blue-player")?.weapons
+      .rocketAmmo,
+    1,
+  );
+
+  let timeMs = 68;
+  let sequence = 2;
+  while (
+    (runtime.snapshot.actors.find((actor) => actor.id === "blue-player")?.weapons
+      .rocketCooldownMs ?? 0) > 0
+  ) {
+    sequence += 1;
+    timeMs += 34;
+    runtime.advance({
+      sequence,
+      timeMs,
+      deltaMs: 34,
+      actions: [],
+    });
+  }
+
+  const readyAgain = readFireFrame(sequence + 1, timeMs + 34, 34);
+  assert.equal(
+    readyAgain.events.filter((event) => event.type === "weapon.rocketFired")
+      .length,
+    1,
+  );
+  assert.equal(
+    readyAgain.snapshot.actors.find((actor) => actor.id === "blue-player")
+      ?.weapons.rocketAmmo,
+    0,
+  );
 });
