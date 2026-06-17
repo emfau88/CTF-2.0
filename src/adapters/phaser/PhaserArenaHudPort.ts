@@ -223,6 +223,7 @@ implements HudPort, FrameDiagnosticsPort {
       panelHeight,
       RED,
     );
+    setPlayerPanelVisible(this.bluePanel, !this.mobileControls);
     setPlayerPanelVisible(this.redPanel, !this.mobileControls);
   }
 

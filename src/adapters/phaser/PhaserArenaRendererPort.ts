@@ -18,6 +18,7 @@ interface ArenaActorView {
   readonly container: Phaser.GameObjects.Container;
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly status: Phaser.GameObjects.Graphics;
+  readonly character: CharacterPresentation;
 }
 
 interface SpawnPadParticle {
@@ -63,6 +64,7 @@ export class PhaserArenaRendererPort implements RendererPort {
   ) {
     const level = toPresentationLevel(map);
     ensureLibraryCandleAnimation(scene);
+    ensureAlienRunnerAnimations(scene);
     renderArena(scene, level, (x, y) => this.addLibraryCandles(x, y));
     if (map.presentation.theme === "library") {
       this.libraryDustGraphics = scene.add.graphics().setDepth(8);
@@ -123,8 +125,8 @@ export class PhaserArenaRendererPort implements RendererPort {
       .setScale(scale)
       .setAlpha(actor.lifeState === "active" ? 1 : .35)
       .setVisible(actor.lifeState !== "dead");
+    updateActorSprite(view.sprite, view.character, actor);
     view.sprite
-      .setFrame(characterFrame(actor))
       .setTint(actor.lifeState === "falling" ? 0x555555 : 0xffffff);
     this.drawActorStatus(view.status, actor);
   }
@@ -138,19 +140,20 @@ export class PhaserArenaRendererPort implements RendererPort {
       0x000000,
       .2,
     ).setDepth(20);
+    const character = characterPresentation(actor);
     const sprite = this.scene.add.sprite(
       0,
       0,
-      "arenaCharacters",
-      characterFrame(actor),
-    ).setScale(.42);
+      character.texture,
+      character.initialFrame,
+    ).setScale(character.scale);
     const status = this.scene.add.graphics();
     const container = this.scene.add.container(
       actor.position.x,
       actor.position.y,
       [sprite, status],
     ).setDepth(35);
-    const view = { shadow, container, sprite, status };
+    const view = { shadow, container, sprite, status, character };
     this.actorViews.set(actor.id, view);
     return view;
   }
@@ -662,12 +665,120 @@ function isWeaponPickup(type: PickupState["type"]): boolean {
   return type === "rocket" || type === "rail" || type === "whip";
 }
 
+type CharacterPresentation = {
+  readonly kind: "arena-character" | "alien-runner";
+  readonly texture: string;
+  readonly initialFrame: number;
+  readonly scale: number;
+};
+
+type AlienRunnerDirection = "down" | "right" | "up" | "left";
+
+const ALIEN_RUNNER_DIRECTIONS: readonly AlienRunnerDirection[] = [
+  "down",
+  "right",
+  "up",
+  "left",
+];
+
+function characterPresentation(
+  actor: Readonly<ActorState>,
+): CharacterPresentation {
+  if (actor.id === "blue-player") {
+    return {
+      kind: "alien-runner",
+      texture: "alienRunner",
+      initialFrame: alienRunnerIdleFrame(actor),
+      scale: .64,
+    };
+  }
+
+  return {
+    kind: "arena-character",
+    texture: "arenaCharacters",
+    initialFrame: characterFrame(actor),
+    scale: .42,
+  };
+}
+
+function updateActorSprite(
+  sprite: Phaser.GameObjects.Sprite,
+  character: CharacterPresentation,
+  actor: Readonly<ActorState>,
+): void {
+  if (character.kind === "alien-runner") {
+    updateAlienRunnerSprite(sprite, actor);
+    return;
+  }
+
+  if (sprite.anims.isPlaying) {
+    sprite.stop();
+  }
+  sprite.setFrame(characterFrame(actor));
+}
+
+function updateAlienRunnerSprite(
+  sprite: Phaser.GameObjects.Sprite,
+  actor: Readonly<ActorState>,
+): void {
+  const direction = alienRunnerDirection(actor);
+  const isMoving = actor.lifeState === "active" &&
+    Math.hypot(actor.velocity.x, actor.velocity.y) > 8;
+
+  if (isMoving) {
+    sprite.play(alienRunnerAnimationKey(direction), true);
+    return;
+  }
+
+  if (sprite.anims.isPlaying) {
+    sprite.stop();
+  }
+  sprite.setFrame(alienRunnerIdleFrame(actor));
+}
+
 function characterFrame(actor: Readonly<ActorState>): number {
   const row = actor.teamId === "blue" ? 4 : 0;
   const direction = Math.abs(actor.facing.x) > Math.abs(actor.facing.y)
     ? actor.facing.x >= 0 ? 1 : 3
     : actor.facing.y >= 0 ? 2 : 0;
   return row * 4 + direction;
+}
+
+function alienRunnerIdleFrame(actor: Readonly<ActorState>): number {
+  return alienRunnerDirectionRow(alienRunnerDirection(actor)) * 4;
+}
+
+function alienRunnerDirection(actor: Readonly<ActorState>): AlienRunnerDirection {
+  return Math.abs(actor.facing.x) > Math.abs(actor.facing.y)
+    ? actor.facing.x >= 0 ? "right" : "left"
+    : actor.facing.y >= 0 ? "down" : "up";
+}
+
+function alienRunnerDirectionRow(direction: AlienRunnerDirection): number {
+  return ALIEN_RUNNER_DIRECTIONS.indexOf(direction);
+}
+
+function alienRunnerAnimationKey(direction: AlienRunnerDirection): string {
+  return `alien-runner-${direction}-run`;
+}
+
+function ensureAlienRunnerAnimations(scene: Phaser.Scene): void {
+  for (const direction of ALIEN_RUNNER_DIRECTIONS) {
+    const key = alienRunnerAnimationKey(direction);
+    if (scene.anims.exists(key)) {
+      continue;
+    }
+    const row = alienRunnerDirectionRow(direction);
+    scene.anims.create({
+      key,
+      frames: scene.anims.generateFrameNumbers("alienRunner", {
+        start: row * 4 + 1,
+        end: row * 4 + 3,
+      }),
+      frameRate: 9,
+      repeat: -1,
+    });
+  }
 }
 
 function ensureSpawnPadAnimation(scene: Phaser.Scene): void {
