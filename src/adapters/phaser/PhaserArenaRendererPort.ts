@@ -64,6 +64,7 @@ export class PhaserArenaRendererPort implements RendererPort {
     private readonly followActorId?: ActorId,
     private readonly playerSkinId: V2PlayerSkinId = "alien-runner",
   ) {
+    scene.cameras.main.setRoundPixels(true);
     const level = toPresentationLevel(map);
     ensureLibraryCandleAnimation(scene);
     ensurePlayerSkinAnimations(scene);
