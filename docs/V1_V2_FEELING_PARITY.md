@@ -14,13 +14,14 @@ in:
 
 - Beschleunigung: `1580`
 - V1-Maximalgeschwindigkeit: `335`
-- V2-Maximalgeschwindigkeit: bewusst auf `268` reduziert (`80 %`), da sich
+- V2-Maximalgeschwindigkeit: bewusst auf `241.2` reduziert (`72 %`), da sich
   `335` insbesondere auf Touch deutlich zu schnell anfuehlt.
 - Bodenreibung: `7`
 - Reibung mit Input: `1.25`
 - Luftreibung: `1.05`
 - Luftkontrolle: `0.72`
-- Luft-Maximalgeschwindigkeit: Faktor `1.08`
+- Luft-Maximalgeschwindigkeit: Faktor `1.20`, damit authored Sprungreichweiten
+  trotz reduzierter Bodengeschwindigkeit erhalten bleiben
 - Turn-Penalty: `0.68` ab Dot-Produkt `< -0.28`
 - Strafe-Bonus: `1.12`
 - Simulations-dt: maximal `34 ms`
@@ -48,7 +49,7 @@ in:
 - Audio-Schrittfrequenz und Bewegungsspur skalieren ueber denselben
   `V2_GROUND_PARITY_CONFIG`-Wert.
 - Deterministische Smokes pruefen jedes authored Gap und Solid auf allen drei
-  Karten mit einem gehaltenen Sprung bei `268`.
+  Karten mit einem gehaltenen Sprung bei `241.2`.
 - Short-Jump- und Long-Jump-Unterschied, Landung und Jump-Events bleiben
   weiterhin separat abgesichert.
 

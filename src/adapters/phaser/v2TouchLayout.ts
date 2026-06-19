@@ -1,7 +1,10 @@
 export function calculateV2TouchLayout(width: number, height: number) {
   const compact = width <= 720 || height <= 520;
-  const jumpX = width - Math.max(compact ? 58 : 80, width * (compact ? .065 : .085));
-  const jumpY = height - (compact ? 60 : 88);
+  const attackX = width - Math.max(
+    compact ? 52 : 78,
+    width * (compact ? .055 : .065),
+  );
+  const attackY = height - (compact ? 52 : 80);
 
   return {
     joy: {
@@ -12,28 +15,28 @@ export function calculateV2TouchLayout(width: number, height: number) {
     },
     jump: {
       r: compact ? 40 : 48,
-      x: jumpX,
-      y: jumpY,
+      x: attackX,
+      y: attackY,
     },
     fire: {
-      r: compact ? 34 : 40,
-      x: jumpX - (compact ? 105 : 120),
-      y: jumpY + (compact ? 3 : 8),
+      r: compact ? 32 : 38,
+      x: attackX - (compact ? 98 : 118),
+      y: attackY + (compact ? 3 : 4),
     },
     rocket: {
-      r: compact ? 31 : 38,
-      x: jumpX - (compact ? 150 : 168),
-      y: jumpY - (compact ? 75 : 92),
+      r: compact ? 29 : 36,
+      x: attackX - (compact ? 100 : 118),
+      y: attackY - (compact ? 89 : 122),
     },
     rail: {
-      r: compact ? 31 : 38,
-      x: jumpX - (compact ? 55 : 72),
-      y: jumpY - (compact ? 75 : 92),
+      r: compact ? 29 : 36,
+      x: attackX - (compact ? 32 : 38),
+      y: attackY - (compact ? 100 : 138),
     },
     whip: {
-      r: compact ? 31 : 38,
-      x: jumpX - (compact ? 235 : 260),
-      y: jumpY - (compact ? 55 : 72),
+      r: compact ? 29 : 36,
+      x: attackX - (compact ? 158 : 188),
+      y: attackY - (compact ? 55 : 66),
     },
   };
 }

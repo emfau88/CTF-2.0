@@ -1316,10 +1316,10 @@ function checkJumpParity(): void {
     speedActor.velocity.y,
   );
   if (
-    V2_GROUND_PARITY_CONFIG.maxSpeed !== 268 ||
+    V2_GROUND_PARITY_CONFIG.maxSpeed !== 241.2 ||
     Math.abs(cappedSpeed - V2_GROUND_PARITY_CONFIG.maxSpeed) > .001
   ) {
-    throw new Error("V2 movement must enforce the approved 20% speed reduction.");
+    throw new Error("V2 movement must enforce the approved 241.2 speed cap.");
   }
 
   const shortJump = runJumpSequence(1);
@@ -1436,7 +1436,7 @@ function checkAuthoredRectTraversal(
   }
 
   throw new Error(
-    `${map.displayName} ${kind} ${rect.id} must remain jump-reachable at 80% speed.`,
+    `${map.displayName} ${kind} ${rect.id} must remain jump-reachable at the approved V2 speed.`,
   );
 }
 

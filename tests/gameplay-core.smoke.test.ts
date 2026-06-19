@@ -454,8 +454,9 @@ test("player basic fire is manual while the bot fallback remains automatic", () 
   );
 });
 
-test("compact v2 fire control stays clear of jump and weapon touch zones", () => {
-  const layout = calculateV2TouchLayout(667, 375);
+test("compact v2 attack controls form a clear edge cluster", () => {
+  const width = 667;
+  const layout = calculateV2TouchLayout(width, 375);
   const distance = (
     left: { x: number; y: number },
     right: { x: number; y: number },
@@ -470,6 +471,19 @@ test("compact v2 fire control stays clear of jump and weapon touch zones", () =>
       distance(layout.fire, weapon) > layout.fire.r + weapon.r + 20,
     );
   }
+  for (const [left, right] of [
+    [layout.rocket, layout.rail],
+    [layout.rocket, layout.whip],
+    [layout.rail, layout.whip],
+  ] as const) {
+    assert.ok(distance(left, right) > left.r + right.r);
+  }
+  assert.ok(layout.jump.r > layout.fire.r);
+  assert.ok(layout.jump.x > layout.fire.x);
+  assert.ok(layout.jump.x + layout.jump.r <= width);
+  assert.ok(
+    Math.min(layout.rocket.x, layout.rail.x, layout.whip.x) >= width - 210,
+  );
 });
 
 test("arena world factories support symmetric teams from 1v1 through 4v4", () => {

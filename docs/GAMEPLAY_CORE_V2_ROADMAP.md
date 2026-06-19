@@ -291,7 +291,7 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 
 **Ziel:** Bots verwenden dieselben Regeln und Inputs wie menschliche Actors.
 
-- [x] Globale V2-Bewegung fuer Spieler und Bots auf `80 %` reduzieren.
+- [x] Globale V2-Bodenbewegung fuer Spieler und Bots auf `72 %` reduzieren.
 - [x] Authored Gaps und Hindernisse mit reduzierter Geschwindigkeit pruefen.
 - [x] Minimalen TDM-Zielcontroller fuer Gegnerverfolgung erstellen.
 - [x] Generische Grid-Navigation fuer Solids und Gaps erstellen.
@@ -308,9 +308,11 @@ erzwingt, wird zuerst die Objective-Grenze korrigiert.
 
 ### Movement-Balancing-Slice
 
-- `V2_GROUND_PARITY_CONFIG.maxSpeed` wurde von `335` auf `268` reduziert.
-- Beschleunigung und Jump-Konfiguration bleiben fuer direkte Vergleichbarkeit
-  unveraendert.
+- `V2_GROUND_PARITY_CONFIG.maxSpeed` wurde von `335` auf `268` und danach fuer
+  bessere mobile Lesbarkeit nochmals um `10 %` auf `241.2` reduziert.
+- Beschleunigung und Jump-Timing bleiben fuer direkte Vergleichbarkeit
+  unveraendert; der Air-Speed-Multiplikator erhaelt die authored
+  Sprungreichweiten.
 - Audio und Bewegungseffekte beziehen ihren Speed-Massstab aus derselben
   Core-Konfiguration.
 - Core-Smokes simulieren gehaltene Spruenge ueber alle Gaps und Solids von
