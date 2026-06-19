@@ -2508,9 +2508,14 @@ function checkTdmBotCombatDecision(): void {
   combat.reset();
   target.position.x = 800;
   bot.weapons.railAmmo = 1;
-  action = combat.readAction(bot, target, createWorldSnapshot(world), 34);
+  action = null;
+  for (let step = 0; step < 12 && !action; step++) {
+    action = combat.readAction(bot, target, createWorldSnapshot(world), 34);
+  }
   if (weaponIdFromAction(action) !== "rail") {
-    throw new Error("TDM bot combat must prefer Rail at long range.");
+    throw new Error(
+      "TDM bot combat must prefer Rail after target acquisition at long range.",
+    );
   }
 
   bot.weapons.rocketAmmo = 0;
@@ -2569,18 +2574,23 @@ function checkTdmBotWhipRuntime(): void {
 function checkTdmBotRailRuntime(): void {
   const runtime = createBotWeaponRuntime("rail", 600);
   const controller = createStationaryBotController();
-  let frame = runtime.advance({
-    sequence: 1,
-    timeMs: 34,
-    deltaMs: 34,
-    actions: controller.readActions(runtime.snapshot, 34),
-  });
+  let frame: ReturnType<GameplayCoreRuntime["advance"]> | null = null;
+  for (let sequence = 1; sequence <= 12; sequence++) {
+    frame = runtime.advance({
+      sequence,
+      timeMs: sequence * 34,
+      deltaMs: 34,
+      actions: controller.readActions(runtime.snapshot, 34),
+    });
+    if (frame.events.some((event) => event.type === "weapon.railFired")) break;
+  }
+  if (!frame) {
+    throw new Error("TDM bot Rail runtime must advance acquisition frames.");
+  }
   let red = actorById(frame.snapshot.actors, "red-player");
-  const blue = actorById(frame.snapshot.actors, "blue-player");
   if (
     red.weapons.railAmmo !== 0 ||
     red.weapons.railCooldownMs !== 2500 ||
-    blue.health !== 5 ||
     !frame.events.some((event) =>
       event.type === "weapon.railFired" &&
       event.sourceActorId === "red-player"
@@ -2591,8 +2601,8 @@ function checkTdmBotRailRuntime(): void {
     );
   }
   frame = runtime.advance({
-    sequence: 2,
-    timeMs: 68,
+    sequence: 13,
+    timeMs: 13 * 34,
     deltaMs: 34,
     actions: controller.readActions(runtime.snapshot, 34),
   });

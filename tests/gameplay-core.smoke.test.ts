@@ -15,12 +15,14 @@ import {
   OneFlagMode,
   OneFlagBotController,
   TeamDeathmatchMode,
+  TdmBotCombatController,
   TRAINING_CROSSING_V2,
   clampRuntimeDeltaMs,
   GRAND_ARCHIVE_V2,
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
   V2_BOT_MOVEMENT_CONFIG,
   V2_V1_WEAPON_PARITY_CONFIG,
+  type BotCombatConfig,
 } from "../src/core";
 import { shouldUseGameplayV2Shell } from "../src/bootSceneSelection";
 import { readV2RouteState } from "../src/v2Route";
@@ -288,4 +290,60 @@ test("one flag bot still approaches the neutral flag directly", () => {
   const move = actions.find((action) => action.action === "move");
   assert.equal(move?.magnitude, 1);
   assert.deepEqual(capturedTarget, flag.position);
+});
+
+test("rail bot waits for target acquisition and applies deterministic spread", () => {
+  const world = createEmptyWorldState("rail-bot-balance");
+  world.geometry = {
+    bounds: { minX: 0, minY: 0, maxX: 1200, maxY: 600 },
+    solids: [],
+    gaps: [],
+  };
+  const bot = createActorState({
+    id: "rail-bot",
+    kind: "bot",
+    teamId: "red",
+    position: { x: 100, y: 100 },
+    radius: 16,
+    maxHealth: 100,
+    maxArmor: 0,
+    weapons: { railAmmo: 2 },
+  });
+  const target = createActorState({
+    id: "rail-target",
+    kind: "player",
+    teamId: "blue",
+    position: { x: 700, y: 100 },
+    radius: 16,
+    maxHealth: 100,
+    maxArmor: 0,
+  });
+  world.actors.push(bot, target);
+  const config: BotCombatConfig = {
+    rocketMinRange: 190,
+    rocketMaxRange: 700,
+    rocketDecisionCooldownMs: 3000,
+    railReactionMs: 320,
+    railAimJitterRadians: .04,
+    railPreferredMinRange: 300,
+    railRange: 1100,
+    whipRange: 100,
+  };
+  const combat = new TdmBotCombatController(config);
+  const snapshot = createWorldSnapshot(world);
+
+  assert.equal(combat.readAction(bot, target, snapshot, 16), null);
+  assert.equal(combat.readAction(bot, target, snapshot, 319), null);
+  const shot = combat.readAction(bot, target, snapshot, 1);
+
+  assert.equal(shot?.payload?.weaponId, "rail");
+  assert.ok(shot?.direction);
+  assert.ok(Math.abs(shot.direction.y) > .0001);
+  assert.ok(Math.abs(Math.hypot(shot.direction.x, shot.direction.y) - 1) < .0001);
+
+  target.lifeId++;
+  assert.equal(
+    combat.readAction(bot, target, createWorldSnapshot(world), 34),
+    null,
+  );
 });

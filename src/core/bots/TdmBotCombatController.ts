@@ -10,6 +10,9 @@ type BotWeaponId = "rocket" | "rail" | "whip";
 
 export class TdmBotCombatController {
   private rocketDecisionCooldownMs = 0;
+  private railReactionRemainingMs = 0;
+  private railTargetKey: string | null = null;
+  private railShotSequence = 0;
 
   constructor(
     private readonly config: BotCombatConfig = V2_BOT_COMBAT_CONFIG,
@@ -33,10 +36,12 @@ export class TdmBotCombatController {
       actor.teamId === target.teamId ||
       !hasLineOfSight(actor.position, target.position, snapshot.geometry.solids)
     ) {
+      this.resetRailTarget();
       return null;
     }
 
-    const direction = directionBetween(actor.position, target.position);
+    this.updateRailTarget(target, deltaMs);
+    const directAim = directionBetween(actor.position, target.position);
     const distance = distanceBetween(actor.position, target.position);
     const weaponId = this.chooseWeapon(actor, target, distance);
     if (!weaponId) {
@@ -45,6 +50,9 @@ export class TdmBotCombatController {
     if (weaponId === "rocket") {
       this.rocketDecisionCooldownMs = this.config.rocketDecisionCooldownMs;
     }
+    const direction = weaponId === "rail"
+      ? this.createRailAim(actor, target, directAim)
+      : directAim;
     return {
       action: "fireWeapon",
       phase: "pressed",
@@ -56,6 +64,44 @@ export class TdmBotCombatController {
 
   reset(): void {
     this.rocketDecisionCooldownMs = 0;
+    this.resetRailTarget();
+    this.railShotSequence = 0;
+  }
+
+  private updateRailTarget(
+    target: Readonly<ActorState>,
+    deltaMs: number,
+  ): void {
+    const targetKey = `${target.id}:${target.lifeId}`;
+    if (this.railTargetKey !== targetKey) {
+      this.railTargetKey = targetKey;
+      this.railReactionRemainingMs = this.config.railReactionMs;
+      return;
+    }
+    this.railReactionRemainingMs = Math.max(
+      0,
+      this.railReactionRemainingMs - Math.max(0, deltaMs),
+    );
+  }
+
+  private resetRailTarget(): void {
+    this.railTargetKey = null;
+    this.railReactionRemainingMs = 0;
+  }
+
+  private createRailAim(
+    actor: Readonly<ActorState>,
+    target: Readonly<ActorState>,
+    directAim: WorldPosition,
+  ): WorldPosition {
+    const sample = deterministicSignedUnit(
+      `${actor.id}:${actor.lifeId}:${target.id}:${target.lifeId}:${this.railShotSequence}`,
+    );
+    this.railShotSequence++;
+    return rotateDirection(
+      directAim,
+      sample * this.config.railAimJitterRadians,
+    );
   }
 
   private chooseWeapon(
@@ -70,13 +116,12 @@ export class TdmBotCombatController {
     ) {
       return "whip";
     }
-    if (
+    const railAvailable =
       actor.weapons.railAmmo > 0 &&
       actor.weapons.railCooldownMs <= 0 &&
-      distance <= this.config.railRange &&
-      distance >= this.config.railPreferredMinRange
-    ) {
-      return "rail";
+      distance <= this.config.railRange;
+    if (railAvailable && distance >= this.config.railPreferredMinRange) {
+      return this.railReactionRemainingMs <= 0 ? "rail" : null;
     }
     if (
       actor.weapons.rocketAmmo > 0 &&
@@ -87,14 +132,35 @@ export class TdmBotCombatController {
       return "rocket";
     }
     if (
-      actor.weapons.railAmmo > 0 &&
-      actor.weapons.railCooldownMs <= 0 &&
-      distance <= this.config.railRange
+      railAvailable &&
+      this.railReactionRemainingMs <= 0 &&
+      distance < this.config.railPreferredMinRange
     ) {
       return "rail";
     }
     return null;
   }
+}
+
+function deterministicSignedUnit(key: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < key.length; index++) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 0xffffffff * 2 - 1;
+}
+
+function rotateDirection(
+  direction: WorldPosition,
+  angle: number,
+): WorldPosition {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return {
+    x: direction.x * cos - direction.y * sin,
+    y: direction.x * sin + direction.y * cos,
+  };
 }
 
 export function directionBetween(
