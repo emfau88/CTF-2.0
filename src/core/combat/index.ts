@@ -20,7 +20,7 @@ export {
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   type BasicAutoAttackConfig,
 } from "./BasicAutoAttackConfig";
-export { updateBasicAutoAttacks } from "./basicAutoAttack";
+export { fireBasicAttack, updateBasicAutoAttacks } from "./basicAutoAttack";
 export {
   V2_V1_WEAPON_PARITY_CONFIG,
   type V1WeaponConfig,

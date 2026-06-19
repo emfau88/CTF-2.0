@@ -1,6 +1,6 @@
 import type { GameEvent } from "../events";
 import type { CoreInputFrame } from "../input";
-import type { BasicAutoAttackConfig } from "../combat";
+import { fireBasicAttack, type BasicAutoAttackConfig } from "../combat";
 import {
   DiagnosticArenaMode,
   type GameMode,
@@ -29,6 +29,8 @@ export interface GameplayCoreRuntimeOptions {
   readonly mode?: GameMode;
   readonly createWorld?: () => WorldState;
   readonly basicAutoAttack?: BasicAutoAttackConfig;
+  readonly manualBasicAttackActorIds?: readonly string[];
+  readonly autoBasicAttackActorIds?: readonly string[];
   readonly allowManualPrimaryFire?: boolean;
 }
 
@@ -36,6 +38,8 @@ export class GameplayCoreRuntime implements CoreRuntime {
   private readonly mode: GameMode;
   private readonly createWorld: () => WorldState;
   private readonly basicAutoAttack?: BasicAutoAttackConfig;
+  private readonly manualBasicAttackActorIds: ReadonlySet<string>;
+  private readonly autoBasicAttackActorIds?: readonly string[];
   private readonly allowManualPrimaryFire: boolean;
   private world: WorldState;
   private currentSnapshot: WorldSnapshot;
@@ -45,6 +49,10 @@ export class GameplayCoreRuntime implements CoreRuntime {
     this.mode = options.mode ?? new DiagnosticArenaMode();
     this.createWorld = options.createWorld ?? createDiagnosticWorldState;
     this.basicAutoAttack = options.basicAutoAttack;
+    this.manualBasicAttackActorIds = new Set(
+      options.manualBasicAttackActorIds ?? [],
+    );
+    this.autoBasicAttackActorIds = options.autoBasicAttackActorIds;
     this.allowManualPrimaryFire = options.allowManualPrimaryFire ?? true;
     this.world = this.createWorld();
     this.currentSnapshot = createWorldSnapshot(this.world);
@@ -97,6 +105,7 @@ export class GameplayCoreRuntime implements CoreRuntime {
       deltaMs,
       events,
       this.basicAutoAttack,
+      this.autoBasicAttackActorIds,
     );
     if (isMatchEnded(this.world)) {
       return this.finishFrame(events);
@@ -134,6 +143,20 @@ export class GameplayCoreRuntime implements CoreRuntime {
             this.allowManualPrimaryFire,
           ),
         );
+        if (
+          this.basicAutoAttack &&
+          this.manualBasicAttackActorIds.has(actor.id) &&
+          actorInput.actions.some((intent) =>
+            intent.action === "firePrimary" && intent.phase === "held"
+          )
+        ) {
+          dispatchModeEvents(
+            this.mode,
+            this.world,
+            events,
+            fireBasicAttack(this.world, actor, this.basicAutoAttack),
+          );
+        }
       }
     }
   }

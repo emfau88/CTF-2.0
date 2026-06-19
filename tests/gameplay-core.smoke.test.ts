@@ -20,12 +20,14 @@ import {
   clampRuntimeDeltaMs,
   GRAND_ARCHIVE_V2,
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
+  V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_BOT_MOVEMENT_CONFIG,
   V2_V1_WEAPON_PARITY_CONFIG,
   type BotCombatConfig,
 } from "../src/core";
 import { shouldUseGameplayV2Shell } from "../src/bootSceneSelection";
 import { readV2RouteState } from "../src/v2Route";
+import { calculateV2TouchLayout } from "../src/adapters/phaser/v2TouchLayout";
 
 test("gameplay core smoke passes the full phaser game bridge check", () => {
   assert.doesNotThrow(() => runPhaserGameBridgeSmokeCheck());
@@ -346,4 +348,94 @@ test("rail bot waits for target acquisition and applies deterministic spread", (
     combat.readAction(bot, target, createWorldSnapshot(world), 34),
     null,
   );
+});
+
+test("player basic fire is manual while the bot fallback remains automatic", () => {
+  const createWorld = () => {
+    const world = createEmptyWorldState("manual-basic-fire");
+    world.geometry = {
+      bounds: { minX: 0, minY: 0, maxX: 800, maxY: 400 },
+      solids: [],
+      gaps: [],
+    };
+    world.actors.push(
+      createActorState({
+        id: "blue-player",
+        kind: "player",
+        teamId: "blue",
+        position: { x: 100, y: 200 },
+        radius: 16,
+        maxHealth: 100,
+        maxArmor: 0,
+      }),
+      createActorState({
+        id: "red-player",
+        kind: "player",
+        teamId: "red",
+        position: { x: 300, y: 200 },
+        radius: 16,
+        maxHealth: 100,
+        maxArmor: 0,
+      }),
+    );
+    return world;
+  };
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld,
+    basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+    manualBasicAttackActorIds: ["blue-player"],
+    autoBasicAttackActorIds: ["red-player"],
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+
+  const automatic = runtime.advance({
+    sequence: 1,
+    timeMs: 34,
+    deltaMs: 34,
+    actions: [],
+  });
+  assert.deepEqual(
+    automatic.events
+      .filter((event) => event.type === "projectile.spawned")
+      .map((event) => event.sourceActorId),
+    ["red-player"],
+  );
+
+  const manual = runtime.advance({
+    sequence: 2,
+    timeMs: 68,
+    deltaMs: 34,
+    actions: [{
+      action: "firePrimary",
+      phase: "held",
+      actorId: "blue-player",
+    }],
+  });
+  assert.equal(
+    manual.events.some((event) =>
+      event.type === "projectile.spawned" &&
+      event.sourceActorId === "blue-player"
+    ),
+    true,
+  );
+});
+
+test("compact v2 fire control stays clear of jump and weapon touch zones", () => {
+  const layout = calculateV2TouchLayout(667, 375);
+  const distance = (
+    left: { x: number; y: number },
+    right: { x: number; y: number },
+  ) => Math.hypot(left.x - right.x, left.y - right.y);
+
+  assert.ok(
+    distance(layout.fire, layout.jump) >
+      layout.fire.r + layout.jump.r + 20,
+  );
+  for (const weapon of [layout.rocket, layout.rail, layout.whip]) {
+    assert.ok(
+      distance(layout.fire, weapon) > layout.fire.r + weapon.r + 20,
+    );
+  }
 });

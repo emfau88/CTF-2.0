@@ -6,9 +6,12 @@ import type {
   WorldPosition,
   WorldSnapshot,
 } from "../../core";
-import { V2_V1_WEAPON_PARITY_CONFIG } from "../../core";
-import { calculateTouchLayout } from "../../touchLayout";
+import {
+  V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+  V2_V1_WEAPON_PARITY_CONFIG,
+} from "../../core";
 import type { InputAdapterPort } from "../input";
+import { calculateV2TouchLayout } from "./v2TouchLayout";
 
 interface TouchControl {
   id: number;
@@ -405,7 +408,7 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
   };
 
   private layout(gameSize: Phaser.Structs.Size): void {
-    const layout = calculateTouchLayout(gameSize.width, gameSize.height);
+    const layout = calculateV2TouchLayout(gameSize.width, gameSize.height);
     const compact = layout.rocket.r <= 36;
     this.moveStick.radius = layout.joy.r;
     this.moveStick.x = layout.joy.ox;
@@ -417,9 +420,9 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
     this.jump.radius = layout.jump.r;
     this.jump.x = layout.jump.x;
     this.jump.y = layout.jump.y;
-    this.fire.radius = compact ? 34 : 40;
-    this.fire.x = layout.rocket.x;
-    this.fire.y = layout.rocket.y;
+    this.fire.radius = layout.fire.r;
+    this.fire.x = layout.fire.x;
+    this.fire.y = layout.fire.y;
     this.fireLabel.setPosition(this.fire.x, this.fire.y)
       .setVisible(this.manualFireEnabled);
     this.jumpLabel.setPosition(this.jump.x, this.jump.y);
@@ -520,7 +523,29 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
       knobRadius,
     );
     if (this.manualFireEnabled) {
-      this.drawButton(this.fire, 0xf3c453);
+      const cooldownMs = this.controlledActor()?.primaryFireCooldownMs ?? 0;
+      this.drawButton(this.fire, 0xf3c453, cooldownMs <= 0);
+      this.fireLabel.setText(
+        cooldownMs > 0
+          ? `FIRE\n${(Math.ceil(cooldownMs / 100) / 10).toFixed(1)}`
+          : "FIRE",
+      );
+      if (cooldownMs > 0) {
+        const ratio = Phaser.Math.Clamp(
+          cooldownMs / V2_BASIC_AUTOSHOOT_PARITY_CONFIG.cooldownMs,
+          0,
+          1,
+        );
+        graphics.lineStyle(5, 0xf3c453, .72).beginPath()
+          .arc(
+            this.fire.x,
+            this.fire.y,
+            this.fire.radius + 5,
+            -Math.PI / 2,
+            -Math.PI / 2 + Math.PI * 2 * (1 - ratio),
+          )
+          .strokePath();
+      }
     }
     graphics.fillStyle(
       this.jump.held ? 0xffd86b : 0xffffff,
@@ -614,9 +639,17 @@ export class PhaserMobileInputAdapter implements InputAdapterPort {
       .fillCircle(endX, endY, weaponId === "rocket" ? 7 : 6);
   }
 
-  private drawButton(control: TouchControl, color: number): void {
-    this.graphics.fillStyle(color, control.held ? .9 : .55);
-    this.graphics.lineStyle(3, 0x17302d, control.held ? .55 : .25);
+  private drawButton(
+    control: TouchControl,
+    color: number,
+    ready = true,
+  ): void {
+    this.graphics.fillStyle(color, ready ? control.held ? .9 : .55 : .28);
+    this.graphics.lineStyle(
+      3,
+      0x17302d,
+      ready ? control.held ? .55 : .25 : .16,
+    );
     this.graphics.fillCircle(control.x, control.y, control.radius);
     this.graphics.strokeCircle(control.x, control.y, control.radius);
   }

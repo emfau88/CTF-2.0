@@ -7,44 +7,47 @@ import type { ProjectileState } from "./projectile";
 export function updateBasicAutoAttacks(
   world: WorldState,
   config: BasicAutoAttackConfig,
+  actorIds?: readonly string[],
 ): readonly GameEvent[] {
   const events: GameEvent[] = [];
   for (const actor of world.actors) {
-    if (
-      actor.lifeState !== "active" ||
-      actor.primaryFireCooldownMs > 0 ||
-      !actor.teamId
-    ) {
-      continue;
-    }
-    const target = selectAutoAttackTarget(actor, world, config);
-    if (!target) {
-      continue;
-    }
-    const projectile = createBasicProjectile(
-      actor,
-      target,
-      world.timeMs,
-      config,
-    );
-    world.projectiles.push(projectile);
-    actor.primaryFireCooldownMs = config.cooldownMs;
-    events.push({
-      id: `projectile-spawned-${projectile.id}`,
-      type: "projectile.spawned",
-      timeMs: world.timeMs,
-      sourceActorId: actor.id,
-      targetActorId: target.id,
-      teamId: actor.teamId,
-      payload: {
-        projectileId: projectile.id,
-        weaponId: "basic-autoshoot",
-        position: { ...projectile.position },
-        velocity: { ...projectile.velocity },
-      },
-    });
+    if (actorIds && !actorIds.includes(actor.id)) continue;
+    events.push(...fireBasicAttack(world, actor, config));
   }
   return events;
+}
+
+export function fireBasicAttack(
+  world: WorldState,
+  actor: ActorState,
+  config: BasicAutoAttackConfig,
+): readonly GameEvent[] {
+  if (
+    actor.lifeState !== "active" ||
+    actor.primaryFireCooldownMs > 0 ||
+    !actor.teamId
+  ) {
+    return [];
+  }
+  const target = selectAutoAttackTarget(actor, world, config);
+  if (!target) return [];
+  const projectile = createBasicProjectile(actor, target, world.timeMs, config);
+  world.projectiles.push(projectile);
+  actor.primaryFireCooldownMs = config.cooldownMs;
+  return [{
+    id: `projectile-spawned-${projectile.id}`,
+    type: "projectile.spawned",
+    timeMs: world.timeMs,
+    sourceActorId: actor.id,
+    targetActorId: target.id,
+    teamId: actor.teamId,
+    payload: {
+      projectileId: projectile.id,
+      weaponId: "basic-autoshoot",
+      position: { ...projectile.position },
+      velocity: { ...projectile.velocity },
+    },
+  }];
 }
 
 function selectAutoAttackTarget(

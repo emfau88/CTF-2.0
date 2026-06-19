@@ -16,13 +16,14 @@ export function updateCombatWorld(
   deltaMs: number,
   events: GameEvent[],
   basicAutoAttack?: BasicAutoAttackConfig,
+  autoBasicAttackActorIds?: readonly string[],
 ): void {
   if (basicAutoAttack) {
     dispatchModeEvents(
       mode,
       world,
       events,
-      updateBasicAutoAttacks(world, basicAutoAttack),
+      updateBasicAutoAttacks(world, basicAutoAttack, autoBasicAttackActorIds),
     );
   }
   const projectiles = updateProjectiles(

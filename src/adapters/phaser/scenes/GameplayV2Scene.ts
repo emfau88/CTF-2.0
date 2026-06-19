@@ -68,13 +68,17 @@ export class GameplayV2Scene extends Phaser.Scene {
         ? createOneFlagWorldState(selectedMap)
         : createTeamDeathmatchWorldState(selectedMap),
       basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+      manualBasicAttackActorIds: useBotOpponent
+        ? ["blue-player"]
+        : ["blue-player", "red-player"],
+      autoBasicAttackActorIds: useBotOpponent ? ["red-player"] : [],
       allowManualPrimaryFire: false,
     });
     const mobileInput = useMobileControls
       ? new PhaserMobileInputAdapter(
         this,
         "blue-player",
-        false,
+        true,
         (weaponId) => {
           const actor = (this.bridge?.snapshot ?? runtime.snapshot).actors.find(
             (candidate) => candidate.id === "blue-player",

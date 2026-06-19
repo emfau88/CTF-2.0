@@ -232,8 +232,8 @@ implements HudPort, FrameDiagnosticsPort {
       .setPosition(width / 2, height - 14)
       .setText(
         this.botOpponent
-          ? "WASD / SPACE   Q ROCKET   E RAIL   F WHIP"
-          : "P1 WASD / SPACE   P2 ARROWS / ENTER   Q / E / F WEAPONS",
+          ? "WASD / SPACE   J / CLICK FIRE   Q ROCKET   E RAIL   F WHIP"
+          : "P1 WASD / SPACE / J   P2 ARROWS / ENTER / SHIFT   Q / E / F WEAPONS",
       )
       .setVisible(!this.mobileControls && width >= 900 && height >= 500);
   }
