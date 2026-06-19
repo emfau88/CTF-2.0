@@ -26,6 +26,7 @@ export interface ClassicCtfModeConfig {
   readonly durationMs: number;
   readonly captureLimit: number;
   readonly pickupRadius: number;
+  readonly dropReturnMs: number;
   readonly initialScores: readonly ScoreEntry[];
 }
 
@@ -33,6 +34,7 @@ export const V2_CLASSIC_CTF_CONFIG: ClassicCtfModeConfig = {
   durationMs: 180_000,
   captureLimit: 3,
   pickupRadius: 36,
+  dropReturnMs: 5_000,
   initialScores: [
     { id: "blue", teamId: "blue", score: 0 },
     { id: "red", teamId: "red", score: 0 },
@@ -88,6 +90,7 @@ export class ClassicCtfMode implements GameMode {
 
     const events: GameEvent[] = [];
     this.syncCarriedFlags(world, events);
+    this.updateDroppedFlags(world, ms, events);
     for (const actor of world.actors) {
       if (actor.lifeState !== "active" || !actor.teamId) continue;
       const carriedFlag = flagCarriedBy(world, actor.id);
@@ -98,10 +101,30 @@ export class ClassicCtfMode implements GameMode {
         }
         continue;
       }
+      const ownDroppedFlag = world.objectives.find((objective) =>
+        isTeamFlag(objective) &&
+        objective.state.controllingTeamId === actor.teamId &&
+        objective.state.status === "dropped"
+      );
+      if (
+        ownDroppedFlag &&
+        distance(actor.position, ownDroppedFlag.position) <
+          this.config.pickupRadius
+      ) {
+        events.push(...this.resetFlag(
+          world,
+          ownDroppedFlag,
+          "owner-return",
+          actor.id,
+          actor.teamId,
+        ));
+        continue;
+      }
       const enemyFlag = world.objectives.find((objective) =>
         isTeamFlag(objective) &&
         objective.state.controllingTeamId !== actor.teamId &&
-        objective.state.status === "home"
+        (objective.state.status === "home" ||
+          objective.state.status === "dropped")
       );
       if (
         enemyFlag &&
@@ -113,6 +136,7 @@ export class ClassicCtfMode implements GameMode {
             ...enemyFlag.state,
             status: "carried",
             interactingActorId: actor.id,
+            returnRemainingMs: undefined,
           },
         });
         events.push({
@@ -139,7 +163,8 @@ export class ClassicCtfMode implements GameMode {
       return [];
     }
     const actorId = event.targetActorId ?? event.sourceActorId;
-    return actorId ? this.resetFlagsCarriedBy(world, actorId, event.type) : [];
+    const actor = world.actors.find((candidate) => candidate.id === actorId);
+    return actor ? this.dropFlagsCarriedBy(world, actor, event.type) : [];
   }
 
   isComplete(world: WorldSnapshot): boolean {
@@ -169,8 +194,17 @@ export class ClassicCtfMode implements GameMode {
       }
       const carrierId = objective.state.interactingActorId;
       const carrier = world.actors.find((actor) => actor.id === carrierId);
-      if (!carrier || carrier.lifeState !== "active") {
-        events.push(...this.resetFlag(world, objective, "carrier-inactive"));
+      if (!carrier) {
+        events.push(...this.resetFlag(world, objective, "carrier-missing"));
+        continue;
+      }
+      if (carrier.lifeState !== "active") {
+        events.push(...this.dropFlag(
+          world,
+          objective,
+          carrier,
+          `carrier-${carrier.lifeState}`,
+        ));
         continue;
       }
       replaceObjective(world, objective.id, {
@@ -178,6 +212,33 @@ export class ClassicCtfMode implements GameMode {
         position: {
           x: carrier.position.x,
           y: carrier.position.y - 24 - carrier.jump.height,
+        },
+      });
+    }
+  }
+
+  private updateDroppedFlags(
+    world: WorldState,
+    deltaMs: number,
+    events: GameEvent[],
+  ): void {
+    for (const objective of [...world.objectives]) {
+      if (!isTeamFlag(objective) || objective.state.status !== "dropped") {
+        continue;
+      }
+      const remainingMs = Math.max(
+        0,
+        (objective.state.returnRemainingMs ?? 0) - deltaMs,
+      );
+      if (remainingMs <= 0) {
+        events.push(...this.resetFlag(world, objective, "drop-timeout"));
+        continue;
+      }
+      replaceObjective(world, objective.id, {
+        ...objective,
+        state: {
+          ...objective.state,
+          returnRemainingMs: remainingMs,
         },
       });
     }
@@ -229,29 +290,68 @@ export class ClassicCtfMode implements GameMode {
     return events;
   }
 
-  private resetFlagsCarriedBy(
+  private dropFlagsCarriedBy(
     world: WorldState,
-    actorId: ActorId,
+    actor: WorldState["actors"][number],
     reason: string,
   ): readonly GameEvent[] {
     return world.objectives.flatMap((objective) =>
       isTeamFlag(objective) &&
-        objective.state.interactingActorId === actorId
-        ? this.resetFlag(world, objective, reason)
+        objective.state.interactingActorId === actor.id
+        ? this.dropFlag(world, objective, actor, reason)
         : []
     );
+  }
+
+  private dropFlag(
+    world: WorldState,
+    objective: Objective,
+    actor: WorldState["actors"][number],
+    reason: string,
+  ): readonly GameEvent[] {
+    const position = reason === "actor.fell" || reason === "carrier-falling"
+      ? actor.lastSafePosition
+      : actor.position;
+    replaceObjective(world, objective.id, {
+      ...objective,
+      position: { ...position },
+      state: {
+        ...objective.state,
+        status: "dropped",
+        interactingActorId: null,
+        returnRemainingMs: this.config.dropReturnMs,
+      },
+    });
+    return [{
+      id: `flag-dropped-${objective.id}-${world.timeMs}`,
+      type: "objective.flagDropped",
+      timeMs: world.timeMs,
+      sourceActorId: actor.id,
+      teamId: actor.teamId ?? undefined,
+      payload: {
+        objectiveId: objective.id,
+        flagTeamId: objective.state.controllingTeamId,
+        position: { ...position },
+        returnMs: this.config.dropReturnMs,
+        reason,
+      },
+    }];
   }
 
   private resetFlag(
     world: WorldState,
     objective: Objective,
     reason: string,
+    sourceActorId?: ActorId,
+    teamId?: TeamId,
   ): readonly GameEvent[] {
     this.resetFlagToHome(world, objective);
     return [{
       id: `flag-reset-${objective.id}-${world.timeMs}`,
       type: "objective.flagReset",
       timeMs: world.timeMs,
+      sourceActorId,
+      teamId,
       payload: {
         objectiveId: objective.id,
         flagTeamId: objective.state.controllingTeamId,
@@ -279,6 +379,7 @@ export class ClassicCtfMode implements GameMode {
         ...objective.state,
         status: "home",
         interactingActorId: null,
+        returnRemainingMs: undefined,
       },
     });
   }

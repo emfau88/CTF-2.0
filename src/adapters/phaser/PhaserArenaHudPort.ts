@@ -397,7 +397,7 @@ function objectiveStatus(state: ModeHudState, compact: boolean): string {
       objective.id === "blue-flag"
     );
     return compact
-      ? `R ${flagLabel(red)}  |  B ${flagLabel(blue)}`
+      ? `R ${flagLabel(red, true)}  |  B ${flagLabel(blue, true)}`
       : `RED ${flagLabel(red)}  |  BLUE ${flagLabel(blue)}`;
   }
   if (state.modeId === "one-flag") {
@@ -413,8 +413,14 @@ function objectiveStatus(state: ModeHudState, compact: boolean): string {
 
 function flagLabel(
   objective: ModeHudState["objectives"][number] | undefined,
+  compact = false,
 ): string {
-  return objective?.state.status === "carried" ? "OUT" : "HOME";
+  if (objective?.state.status === "carried") return "OUT";
+  if (objective?.state.status !== "dropped") return "HOME";
+  const seconds = Math.ceil(
+    Math.max(0, objective.state.returnRemainingMs ?? 0) / 100,
+  ) / 10;
+  return compact ? `D${seconds}` : `DROP ${seconds}S`;
 }
 
 function lifeLabel(

@@ -5,6 +5,7 @@ export interface ObjectiveState {
   readonly controllingTeamId?: TeamId | null;
   readonly interactingActorId?: ActorId | null;
   readonly progress?: number;
+  readonly returnRemainingMs?: number;
 }
 
 export interface Objective {

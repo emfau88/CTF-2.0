@@ -53,6 +53,14 @@ export class ClassicCtfBotDecisionController {
       );
     }
 
+    if (ownFlag?.state.status === "dropped") {
+      return goal(
+        "recover-own-flag",
+        ownFlag.position,
+        `recover-drop:${ownFlag.id}`,
+      );
+    }
+
     const ownFlagCarrier = activeActor(
       snapshot,
       ownFlag?.state.interactingActorId,
@@ -80,6 +88,14 @@ export class ClassicCtfBotDecisionController {
           centerOf(baseFor(this.map, actor.teamId)),
         ),
         `escort:${alliedCarrier.id}:${alliedCarrier.lifeId}`,
+      );
+    }
+
+    if (enemyFlag?.state.status === "dropped" && this.role !== "defender") {
+      return goal(
+        "attack-flag",
+        enemyFlag.position,
+        `continue:${enemyFlag.id}`,
       );
     }
 

@@ -430,6 +430,7 @@ function checkClassicCtfMode(): void {
     durationMs: 180_000,
     captureLimit: 3,
     pickupRadius: 36,
+    dropReturnMs: 5_000,
     initialScores: [
       { id: "blue", teamId: "blue", score: 0 },
       { id: "red", teamId: "red", score: 0 },
@@ -465,6 +466,7 @@ function checkClassicCtfMode(): void {
   }
 
   blue.position = { x: 700, y: 380 };
+  blue.lastSafePosition = { x: 640, y: 360 };
   blue.jump.height = 20;
   world.timeMs = 68;
   mode.update(world, 34);
@@ -486,18 +488,50 @@ function checkClassicCtfMode(): void {
     teamId: blue.teamId ?? undefined,
     payload: {},
   }, world);
+  const droppedAfterFall = world.objectives.find((objective) =>
+    objective.id === "red-flag"
+  );
   if (
-    !events.some((event) => event.type === "objective.flagReset") ||
+    !events.some((event) => event.type === "objective.flagDropped") ||
+    droppedAfterFall?.state.status !== "dropped" ||
+    droppedAfterFall.position.x !== 640 ||
+    droppedAfterFall.position.y !== 360 ||
+    droppedAfterFall.state.returnRemainingMs !== 5_000
+  ) {
+    throw new Error(
+      "Classic CTF falls must drop carried flags at the last safe position.",
+    );
+  }
+
+  blue.position = { x: 900, y: 700 };
+  red.position = { x: 100, y: 100 };
+  world.timeMs += 4_999;
+  events = mode.update(world, 4_999);
+  if (
+    events.some((event) => event.type === "objective.flagReset") ||
+    world.objectives.find((objective) => objective.id === "red-flag")
+        ?.state.returnRemainingMs !== 1
+  ) {
+    throw new Error("Dropped CTF flags must remain available for five seconds.");
+  }
+  world.timeMs += 1;
+  events = mode.update(world, 1);
+  if (
+    !events.some((event) =>
+      event.type === "objective.flagReset" &&
+      (event.payload as { reason?: string }).reason === "drop-timeout"
+    ) ||
     world.objectives.find((objective) => objective.id === "red-flag")
         ?.state.status !== "home"
   ) {
-    throw new Error("Classic CTF must reset a carried flag after a fall.");
+    throw new Error("Dropped CTF flags must return home after five seconds.");
   }
 
   blue.jump.height = 0;
   blue.position = { ...redFlagHome };
-  world.timeMs = 102;
+  world.timeMs += 34;
   mode.update(world, 34);
+  blue.position = { x: 720, y: 390 };
   events = mode.handleEvent({
     id: "blue-died",
     type: "actor.died",
@@ -506,13 +540,66 @@ function checkClassicCtfMode(): void {
     teamId: blue.teamId ?? undefined,
     payload: { victimLifeId: blue.lifeId },
   }, world);
+  const droppedAfterDeath = world.objectives.find((objective) =>
+    objective.id === "red-flag"
+  );
   if (
-    !events.some((event) => event.type === "objective.flagReset") ||
+    !events.some((event) => event.type === "objective.flagDropped") ||
+    droppedAfterDeath?.state.status !== "dropped" ||
+    droppedAfterDeath.position.x !== 720 ||
+    droppedAfterDeath.position.y !== 390
+  ) {
+    throw new Error("Classic CTF deaths must drop flags at the death position.");
+  }
+
+  const blueAlly = createActorState({
+    id: "blue-ctf-ally",
+    kind: "bot",
+    teamId: "blue",
+    position: { x: 720, y: 390 },
+    radius: 16,
+    maxHealth: 100,
+    maxArmor: 100,
+  });
+  world.actors.push(blueAlly);
+  blue.position = { x: 900, y: 700 };
+  world.timeMs += 34;
+  events = mode.update(world, 34);
+  if (
+    !events.some((event) =>
+      event.type === "objective.flagPickedUp" &&
+      event.sourceActorId === blueAlly.id
+    ) ||
+    world.objectives.find((objective) => objective.id === "red-flag")
+        ?.state.interactingActorId !== blueAlly.id
+  ) {
+    throw new Error("CTF teammates must be able to continue a dropped carry.");
+  }
+
+  world.timeMs += 34;
+  mode.handleEvent({
+    id: "blue-ally-died",
+    type: "actor.died",
+    timeMs: world.timeMs,
+    targetActorId: blueAlly.id,
+    teamId: blueAlly.teamId ?? undefined,
+    payload: { victimLifeId: blueAlly.lifeId },
+  }, world);
+  red.position = { ...blueAlly.position };
+  world.timeMs += 34;
+  events = mode.update(world, 34);
+  if (
+    !events.some((event) =>
+      event.type === "objective.flagReset" &&
+      (event.payload as { reason?: string }).reason === "owner-return" &&
+      event.sourceActorId === red.id
+    ) ||
     world.objectives.find((objective) => objective.id === "red-flag")
         ?.state.status !== "home"
   ) {
-    throw new Error("Classic CTF must reset a carried flag after death.");
+    throw new Error("CTF flag owners must return their dropped flag on touch.");
   }
+  world.actors.splice(world.actors.indexOf(blueAlly), 1);
 
   const blueFlagHome = {
     x: TRAINING_CROSSING_V2.gameplay.blueBase.x +
@@ -607,10 +694,67 @@ function checkClassicCtfBotRoles(): void {
     }
   }
 
+  world.objectives[redFlagIndex] = {
+    ...redFlag,
+    position: { x: 620, y: 410 },
+    state: {
+      ...redFlag.state,
+      status: "dropped",
+      interactingActorId: null,
+      returnRemainingMs: 5_000,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  for (const controller of [attacker, defender, support]) {
+    const droppedGoal = controller.chooseGoal(red, snapshot);
+    if (
+      droppedGoal.kind !== "recover-own-flag" ||
+      droppedGoal.position.x !== 620 ||
+      droppedGoal.position.y !== 410
+    ) {
+      throw new Error(
+        "Every Classic CTF role must urgently return its dropped flag.",
+      );
+    }
+  }
+
   const blueFlag = world.objectives.find((objective) =>
     objective.id === "blue-flag"
   )!;
   const blueFlagIndex = world.objectives.indexOf(blueFlag);
+  world.objectives[redFlagIndex] = {
+    ...redFlag,
+    state: {
+      ...redFlag.state,
+      status: "home",
+      interactingActorId: null,
+      returnRemainingMs: undefined,
+    },
+  };
+  world.objectives[blueFlagIndex] = {
+    ...blueFlag,
+    position: { x: 880, y: 410 },
+    state: {
+      ...blueFlag.state,
+      status: "dropped",
+      interactingActorId: null,
+      returnRemainingMs: 5_000,
+    },
+  };
+  snapshot = createWorldSnapshot(world);
+  for (const controller of [attacker, support]) {
+    const continuationGoal = controller.chooseGoal(red, snapshot);
+    if (
+      continuationGoal.kind !== "attack-flag" ||
+      continuationGoal.position.x !== 880 ||
+      continuationGoal.position.y !== 410
+    ) {
+      throw new Error(
+        "Offensive Classic CTF bots must continue a dropped enemy carry.",
+      );
+    }
+  }
+
   world.objectives[redFlagIndex] = {
     ...redFlag,
     state: {
