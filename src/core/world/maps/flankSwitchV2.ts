@@ -1,4 +1,5 @@
 import type { WorldMapData } from "./worldMapData";
+import { createTeamSpawnPoints } from "./createTeamSpawnPoints";
 
 const walls = [
   { x: 330, y: 92, width: 52, height: 228, visual: "industrial-barrier" },
@@ -97,20 +98,18 @@ export const FLANK_SWITCH_V2: WorldMapData = {
     ],
   },
   spawnPoints: [
-    {
-      id: "blue-player-spawn",
+    ...createTeamSpawnPoints({
       teamId: "blue",
       position: { x: 2350, y: 410 },
       facing: { x: -1, y: 0 },
       tags: ["player", "tdm"],
-    },
-    {
-      id: "red-player-spawn",
+    }),
+    ...createTeamSpawnPoints({
       teamId: "red",
       position: { x: 150, y: 410 },
       facing: { x: 1, y: 0 },
       tags: ["player", "tdm"],
-    },
+    }),
   ],
   pickupSpawns: [
     { id: "health-red", type: "health", position: { x: 125, y: 315 } },

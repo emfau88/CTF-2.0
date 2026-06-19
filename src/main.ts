@@ -35,7 +35,11 @@ if (useGameplayV2Shell && activeRoute && routeState?.canStartMatch) {
     routeIssues.push(`Unknown V2 arena map: ${activeRoute.map}.`);
     activeRoute.menu = true;
   } else {
-    for (const issue of validateWorldMapForMode(map, modeIdForRoute(activeRoute.mode))) {
+    for (const issue of validateWorldMapForMode(
+      map,
+      modeIdForRoute(activeRoute.mode),
+      activeRoute.teamSize,
+    )) {
       routeIssues.push(issue.message);
     }
     if (routeIssues.length > 0) {

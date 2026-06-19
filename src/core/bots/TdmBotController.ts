@@ -22,7 +22,7 @@ export class TdmBotController {
 
   constructor(
     private readonly actorId: string,
-    private readonly targetActorId: string,
+    private readonly targetActorId?: string,
     private readonly movement: BotMovementConfig =
       V2_BOT_MOVEMENT_CONFIG,
     private readonly navigator: BotNavigator = new GridBotNavigator(),
@@ -35,7 +35,12 @@ export class TdmBotController {
     deltaMs: number,
   ): readonly CoreActionIntent[] {
     const actor = findActiveActor(snapshot, this.actorId);
-    const target = findActiveActor(snapshot, this.targetActorId);
+    const requestedTarget = this.targetActorId
+      ? findActiveActor(snapshot, this.targetActorId)
+      : null;
+    const target = actor
+      ? requestedTarget ?? nearestActiveEnemy(snapshot, actor)
+      : null;
     if (!actor || !target || snapshot.match?.phase === "ended") {
       this.combat.reset();
       this.jumpHeld = false;
@@ -125,6 +130,36 @@ export class TdmBotController {
       magnitude: 0,
     };
   }
+}
+
+function nearestActiveEnemy(
+  snapshot: WorldSnapshot,
+  actor: Readonly<ActorState>,
+): Readonly<ActorState> | null {
+  let nearest: Readonly<ActorState> | null = null;
+  let nearestDistance = Infinity;
+  for (const candidate of snapshot.actors) {
+    if (
+      candidate.lifeState !== "active" ||
+      !candidate.teamId ||
+      candidate.teamId === actor.teamId
+    ) {
+      continue;
+    }
+    const distance = Math.hypot(
+      candidate.position.x - actor.position.x,
+      candidate.position.y - actor.position.y,
+    );
+    if (
+      distance < nearestDistance ||
+      (distance === nearestDistance &&
+        (!nearest || candidate.id.localeCompare(nearest.id) < 0))
+    ) {
+      nearest = candidate;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
 }
 
 function findActiveActor(

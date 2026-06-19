@@ -31,6 +31,10 @@ export {
   V2_BOT_COMBAT_CONFIG,
   V2_BOT_MOVEMENT_CONFIG,
   V2_BOT_NAVIGATION_CONFIG,
+  ArenaBotControllerGroup,
+  classicCtfRoleForSlot,
+  createArenaBotControllerGroup,
+  type BotActionSource,
   type BotCombatConfig,
   type ClassicCtfBotGoal,
   type ClassicCtfBotGoalKind,
@@ -154,7 +158,22 @@ export type {
   SpawnProvider,
   SpawnRequest,
 } from "./spawning";
-export { AssignedSpawnProvider } from "./spawning";
+export {
+  arenaActorId,
+  arenaSpawnPointId,
+  assertArenaTeamSize,
+  AssignedSpawnProvider,
+  createArenaRoster,
+  DEFAULT_ARENA_TEAM_SIZE,
+  isArenaTeamId,
+  isArenaTeamSize,
+  MAX_ARENA_TEAM_SIZE,
+  type ArenaParticipant,
+  type ArenaTeamId,
+  type ArenaTeamSize,
+  type ArenaTeamSlot,
+  type ArenaWorldOptions,
+} from "./spawning";
 export {
   createEmptyWorldState,
   createWorldSnapshot,

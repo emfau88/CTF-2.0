@@ -1,3 +1,9 @@
+import {
+  DEFAULT_ARENA_TEAM_SIZE,
+  isArenaTeamSize,
+  type ArenaTeamSize,
+} from "./core/spawning";
+
 export type V2ModeId = "tdm" | "ctf" | "one-flag";
 export type V2PlayersMode = "bot" | "local";
 export type V2ControlsMode = "auto" | "touch" | "keyboard";
@@ -9,6 +15,7 @@ export interface V2RouteConfig {
   readonly mode: V2ModeId;
   readonly map: string;
   readonly players: V2PlayersMode;
+  readonly teamSize: ArenaTeamSize;
   readonly controls: V2ControlsMode;
   readonly skin: V2PlayerSkinId;
   readonly sfx: V2SfxMode;
@@ -26,6 +33,7 @@ const DEFAULT_ROUTE: V2RouteConfig = {
   mode: "tdm",
   map: "training-crossing-v2",
   players: "bot",
+  teamSize: DEFAULT_ARENA_TEAM_SIZE,
   controls: "auto",
   skin: "alien-runner",
   sfx: "on",
@@ -38,6 +46,7 @@ export function readV2RouteState(
   const hasMode = search.has("mode");
   const modeValue = search.get("mode");
   const playersValue = search.get("players");
+  const teamSizeValue = search.get("teamSize");
   const controlsValue = search.get("controls");
   const skinValue = search.get("skin");
   const mapValue = search.get("map");
@@ -46,6 +55,7 @@ export function readV2RouteState(
     mode: readMode(modeValue),
     map: mapValue ?? DEFAULT_ROUTE.map,
     players: readPlayers(playersValue),
+    teamSize: readTeamSize(teamSizeValue),
     controls: readControls(controlsValue),
     skin: readSkin(skinValue),
     sfx: readSfx(search.get("sfx")),
@@ -60,6 +70,9 @@ export function readV2RouteState(
   }
   if (hasMode && !isPlayersMode(playersValue)) {
     issues.push(`Unsupported V2 players mode: ${playersValue ?? "missing"}.`);
+  }
+  if (hasMode && teamSizeValue !== null && !isTeamSize(teamSizeValue)) {
+    issues.push(`Unsupported V2 team size: ${teamSizeValue}.`);
   }
   if (hasMode && !isControlsMode(controlsValue)) {
     issues.push(`Unsupported V2 controls mode: ${controlsValue ?? "missing"}.`);
@@ -92,6 +105,7 @@ export function buildV2RouteSearch(
   params.set("mode", resolved.mode);
   params.set("map", resolved.map);
   params.set("players", resolved.players);
+  params.set("teamSize", String(resolved.teamSize));
   params.set("controls", resolved.controls);
   params.set("skin", resolved.skin);
   params.set("sfx", resolved.sfx);
@@ -121,6 +135,12 @@ function readPlayers(value: string | null): V2PlayersMode {
   return isPlayersMode(value) ? value : DEFAULT_ROUTE.players;
 }
 
+function readTeamSize(value: string | null): ArenaTeamSize {
+  if (value === null) return DEFAULT_ROUTE.teamSize;
+  const parsed = Number(value);
+  return isArenaTeamSize(parsed) ? parsed : DEFAULT_ROUTE.teamSize;
+}
+
 function readControls(value: string | null): V2ControlsMode {
   return isControlsMode(value) ? value : DEFAULT_ROUTE.controls;
 }
@@ -139,6 +159,10 @@ function isMode(value: string | null): value is V2ModeId {
 
 function isPlayersMode(value: string | null): value is V2PlayersMode {
   return value === "local" || value === "bot";
+}
+
+function isTeamSize(value: string): boolean {
+  return /^\d+$/.test(value) && isArenaTeamSize(Number(value));
 }
 
 function isControlsMode(value: string | null): value is V2ControlsMode {

@@ -127,10 +127,10 @@ export function runPhaserGameBridgeSmokeCheck(): void {
     initial.snapshot.geometry.bounds.maxY !== 820 ||
     initial.snapshot.geometry.solids.length !== 10 ||
     initial.snapshot.geometry.gaps.length !== 2 ||
-    initial.snapshot.spawnPoints.length !== 5 ||
+    initial.snapshot.spawnPoints.length !== 11 ||
     initial.snapshot.spawnPoints.filter((spawn) =>
         spawn.teamId === "red"
-      ).length !== 4
+      ).length !== 7
   ) {
     throw new Error(
       "V2 shell must initialize Training Crossing geometry and team spawns.",

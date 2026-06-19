@@ -10,11 +10,20 @@ import {
   type WorldMapData,
   type WorldState,
 } from "../world";
+import {
+  assertArenaTeamSize,
+  createArenaRoster,
+  DEFAULT_ARENA_TEAM_SIZE,
+  type ArenaWorldOptions,
+} from "../spawning/arenaRoster";
 
 export function createTeamDeathmatchWorldState(
   map: WorldMapData = TRAINING_CROSSING_V2,
+  options: ArenaWorldOptions = {},
 ): WorldState {
-  assertWorldMapSupportsMode(map, "team-deathmatch");
+  const teamSize = options.teamSize ?? DEFAULT_ARENA_TEAM_SIZE;
+  assertArenaTeamSize(teamSize);
+  assertWorldMapSupportsMode(map, "team-deathmatch", teamSize);
   const world = createEmptyWorldState("team-deathmatch");
   world.geometry = {
     bounds: { ...map.geometry.bounds },
@@ -38,10 +47,14 @@ export function createTeamDeathmatchWorldState(
     facing: spawnPoint.facing ? { ...spawnPoint.facing } : undefined,
     tags: spawnPoint.tags ? [...spawnPoint.tags] : undefined,
   }));
-  world.actors.push(
-    createPlayer(world, "blue-player", "blue", "blue-player-spawn"),
-    createPlayer(world, "red-player", "red", "red-player-spawn"),
-  );
+  world.actors.push(...createArenaRoster(teamSize).map((participant) =>
+    createPlayer(
+      world,
+      participant.actorId,
+      participant.teamId,
+      participant.spawnPointId,
+    )
+  ));
   world.pickups.push(...map.pickupSpawns.map((pickup) =>
     createPickupState({
       id: pickup.id,

@@ -1,4 +1,5 @@
 import type { WorldMapData } from "./worldMapData";
+import { createTeamSpawnPoints } from "./createTeamSpawnPoints";
 
 export const TRAINING_CROSSING_V2: WorldMapData = {
   id: "training-crossing-v2",
@@ -56,13 +57,12 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
     ],
   },
   spawnPoints: [
-    {
-      id: "blue-player-spawn",
+    ...createTeamSpawnPoints({
       teamId: "blue",
       position: { x: 1350, y: 410 },
       facing: { x: -1, y: 0 },
       tags: ["player", "diagnostic"],
-    },
+    }),
     {
       id: "red-target-spawn-1",
       teamId: "red",
@@ -84,13 +84,12 @@ export const TRAINING_CROSSING_V2: WorldMapData = {
       facing: { x: -1, y: 0 },
       tags: ["target", "diagnostic"],
     },
-    {
-      id: "red-player-spawn",
+    ...createTeamSpawnPoints({
       teamId: "red",
       position: { x: 150, y: 410 },
       facing: { x: 1, y: 0 },
       tags: ["player", "tdm"],
-    },
+    }),
   ],
   pickupSpawns: [
     { id: "health-red", type: "health", position: { x: 120, y: 320 } },

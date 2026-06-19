@@ -2,17 +2,16 @@ import Phaser from "phaser";
 import { preloadArenaAssets } from "../../../assets";
 import { readV2Route } from "../../../v2Route";
 import {
-  ClassicCtfBotController,
   ClassicCtfMode,
+  createArenaBotControllerGroup,
+  createArenaRoster,
   createClassicCtfWorldState,
   createOneFlagWorldState,
   createTeamDeathmatchWorldState,
   GameplayCoreRuntime,
   OneFlagMode,
-  OneFlagBotController,
   resolveWorldMap,
   TeamDeathmatchMode,
-  TdmBotController,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
 } from "../../../core";
 import {
@@ -55,6 +54,21 @@ export class GameplayV2Scene extends Phaser.Scene {
     // Product V2 routes only resolve arena modes via readV2Route().
     const useMobileControls = prefersMobileControls(route);
     const useBotOpponent = prefersBotOpponent(route.players, useMobileControls);
+    const humanActorIds = route.players === "bot"
+      ? ["blue-player"]
+      : ["blue-player", "red-player"];
+    const botParticipants = createArenaRoster(route.teamSize).filter(
+      (participant) => !humanActorIds.includes(participant.actorId),
+    );
+    const botControllers = createArenaBotControllerGroup(
+      isClassicCtf
+        ? "classic-ctf"
+        : isOneFlag
+        ? "one-flag"
+        : "team-deathmatch",
+      selectedMap,
+      botParticipants,
+    );
     this.sound.mute = route.sfx === "off";
     const runtime = new GameplayCoreRuntime({
       mode: isClassicCtf
@@ -63,15 +77,15 @@ export class GameplayV2Scene extends Phaser.Scene {
         ? new OneFlagMode(selectedMap)
         : new TeamDeathmatchMode(),
       createWorld: () => isClassicCtf
-        ? createClassicCtfWorldState(selectedMap)
+        ? createClassicCtfWorldState(selectedMap, { teamSize: route.teamSize })
         : isOneFlag
-        ? createOneFlagWorldState(selectedMap)
-        : createTeamDeathmatchWorldState(selectedMap),
+        ? createOneFlagWorldState(selectedMap, { teamSize: route.teamSize })
+        : createTeamDeathmatchWorldState(selectedMap, { teamSize: route.teamSize }),
       basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
-      manualBasicAttackActorIds: useBotOpponent
-        ? ["blue-player"]
-        : ["blue-player", "red-player"],
-      autoBasicAttackActorIds: useBotOpponent ? ["red-player"] : [],
+      manualBasicAttackActorIds: humanActorIds,
+      autoBasicAttackActorIds: botParticipants.map(
+        (participant) => participant.actorId,
+      ),
       allowManualPrimaryFire: false,
     });
     const mobileInput = useMobileControls
@@ -116,22 +130,11 @@ export class GameplayV2Scene extends Phaser.Scene {
         this,
         useBotOpponent ? "tdm-solo" : "tdm",
       );
-    this.inputAdapter = useBotOpponent
+    this.inputAdapter = botControllers.size > 0
       ? new AugmentedInputAdapter(
         playerInput,
         () => this.bridge?.snapshot ?? runtime.snapshot,
-        isClassicCtf
-          ? new ClassicCtfBotController(
-            "red-player",
-            "attacker",
-            selectedMap,
-          )
-          : isOneFlag
-          ? new OneFlagBotController(
-            "red-player",
-            selectedMap,
-          )
-          : new TdmBotController("red-player", "blue-player"),
+        botControllers,
       )
       : playerInput;
     this.bridge = new PhaserGameBridge(runtime, {

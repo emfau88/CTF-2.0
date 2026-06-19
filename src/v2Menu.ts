@@ -18,6 +18,7 @@ interface V2MenuElements {
   readonly mode: HTMLSelectElement;
   readonly map: HTMLSelectElement;
   readonly players: HTMLSelectElement;
+  readonly teamSize: HTMLSelectElement;
   readonly controls: HTMLSelectElement;
   readonly skin: HTMLSelectElement;
   readonly sfx: HTMLSelectElement;
@@ -49,6 +50,7 @@ export function showGameplayV2Menu(statusMessage?: string): void {
   elements.mode.value = route.mode;
   elements.map.value = route.map;
   elements.players.value = route.players;
+  elements.teamSize.value = String(route.teamSize);
   elements.controls.value = route.controls;
   elements.skin.value = route.skin;
   elements.sfx.value = route.sfx;
@@ -82,6 +84,7 @@ export function showGameplayV2Menu(statusMessage?: string): void {
       mode: elements.mode.value as typeof route.mode,
       map: elements.map.value,
       players: elements.players.value as V2PlayersMode,
+      teamSize: Number(elements.teamSize.value) as typeof route.teamSize,
       controls: elements.controls.value as V2ControlsMode,
       skin: elements.skin.value as V2PlayerSkinId,
       sfx: elements.sfx.value === "off" ? "off" : "on",
@@ -145,6 +148,7 @@ function readMenuElements(): V2MenuElements {
     mode: requiredElement<HTMLSelectElement>("v2-menu-mode"),
     map: requiredElement<HTMLSelectElement>("v2-menu-map"),
     players: requiredElement<HTMLSelectElement>("v2-menu-players"),
+    teamSize: requiredElement<HTMLSelectElement>("v2-menu-team-size"),
     controls: requiredElement<HTMLSelectElement>("v2-menu-controls"),
     skin: requiredElement<HTMLSelectElement>("v2-menu-skin"),
     sfx: requiredElement<HTMLSelectElement>("v2-menu-sfx"),

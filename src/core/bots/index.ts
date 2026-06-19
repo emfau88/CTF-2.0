@@ -11,6 +11,12 @@ export {
   type BotCombatConfig,
 } from "./BotCombatConfig";
 export {
+  ArenaBotControllerGroup,
+  classicCtfRoleForSlot,
+  createArenaBotControllerGroup,
+  type BotActionSource,
+} from "./ArenaBotControllerGroup";
+export {
   ClassicCtfBotDecisionController,
   type ClassicCtfBotGoal,
   type ClassicCtfBotGoalKind,

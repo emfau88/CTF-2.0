@@ -4,7 +4,10 @@ import { runPhaserGameBridgeSmokeCheck } from "../src/adapters/phaser/PhaserGame
 import {
   ClassicCtfBotController,
   ClassicCtfMode,
+  classicCtfRoleForSlot,
   createActorState,
+  createArenaBotControllerGroup,
+  createArenaRoster,
   createClassicCtfWorldState,
   createEmptyWorldState,
   createWorldSnapshot,
@@ -15,18 +18,22 @@ import {
   OneFlagMode,
   OneFlagBotController,
   TeamDeathmatchMode,
+  TdmBotController,
   TdmBotCombatController,
   TRAINING_CROSSING_V2,
   clampRuntimeDeltaMs,
+  FLANK_SWITCH_V2,
   GRAND_ARCHIVE_V2,
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_BOT_MOVEMENT_CONFIG,
   V2_V1_WEAPON_PARITY_CONFIG,
+  validateWorldMapForMode,
   type BotCombatConfig,
+  type ArenaTeamSize,
 } from "../src/core";
 import { shouldUseGameplayV2Shell } from "../src/bootSceneSelection";
-import { readV2RouteState } from "../src/v2Route";
+import { buildV2MatchSearch, readV2RouteState } from "../src/v2Route";
 import { calculateV2TouchLayout } from "../src/adapters/phaser/v2TouchLayout";
 
 test("gameplay core smoke passes the full phaser game bridge check", () => {
@@ -54,6 +61,31 @@ test("v2 route validation rejects invalid match routes", () => {
     "Unsupported V2 players mode: ???.",
     "Unsupported V2 controls mode: bad.",
   ]);
+});
+
+test("v2 routes preserve and validate arena team size", () => {
+  const valid = readV2RouteState(new URLSearchParams(
+    "scene=v2&mode=ctf&map=grand-archive-v2&players=bot&controls=keyboard&teamSize=4",
+  ));
+  assert.equal(valid.canStartMatch, true);
+  assert.equal(valid.route.teamSize, 4);
+  assert.equal(
+    new URLSearchParams(buildV2MatchSearch(valid.route)).get("teamSize"),
+    "4",
+  );
+
+  const legacy = readV2RouteState(new URLSearchParams(
+    "scene=v2&mode=tdm&map=training-crossing-v2&players=bot&controls=keyboard",
+  ));
+  assert.equal(legacy.canStartMatch, true);
+  assert.equal(legacy.route.teamSize, 1);
+
+  const invalid = readV2RouteState(new URLSearchParams(
+    "scene=v2&mode=one-flag&map=flank-switch-v2&players=bot&controls=touch&teamSize=5",
+  ));
+  assert.equal(invalid.canStartMatch, false);
+  assert.equal(invalid.route.menu, true);
+  assert.deepEqual(invalid.issues, ["Unsupported V2 team size: 5."]);
 });
 
 test("scene selection keeps /CTF/ on v1 and defaults /CTF-2.0/ to v2", () => {
@@ -438,4 +470,168 @@ test("compact v2 fire control stays clear of jump and weapon touch zones", () =>
       distance(layout.fire, weapon) > layout.fire.r + weapon.r + 20,
     );
   }
+});
+
+test("arena world factories support symmetric teams from 1v1 through 4v4", () => {
+  const maps = [TRAINING_CROSSING_V2, GRAND_ARCHIVE_V2, FLANK_SWITCH_V2];
+  const factories = [
+    createTeamDeathmatchWorldState,
+    createClassicCtfWorldState,
+    createOneFlagWorldState,
+  ];
+  for (const map of maps) {
+    for (
+      const teamSize of [1, 2, 3, 4] as const satisfies
+        readonly ArenaTeamSize[]
+    ) {
+      for (const factory of factories) {
+        const world = factory(map, { teamSize });
+        assert.equal(world.actors.length, teamSize * 2);
+        assert.equal(
+          world.actors.filter((actor) => actor.teamId === "blue").length,
+          teamSize,
+        );
+        assert.equal(
+          world.actors.filter((actor) => actor.teamId === "red").length,
+          teamSize,
+        );
+        assert.equal(
+          new Set(world.actors.map((actor) => actor.id)).size,
+          world.actors.length,
+        );
+        assert.equal(
+          new Set(world.actors.map((actor) => actor.spawnPointId)).size,
+          world.actors.length,
+        );
+        for (const actor of world.actors) {
+          const spawn = world.spawnPoints.find((candidate) =>
+            candidate.id === actor.spawnPointId &&
+            candidate.teamId === actor.teamId
+          );
+          assert.ok(spawn);
+          assert.deepEqual(actor.position, spawn.position);
+          assert.deepEqual(actor.spawnPosition, spawn.position);
+          assert.equal(
+            world.pickups.some((pickup) =>
+              Math.hypot(
+                pickup.position.x - actor.position.x,
+                pickup.position.y - actor.position.y,
+              ) <= pickup.radius + actor.radius
+            ),
+            false,
+          );
+          assert.equal(
+            world.actors.some((other) =>
+              other.id !== actor.id &&
+              Math.hypot(
+                other.position.x - actor.position.x,
+                other.position.y - actor.position.y,
+              ) < other.radius + actor.radius
+            ),
+            false,
+          );
+        }
+      }
+    }
+  }
+});
+
+test("4v4 map validation rejects a missing team spawn slot", () => {
+  const missingSlotMap = {
+    ...TRAINING_CROSSING_V2,
+    spawnPoints: TRAINING_CROSSING_V2.spawnPoints.filter((spawn) =>
+      spawn.id !== "blue-player-spawn-4"
+    ),
+  };
+  assert.equal(
+    validateWorldMapForMode(missingSlotMap, "team-deathmatch", 4).some(
+      (issue) => issue.code === "missing-team-spawn",
+    ),
+    true,
+  );
+});
+
+test("default arena roster preserves the existing 1v1 actor ids", () => {
+  const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+  assert.deepEqual(world.actors.map((actor) => actor.id), [
+    "blue-player",
+    "red-player",
+  ]);
+});
+
+test("arena bot groups control every non-human slot from 1v1 through 4v4", () => {
+  const modes = [
+    {
+      id: "team-deathmatch" as const,
+      createWorld: createTeamDeathmatchWorldState,
+      createMode: () => new TeamDeathmatchMode(),
+    },
+    {
+      id: "classic-ctf" as const,
+      createWorld: createClassicCtfWorldState,
+      createMode: () => new ClassicCtfMode(TRAINING_CROSSING_V2),
+    },
+    {
+      id: "one-flag" as const,
+      createWorld: createOneFlagWorldState,
+      createMode: () => new OneFlagMode(TRAINING_CROSSING_V2),
+    },
+  ];
+  for (const teamSize of [1, 2, 3, 4] as const) {
+    const bots = createArenaRoster(teamSize).filter((participant) =>
+      participant.actorId !== "blue-player"
+    );
+    for (const definition of modes) {
+      const world = definition.createWorld(TRAINING_CROSSING_V2, { teamSize });
+      definition.createMode().initialize(world);
+      const group = createArenaBotControllerGroup(
+        definition.id,
+        TRAINING_CROSSING_V2,
+        bots,
+      );
+      const actions = group.readActions(createWorldSnapshot(world), 34);
+      const controlledActorIds = new Set(actions
+        .filter((action) => action.action === "move")
+        .map((action) => action.actorId));
+      assert.equal(group.size, bots.length);
+      assert.deepEqual(
+        controlledActorIds,
+        new Set(bots.map((participant) => participant.actorId)),
+      );
+      group.reset();
+    }
+  }
+});
+
+test("dynamic TDM bot targeting switches to the next active enemy", () => {
+  const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2, {
+    teamSize: 2,
+  });
+  new TeamDeathmatchMode().initialize(world);
+  const red = world.actors.find((actor) => actor.id === "red-player")!;
+  const nearBlue = world.actors.find((actor) => actor.id === "blue-player-2")!;
+  const farBlue = world.actors.find((actor) => actor.id === "blue-player")!;
+  red.position = { x: 100, y: 100 };
+  nearBlue.position = { x: 200, y: 100 };
+  farBlue.position = { x: 500, y: 100 };
+  const controller = new TdmBotController("red-player");
+
+  let aim = controller.readActions(createWorldSnapshot(world), 34).find(
+    (action) => action.action === "aim",
+  );
+  assert.deepEqual(aim?.direction, { x: 1, y: 0 });
+
+  nearBlue.lifeState = "dead";
+  farBlue.position = { x: 100, y: 400 };
+  aim = controller.readActions(createWorldSnapshot(world), 34).find(
+    (action) => action.action === "aim",
+  );
+  assert.deepEqual(aim?.direction, { x: 0, y: 1 });
+});
+
+test("classic CTF bot roles are stable for four team slots", () => {
+  assert.deepEqual(
+    ([1, 2, 3, 4] as const).map(classicCtfRoleForSlot),
+    ["attacker", "defender", "support", "attacker"],
+  );
 });
