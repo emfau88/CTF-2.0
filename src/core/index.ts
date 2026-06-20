@@ -41,6 +41,8 @@ export {
   type ClassicCtfBotRole,
   type BotMovementConfig,
   type BotNavigationDecision,
+  type GridBotNavigatorDebugState,
+  type GridBotRepathReason,
   type BotNavigator,
   type BotNavigationConfig,
   type OneFlagBotGoal,

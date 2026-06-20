@@ -32,6 +32,8 @@ export { OneFlagBotController } from "./OneFlagBotController";
 export {
   GridBotNavigator,
   type BotNavigationDecision,
+  type GridBotNavigatorDebugState,
+  type GridBotRepathReason,
   type BotNavigator,
 } from "./GridBotNavigator";
 export { TdmBotController } from "./TdmBotController";

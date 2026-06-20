@@ -24,9 +24,39 @@ interface PathWaypoint {
   readonly jumpLink?: WorldJumpLink;
 }
 
+export interface GridCellCoordinate {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface BotNavigationDecision {
   readonly direction: WorldPosition;
   readonly jump: boolean;
+}
+
+export type GridBotRepathReason =
+  | "initial"
+  | "interval"
+  | "target-changed"
+  | "path-exhausted"
+  | "none";
+
+export interface GridBotNavigatorDebugState {
+  readonly from: WorldPosition | null;
+  readonly target: WorldPosition | null;
+  readonly targetKey: string;
+  readonly startCell: GridCellCoordinate | null;
+  readonly goalCell: GridCellCoordinate | null;
+  readonly currentWaypoint: WorldPosition | null;
+  readonly currentWaypointIndex: number;
+  readonly pathLength: number;
+  readonly repathRemainingMs: number;
+  readonly repathed: boolean;
+  readonly repathReason: GridBotRepathReason;
+  readonly traversingJump: boolean;
+  readonly jumpLinkActive: boolean;
+  readonly goalBlocked: boolean;
+  readonly pathFound: boolean;
 }
 
 export interface BotNavigator {
@@ -45,6 +75,23 @@ export class GridBotNavigator implements BotNavigator {
   private pathIndex = 0;
   private repathRemainingMs = 0;
   private targetKey = "";
+  private lastDebugState: GridBotNavigatorDebugState = {
+    from: null,
+    target: null,
+    targetKey: "",
+    startCell: null,
+    goalCell: null,
+    currentWaypoint: null,
+    currentWaypointIndex: 0,
+    pathLength: 0,
+    repathRemainingMs: 0,
+    repathed: false,
+    repathReason: "none",
+    traversingJump: false,
+    jumpLinkActive: false,
+    goalBlocked: false,
+    pathFound: false,
+  };
 
   constructor(
     private readonly config: BotNavigationConfig =
@@ -59,12 +106,21 @@ export class GridBotNavigator implements BotNavigator {
     deltaMs: number,
   ): BotNavigationDecision {
     this.repathRemainingMs -= Math.max(0, deltaMs);
+    const bounds = snapshot.geometry.bounds;
+    const startCell = cellFor(from, bounds.minX, bounds.minY, this.config.cellSize);
+    const goalCell = cellFor(target, bounds.minX, bounds.minY, this.config.cellSize);
+    const blockers = [
+      ...snapshot.geometry.solids,
+      ...snapshot.geometry.gaps,
+    ];
     const currentWaypoint = this.path[this.pathIndex];
     const traversingJump = Boolean(
       currentWaypoint?.jumpLink &&
         distance(from, currentWaypoint.position) >
           this.config.waypointReachDistance,
     );
+    let repathed = false;
+    let repathReason: GridBotRepathReason = "none";
     if (
       !traversingJump &&
       (
@@ -73,10 +129,18 @@ export class GridBotNavigator implements BotNavigator {
         targetKey !== this.targetKey
       )
     ) {
+      repathReason = targetKey !== this.targetKey
+        ? this.targetKey
+          ? "target-changed"
+          : "initial"
+        : this.pathIndex >= this.path.length
+        ? "path-exhausted"
+        : "interval";
       this.path = findPath(from, target, snapshot, this.config);
       this.pathIndex = 0;
       this.repathRemainingMs = this.config.repathIntervalMs;
       this.targetKey = targetKey;
+      repathed = true;
     }
 
     while (
@@ -88,13 +152,32 @@ export class GridBotNavigator implements BotNavigator {
     }
     const waypoint = this.path[this.pathIndex];
     const jumpLink = waypoint?.jumpLink;
-    return {
+    const decision = {
       direction: normalizedDirection(from, waypoint?.position ?? target),
       jump: Boolean(
         jumpLink &&
           distance(from, jumpLink.from) <= jumpLink.activationRadius,
       ),
     };
+    this.lastDebugState = {
+      from: { ...from },
+      target: { ...target },
+      targetKey,
+      startCell,
+      goalCell,
+      currentWaypoint: waypoint ? { ...waypoint.position } : null,
+      currentWaypointIndex: this.pathIndex,
+      pathLength: this.path.length,
+      repathRemainingMs: this.repathRemainingMs,
+      repathed,
+      repathReason,
+      traversingJump,
+      jumpLinkActive: Boolean(jumpLink),
+      goalBlocked: blocked(target, blockers, this.config.obstaclePadding),
+      pathFound: this.path.length > 0 &&
+        !positionsMatch(this.path[0]?.position, from),
+    };
+    return decision;
   }
 
   reset(): void {
@@ -102,6 +185,40 @@ export class GridBotNavigator implements BotNavigator {
     this.pathIndex = 0;
     this.repathRemainingMs = 0;
     this.targetKey = "";
+    this.lastDebugState = {
+      from: null,
+      target: null,
+      targetKey: "",
+      startCell: null,
+      goalCell: null,
+      currentWaypoint: null,
+      currentWaypointIndex: 0,
+      pathLength: 0,
+      repathRemainingMs: 0,
+      repathed: false,
+      repathReason: "none",
+      traversingJump: false,
+      jumpLinkActive: false,
+      goalBlocked: false,
+      pathFound: false,
+    };
+  }
+
+  debugSnapshot(): GridBotNavigatorDebugState {
+    return {
+      ...this.lastDebugState,
+      from: this.lastDebugState.from ? { ...this.lastDebugState.from } : null,
+      target: this.lastDebugState.target ? { ...this.lastDebugState.target } : null,
+      startCell: this.lastDebugState.startCell
+        ? { ...this.lastDebugState.startCell }
+        : null,
+      goalCell: this.lastDebugState.goalCell
+        ? { ...this.lastDebugState.goalCell }
+        : null,
+      currentWaypoint: this.lastDebugState.currentWaypoint
+        ? { ...this.lastDebugState.currentWaypoint }
+        : null,
+    };
   }
 }
 
@@ -311,6 +428,15 @@ function normalizedDirection(
 
 function distance(a: WorldPosition, b: WorldPosition): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function positionsMatch(
+  left: WorldPosition | undefined,
+  right: WorldPosition,
+): boolean {
+  return !!left &&
+    Math.abs(left.x - right.x) < .001 &&
+    Math.abs(left.y - right.y) < .001;
 }
 
 function heuristic(a: GridCell, b: GridCell): number {
