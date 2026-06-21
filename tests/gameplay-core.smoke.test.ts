@@ -27,6 +27,8 @@ import {
   V2_GAMEPLAY_RUNTIME_TIMING_CONFIG,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_BOT_MOVEMENT_CONFIG,
+  V2_BOT_NAVIGATION_CONFIG,
+  V2_TEAM_DEATHMATCH_CONFIG,
   V2_V1_WEAPON_PARITY_CONFIG,
   validateWorldMapForMode,
   type BotCombatConfig,
@@ -147,6 +149,19 @@ test("production arena modes do not emit diagnostic movement events", () => {
       false,
     );
   }
+});
+
+test("default TDM matches require ten kills", () => {
+  const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+  const mode = new TeamDeathmatchMode();
+  const events = mode.initialize(world);
+
+  assert.equal(V2_TEAM_DEATHMATCH_CONFIG.scoreLimit, 10);
+  assert.equal(mode.getHudState(createWorldSnapshot(world)).notices[0], "First to 10");
+  assert.equal(
+    (events[0]?.payload as { scoreLimit?: unknown } | undefined)?.scoreLimit,
+    10,
+  );
 });
 
 test("rocket cooldown blocks repeated fire until the cooldown expires", () => {
@@ -324,6 +339,96 @@ test("one flag bot still approaches the neutral flag directly", () => {
   const move = actions.find((action) => action.action === "move");
   assert.equal(move?.magnitude, 1);
   assert.deepEqual(capturedTarget, flag.position);
+});
+
+test("one flag bot projects blocked carrier chase targets to a reachable point", () => {
+  const world = createOneFlagWorldState(GRAND_ARCHIVE_V2);
+  new OneFlagMode(GRAND_ARCHIVE_V2).initialize(world);
+  const red = world.actors.find((actor) => actor.id === "red-player");
+  const blue = world.actors.find((actor) => actor.id === "blue-player");
+  const flag = world.objectives.find((objective) => objective.kind === "neutral-flag");
+  assert.ok(red);
+  assert.ok(blue);
+  assert.ok(flag);
+  red.position = { x: 760, y: 410 };
+  blue.position = { x: 860, y: 330 };
+  flag.state.status = "carried";
+  flag.state.interactingActorId = blue.id;
+
+  let capturedTarget: { x: number; y: number } | null = null;
+  const controller = new OneFlagBotController(
+    "red-player",
+    GRAND_ARCHIVE_V2,
+    V2_BOT_MOVEMENT_CONFIG,
+    {
+      navigate: (_from, target) => {
+        capturedTarget = { ...target };
+        return { direction: { x: 1, y: 0 }, jump: false };
+      },
+      reset: () => {},
+    },
+  );
+
+  controller.readActions(createWorldSnapshot(world), 34);
+
+  assert.ok(capturedTarget);
+  assert.notDeepEqual(capturedTarget, blue.position);
+  assert.equal(
+    GRAND_ARCHIVE_V2.geometry.solids.some((rect) =>
+      capturedTarget!.x >= rect.x - V2_BOT_NAVIGATION_CONFIG.obstaclePadding &&
+      capturedTarget!.x <= rect.x + rect.width + V2_BOT_NAVIGATION_CONFIG.obstaclePadding &&
+      capturedTarget!.y >= rect.y - V2_BOT_NAVIGATION_CONFIG.obstaclePadding &&
+      capturedTarget!.y <= rect.y + rect.height + V2_BOT_NAVIGATION_CONFIG.obstaclePadding
+    ),
+    false,
+  );
+});
+
+test("one flag bot projects blocked escort targets to a reachable point", () => {
+  const world = createOneFlagWorldState(GRAND_ARCHIVE_V2, { teamSize: 2 });
+  new OneFlagMode(GRAND_ARCHIVE_V2).initialize(world);
+  const escort = world.actors.find((actor) => actor.id === "red-player");
+  const carrier = world.actors.find((actor) => actor.id === "red-player-2");
+  const flag = world.objectives.find((objective) => objective.kind === "neutral-flag");
+  assert.ok(escort);
+  assert.ok(carrier);
+  assert.ok(flag);
+  escort.position = { x: 400, y: 410 };
+  carrier.position = { x: 553, y: 324 };
+  flag.state.status = "carried";
+  flag.state.interactingActorId = carrier.id;
+
+  let capturedTarget: { x: number; y: number } | null = null;
+  const controller = new OneFlagBotController(
+    escort.id,
+    GRAND_ARCHIVE_V2,
+    V2_BOT_MOVEMENT_CONFIG,
+    {
+      navigate: (_from, target) => {
+        capturedTarget = { ...target };
+        return { direction: { x: 1, y: 0 }, jump: false };
+      },
+      reset: () => {},
+    },
+  );
+
+  controller.readActions(createWorldSnapshot(world), 34);
+
+  assert.ok(capturedTarget);
+  assert.equal(controller.debugSnapshot().goalKind, "escort-carrier");
+  assert.equal(controller.debugSnapshot().projectionApplied, true);
+  assert.equal(
+    [
+      ...GRAND_ARCHIVE_V2.geometry.solids,
+      ...GRAND_ARCHIVE_V2.geometry.gaps,
+    ].some((rect) =>
+      capturedTarget!.x >= rect.x - V2_BOT_NAVIGATION_CONFIG.obstaclePadding &&
+      capturedTarget!.x <= rect.x + rect.width + V2_BOT_NAVIGATION_CONFIG.obstaclePadding &&
+      capturedTarget!.y >= rect.y - V2_BOT_NAVIGATION_CONFIG.obstaclePadding &&
+      capturedTarget!.y <= rect.y + rect.height + V2_BOT_NAVIGATION_CONFIG.obstaclePadding
+    ),
+    false,
+  );
 });
 
 test("rail bot waits for target acquisition and applies deterministic spread", () => {

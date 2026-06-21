@@ -2,7 +2,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
-    "test": "node --import tsx --import ./tests/browser-globals.ts --test tests/**/*.test.ts"
+    "test": "node --import tsx --import ./tests/browser-globals.ts --test tests/**/*.test.ts",
+    "bot:diagnostics": "node --import tsx ./scripts/run-bot-diagnostics.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0",

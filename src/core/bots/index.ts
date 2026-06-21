@@ -28,7 +28,10 @@ export {
   type OneFlagBotGoal,
   type OneFlagBotGoalKind,
 } from "./OneFlagBotDecisionController";
-export { OneFlagBotController } from "./OneFlagBotController";
+export {
+  OneFlagBotController,
+  type OneFlagBotControllerDebugState,
+} from "./OneFlagBotController";
 export {
   GridBotNavigator,
   type BotNavigationDecision,

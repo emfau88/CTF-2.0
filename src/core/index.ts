@@ -47,6 +47,7 @@ export {
   type BotNavigationConfig,
   type OneFlagBotGoal,
   type OneFlagBotGoalKind,
+  type OneFlagBotControllerDebugState,
 } from "./bots";
 export {
   fireDiagnosticProjectile,

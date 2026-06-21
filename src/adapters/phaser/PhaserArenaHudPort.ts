@@ -455,5 +455,6 @@ function shortRuleText(state: ModeHudState): string {
       ? "TAKE FLAG TO ENEMY BASE"
       : "SECURE CENTER FLAG";
   }
-  return "FIRST TO 3";
+  return state.notices.find((notice) => notice.startsWith("First to "))
+    ?.toUpperCase() ?? "TEAM DEATHMATCH";
 }

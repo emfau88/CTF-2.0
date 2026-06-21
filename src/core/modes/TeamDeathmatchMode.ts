@@ -20,7 +20,7 @@ export interface TeamDeathmatchModeConfig {
 
 export const V2_TEAM_DEATHMATCH_CONFIG: TeamDeathmatchModeConfig = {
   durationMs: 120_000,
-  scoreLimit: 3,
+  scoreLimit: 10,
   initialScores: [
     { id: "blue", teamId: "blue", score: 0 },
     { id: "red", teamId: "red", score: 0 },

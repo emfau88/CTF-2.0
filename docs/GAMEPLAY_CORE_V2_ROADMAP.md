@@ -174,6 +174,9 @@ sich wie ihre V1-Version an.
 - [x] Teamseiten, Health-/Armor-Pickups und Pickup-Werte entsprechen V1.
 - [x] Mobile-TDM besitzt einen einfachen Red Bot als Einzelspieler-Gegner.
 - [x] TDM-Bots navigieren, springen und verwenden Spezialwaffen.
+- [x] TDM verwendet ein Killziel von `10`.
+- [x] Headless-TDM trennt Combat-Hold, Inaktivitaet und echte
+      Move-Intent-Stalls und aktiviert Bot-Auto-Fire wie der Spielpfad.
 - [x] CTF-Rollen und One-Flag-Ziele sind ueber getrennte
       Entscheidungscontroller angebunden.
 

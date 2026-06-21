@@ -93,6 +93,12 @@ Darum wird bei `TDM` aktuell eher auf Folgendes geprueft:
 
 - Distanzgewinn zum naechsten aktiven Gegner
 - Travel statt kompletter Bewegungslosigkeit
+- Basic-Auto-Fire fuer alle simulierten Bot-Slots
+- bewusstes Combat-Hold getrennt von Stillstand trotz Move-Intent
+- Tod/Respawn getrennt von aktiver Bewegung
+- Simulationsende sofort nach echtem Matchende
+
+Das regulaere TDM-Killziel liegt aktuell bei `10`.
 
 ### Classic CTF / One Flag
 
@@ -109,6 +115,16 @@ Stand dieses Dokuments:
 - alle aktuellen Tests und der Build laufen gruen
 - Bots sind in allen drei Modi und in `2v2`/`4v4` headless aktiv
 - es gibt keinen offensichtlichen Totalausfall der Bot-Runtime
+
+Aktueller TDM-Befund:
+
+- die frueheren hohen Stall-Werte waren ueberwiegend bewusstes
+  `CombatStandoff` und teilweise eingefrorene Zeit nach Matchende
+- mit produktionsnaher Auto-Fire-Konfiguration entstehen im aktuellen
+  `2v2`- und `4v4`-Lauf `0 ms` echte Move-Intent-Stalls
+- `2v2` erzeugt in `18 s` zwei Kill-Scores und `4v4` neun Kill-Scores
+- langes statisches Combat-Hold bleibt eine sichtbare Qualitaetsfrage, aber
+  kein belegter Navigator-Defekt
 
 Wichtigster Befund fuer `One Flag x Grand Archive`:
 
@@ -133,8 +149,8 @@ Praktische Schlussfolgerung:
 - kein echtes Performance-Profiling
 - keine deterministische Replay-Datei
 - keine Langzeitserie mit Seeds und Streuung
-- keine Trennung zwischen legitimem Combat-Halten und echtem
-  Feststecken ueber ein eigenes semantisches Modell
+- keine Aussage, ob langes legitimes Combat-Halten im Browser spielerisch gut
+  wirkt
 
 ## Sinnvolle naechste Ausbaustufen
 
