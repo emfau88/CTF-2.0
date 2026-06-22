@@ -358,14 +358,144 @@ function checkRuntimeTimingAndRouteValidation(): void {
 }
 
 function checkWorldMapRegistry(): void {
+  const flowLab = getWorldMap("flow-lab-v2");
+  const flowCircuit = getWorldMap("flow-circuit-v2");
   if (
     getWorldMap("training-crossing-v2")?.displayName !== "Training Crossing" ||
     getWorldMap("grand-archive-v2") !== GRAND_ARCHIVE_V2 ||
     getWorldMap("flank-switch-v2") !== FLANK_SWITCH_V2 ||
+    flowLab?.displayName !== "Flow Lab" ||
+    flowCircuit?.displayName !== "Flow Circuit" ||
     getWorldMap("missing-map") !== undefined ||
     resolveWorldMap("missing-map").id !== "training-crossing-v2"
   ) {
     throw new Error("V2 map registry must resolve known maps and fallback safely.");
+  }
+  if (!flowLab) {
+    throw new Error("Flow Lab must be registered as a V2 map.");
+  }
+  if (!flowCircuit) {
+    throw new Error("Flow Circuit must be registered as a V2 map.");
+  }
+  for (const modeId of [
+    "team-deathmatch",
+    "classic-ctf",
+    "one-flag",
+  ] as const) {
+    if (validateWorldMapForMode(flowLab, modeId, 4).length !== 0) {
+      throw new Error(`Flow Lab must support ${modeId} in 4v4.`);
+    }
+  }
+  const flowWorlds = [
+    {
+      mode: new TeamDeathmatchMode(),
+      world: createTeamDeathmatchWorldState(flowLab, { teamSize: 4 }),
+    },
+    {
+      mode: new ClassicCtfMode(flowLab),
+      world: createClassicCtfWorldState(flowLab, { teamSize: 4 }),
+    },
+    {
+      mode: new OneFlagMode(flowLab),
+      world: createOneFlagWorldState(flowLab, { teamSize: 4 }),
+    },
+  ];
+  for (const { mode, world } of flowWorlds) {
+    mode.initialize(world);
+    if (
+      world.actors.length !== 8 ||
+      world.geometry.solids.length !== 19 ||
+      world.geometry.gaps.length !== 1 ||
+      world.pickups.length !== 15 ||
+      world.navigation.jumpLinks.length !== 4 ||
+      world.match?.phase !== "running"
+    ) {
+      throw new Error(`Flow Lab ${mode.id} must initialize complete 4v4 content.`);
+    }
+  }
+  const blueSpawn = flowLab.spawnPoints.find((spawn) =>
+    spawn.id === "blue-player-spawn"
+  );
+  const redSpawn = flowLab.spawnPoints.find((spawn) =>
+    spawn.id === "red-player-spawn"
+  );
+  if (
+    !blueSpawn ||
+    !redSpawn ||
+    !flowLab.geometry.solids.some((solid) =>
+      solid.x < 1100 &&
+      solid.x + solid.width > blueSpawn.position.x &&
+      blueSpawn.position.y >= solid.y &&
+      blueSpawn.position.y <= solid.y + solid.height
+    ) ||
+    !flowLab.geometry.solids.some((solid) =>
+      solid.x > 1100 &&
+      solid.x < redSpawn.position.x &&
+      redSpawn.position.y >= solid.y &&
+      redSpawn.position.y <= solid.y + solid.height
+    )
+  ) {
+    throw new Error("Flow Lab must block direct spawn-to-spawn sightlines.");
+  }
+  for (const modeId of [
+    "team-deathmatch",
+    "classic-ctf",
+    "one-flag",
+  ] as const) {
+    if (validateWorldMapForMode(flowCircuit, modeId, 4).length !== 0) {
+      throw new Error(`Flow Circuit must support ${modeId} in 4v4.`);
+    }
+  }
+  const flowCircuitWorlds = [
+    {
+      mode: new TeamDeathmatchMode(),
+      world: createTeamDeathmatchWorldState(flowCircuit, { teamSize: 4 }),
+    },
+    {
+      mode: new ClassicCtfMode(flowCircuit),
+      world: createClassicCtfWorldState(flowCircuit, { teamSize: 4 }),
+    },
+    {
+      mode: new OneFlagMode(flowCircuit),
+      world: createOneFlagWorldState(flowCircuit, { teamSize: 4 }),
+    },
+  ];
+  for (const { mode, world } of flowCircuitWorlds) {
+    mode.initialize(world);
+    if (
+      world.actors.length !== 8 ||
+      world.geometry.solids.length !== 22 ||
+      world.geometry.gaps.length !== 2 ||
+      world.pickups.length !== 15 ||
+      world.navigation.jumpLinks.length !== 4 ||
+      world.match?.phase !== "running"
+    ) {
+      throw new Error(`Flow Circuit ${mode.id} must initialize complete 4v4 content.`);
+    }
+  }
+  const circuitBlueSpawn = flowCircuit.spawnPoints.find((spawn) =>
+    spawn.id === "blue-player-spawn"
+  );
+  const circuitRedSpawn = flowCircuit.spawnPoints.find((spawn) =>
+    spawn.id === "red-player-spawn"
+  );
+  if (
+    !circuitBlueSpawn ||
+    !circuitRedSpawn ||
+    !flowCircuit.geometry.solids.some((solid) =>
+      solid.x < 1000 &&
+      solid.x + solid.width > circuitBlueSpawn.position.x &&
+      circuitBlueSpawn.position.y >= solid.y &&
+      circuitBlueSpawn.position.y <= solid.y + solid.height
+    ) ||
+    !flowCircuit.geometry.solids.some((solid) =>
+      solid.x > 1000 &&
+      solid.x < circuitRedSpawn.position.x &&
+      circuitRedSpawn.position.y >= solid.y &&
+      circuitRedSpawn.position.y <= solid.y + solid.height
+    )
+  ) {
+    throw new Error("Flow Circuit must block direct spawn-to-spawn sightlines.");
   }
   if (
     validateWorldMapForMode(TRAINING_CROSSING_V2, "team-deathmatch").length !== 0 ||

@@ -57,14 +57,25 @@ export class PhaserArenaRendererPort implements RendererPort {
   private lastRenderTimeMs = 0;
   private lastLibraryTimeMs = 0;
   private cameraInitialized = false;
+  private manualCameraActive = false;
+  private lastCameraTimeMs = 0;
+  private readonly cameraCursorKeys?: Phaser.Types.Input.Keyboard.CursorKeys;
+  private readonly cameraResetKey?: Phaser.Input.Keyboard.Key;
 
   constructor(
     private readonly scene: Phaser.Scene,
     map: WorldMapData,
     private readonly followActorId?: ActorId,
     private readonly playerSkinId: V2PlayerSkinId = "alien-runner",
+    enableManualCamera = false,
   ) {
     scene.cameras.main.setRoundPixels(true);
+    if (enableManualCamera && scene.input.keyboard) {
+      this.cameraCursorKeys = scene.input.keyboard.createCursorKeys();
+      this.cameraResetKey = scene.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.C,
+      );
+    }
     const level = toPresentationLevel(map);
     ensureLibraryCandleAnimation(scene);
     ensurePlayerSkinAnimations(scene);
@@ -93,6 +104,8 @@ export class PhaserArenaRendererPort implements RendererPort {
 
   reset(): void {
     this.cameraInitialized = false;
+    this.manualCameraActive = false;
+    this.lastCameraTimeMs = 0;
     this.lastLibraryTimeMs = 0;
     this.destroyActorViews();
     this.destroyProjectileViews();
@@ -102,6 +115,10 @@ export class PhaserArenaRendererPort implements RendererPort {
   }
 
   dispose(): void {
+    for (const key of Object.values(this.cameraCursorKeys ?? {})) {
+      key?.destroy();
+    }
+    this.cameraResetKey?.destroy();
     this.destroyActorViews();
     this.destroyProjectileViews();
     this.destroyPickupViews();
@@ -540,6 +557,33 @@ export class PhaserArenaRendererPort implements RendererPort {
       bounds.maxX - bounds.minX,
       bounds.maxY - bounds.minY,
     );
+    const cameraDeltaMs = this.lastCameraTimeMs > 0
+      ? Math.min(100, Math.max(0, snapshot.timeMs - this.lastCameraTimeMs))
+      : 0;
+    this.lastCameraTimeMs = snapshot.timeMs;
+    if (
+      this.cameraResetKey &&
+      Phaser.Input.Keyboard.JustDown(this.cameraResetKey)
+    ) {
+      this.manualCameraActive = false;
+      this.cameraInitialized = false;
+    }
+    const manualX = Number(this.cameraCursorKeys?.right?.isDown) -
+      Number(this.cameraCursorKeys?.left?.isDown);
+    const manualY = Number(this.cameraCursorKeys?.down?.isDown) -
+      Number(this.cameraCursorKeys?.up?.isDown);
+    if (manualX !== 0 || manualY !== 0) {
+      this.manualCameraActive = true;
+    }
+    if (this.manualCameraActive) {
+      const length = Math.hypot(manualX, manualY) || 1;
+      const distance = 650 * cameraDeltaMs / 1000;
+      camera.setScroll(
+        camera.scrollX + manualX / length * distance,
+        camera.scrollY + manualY / length * distance,
+      );
+      return;
+    }
     const requested = this.followActorId
       ? snapshot.actors.find((actor) =>
         actor.id === this.followActorId && actor.lifeState === "active"
