@@ -197,6 +197,10 @@ Erster kleiner TDM-Slice ist umgesetzt:
 - Ein Armor-/Weapon-Szenariotest prueft jetzt explizit:
   - Slot-4-Bot waehlt `seek-armor` und sammelt Armor ein.
   - Slot-2-Bot waehlt `seek-weapon` und sammelt Rail ein.
+- Ein Combat-Standoff-Szenariotest prueft jetzt explizit:
+  - Bot waehlt `hold-standoff` auf idealer Distanz.
+  - Bot bewegt sich in diesem isolierten Fall kaum.
+  - Distanz zum Gegner bleibt stabil.
 - TDM-Pickup-Ziele haben eine kurze Zielbindung. Wenn ein Bot ein passendes
   Pickup anlaeuft, bleibt er fuer ein kurzes Zeitfenster bei diesem Ziel,
   solange es noch aktiv und sinnvoll ist.
@@ -210,7 +214,6 @@ Erwarteter Spieleffekt:
 
 Noch offen:
 
-- `hold-standoff` gezielt als Szenario messen.
 - Pickup-Konflikte in `3v3/4v4` sichtbar machen, bevor Team-Claims gebaut
   werden.
 

@@ -8,12 +8,14 @@ import {
   runClassicCtfOwnFlagStolenScenario,
   runOneFlagEscortCarrierHotzoneScenario,
   runTdmArmorAndWeaponPickupScenario,
+  runTdmCombatStandoffScenario,
   runTdmLowHealthVsEnemyScenario,
   type BotMovementMetric,
   type ClassicCtfOwnFlagStolenSummary,
   type OneFlagEscortCarrierHotzoneSummary,
   type OneFlagNavigatorMetric,
   type SimulationSummary,
+  type TdmCombatStandoffSummary,
   type TdmPickupIntentSummary,
   type TdmLowHealthVsEnemySummary,
 } from "../tests/bot-diagnostics";
@@ -60,6 +62,9 @@ function createDiagnosticsArtifact() {
     ),
     tdmArmorAndWeaponPickup: serializeTdmArmorAndWeaponPickupScenario(
       runTdmArmorAndWeaponPickupScenario(),
+    ),
+    tdmCombatStandoff: serializeTdmCombatStandoffScenario(
+      runTdmCombatStandoffScenario(),
     ),
   };
   const oneFlag = {
@@ -134,6 +139,14 @@ function createDiagnosticsArtifact() {
           durationMs: scenarioBaselines.tdmArmorAndWeaponPickup.durationMs,
           frames: Math.ceil(
             scenarioBaselines.tdmArmorAndWeaponPickup.durationMs / FRAME_DELTA_MS,
+          ),
+        },
+        tdmCombatStandoff: {
+          mode: "team-deathmatch",
+          map: scenarioBaselines.tdmCombatStandoff.map,
+          durationMs: scenarioBaselines.tdmCombatStandoff.durationMs,
+          frames: Math.ceil(
+            scenarioBaselines.tdmCombatStandoff.durationMs / FRAME_DELTA_MS,
           ),
         },
       },
@@ -295,6 +308,35 @@ function serializeTdmArmorAndWeaponPickupScenario(
       summary.cases.every((metric) => metric.pickupCollected)
         ? "pickups_collected"
         : null,
+    ].filter((hint): hint is string => hint !== null),
+  };
+}
+
+function serializeTdmCombatStandoffScenario(
+  summary: TdmCombatStandoffSummary,
+) {
+  return {
+    label: "TDM Training Crossing Combat Standoff",
+    mode: "team-deathmatch",
+    map: summary.mapId,
+    durationMs: summary.durationMs,
+    frameDeltaMs: summary.frameDeltaMs,
+    testBot: {
+      ...summary.testBot,
+      intentFramesByKind: mapToRecord(summary.testBot.intentFramesByKind),
+      intent: createIntentSummary(
+        summary.testBot.actorId,
+        "team-deathmatch",
+        mapToRecord(summary.testBot.intentFramesByKind),
+        ["combat_accuracy", "damage_traded"],
+      ),
+    },
+    passHints: [
+      summary.testBot.pathMissCount === 0 ? "path_not_needed_or_found" : null,
+      summary.testBot.holdFrames > summary.testBot.movingFrames
+        ? "hold_dominates_move"
+        : null,
+      summary.testBot.travelDistance < 48 ? "position_held" : null,
     ].filter((hint): hint is string => hint !== null),
   };
 }
@@ -466,6 +508,7 @@ function collectScenarioWarnings(scenarios: {
   readonly classicCtfOwnFlagStolen: ReturnType<typeof serializeClassicCtfOwnFlagStolenScenario>;
   readonly tdmLowHealthVsEnemy: ReturnType<typeof serializeTdmLowHealthVsEnemyScenario>;
   readonly tdmArmorAndWeaponPickup: ReturnType<typeof serializeTdmArmorAndWeaponPickupScenario>;
+  readonly tdmCombatStandoff: ReturnType<typeof serializeTdmCombatStandoffScenario>;
 }): readonly string[] {
   const warnings: string[] = [];
   if (scenarios.oneFlagEscortCarrier.escort.pathMissCount > 0) {
@@ -533,6 +576,16 @@ function collectScenarioWarnings(scenarios: {
         `${scenarios.tdmArmorAndWeaponPickup.label} ${metric.label}: pickup not collected`,
       );
     }
+  }
+  if (scenarios.tdmCombatStandoff.testBot.holdFrames <= scenarios.tdmCombatStandoff.testBot.movingFrames) {
+    warnings.push(
+      `${scenarios.tdmCombatStandoff.label}: holdFrames=${scenarios.tdmCombatStandoff.testBot.holdFrames}, movingFrames=${scenarios.tdmCombatStandoff.testBot.movingFrames}`,
+    );
+  }
+  if (scenarios.tdmCombatStandoff.testBot.travelDistance >= 48) {
+    warnings.push(
+      `${scenarios.tdmCombatStandoff.label}: travelDistance=${scenarios.tdmCombatStandoff.testBot.travelDistance.toFixed(1)}`,
+    );
   }
   return warnings;
 }
@@ -662,6 +715,17 @@ function formatMarkdownReport(
         .map((metric) => `${metric.label}:${metric.pickupDistanceReduction.toFixed(1)}`)
         .join(", "),
       artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.passHints.join(", ") || "none",
+    ].join(" | ").replace(/^/, "| ").replace(/$/, " |"),
+    [
+      artifact.reports.scenarioBaselines.tdmCombatStandoff.label,
+      artifact.reports.scenarioBaselines.tdmCombatStandoff.mode,
+      artifact.reports.scenarioBaselines.tdmCombatStandoff.map,
+      `${artifact.reports.scenarioBaselines.tdmCombatStandoff.durationMs}ms`,
+      artifact.reports.scenarioBaselines.tdmCombatStandoff.testBot.intent.primaryIntent ?? "none",
+      "hold ideal combat range",
+      String(artifact.reports.scenarioBaselines.tdmCombatStandoff.testBot.pathMissCount),
+      `hold:${artifact.reports.scenarioBaselines.tdmCombatStandoff.testBot.holdFrames}, move:${artifact.reports.scenarioBaselines.tdmCombatStandoff.testBot.movingFrames}`,
+      artifact.reports.scenarioBaselines.tdmCombatStandoff.passHints.join(", ") || "none",
     ].join(" | ").replace(/^/, "| ").replace(/$/, " |"),
     "",
     "### Intent-Sichtbarkeit",

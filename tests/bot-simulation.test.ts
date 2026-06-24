@@ -10,6 +10,7 @@ import {
   runOneFlagNavigatorDiagnostics,
   runSimulationScenario,
   runTdmArmorAndWeaponPickupScenario,
+  runTdmCombatStandoffScenario,
   runTdmLowHealthVsEnemyScenario,
   type SimulationSummary,
 } from "./bot-diagnostics";
@@ -110,6 +111,33 @@ test("tdm bots expose armor and weapon pickup intents", () => {
   assert.ok(weapon, diagnostic.report);
   assert.equal(armor.finalArmor > 0, true, diagnostic.report);
   assert.equal(weapon.finalRailAmmo > 0, true, diagnostic.report);
+});
+
+test("tdm bot holds combat standoff at ideal range", () => {
+  const diagnostic = runTdmCombatStandoffScenario();
+  const holdIntentFrames =
+    diagnostic.testBot.intentFramesByKind.get("hold-standoff") ?? 0;
+
+  assert.equal(holdIntentFrames > 0, true, diagnostic.report);
+  assert.equal(
+    diagnostic.testBot.holdFrames > diagnostic.testBot.movingFrames,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(diagnostic.testBot.pathMissCount, 0, diagnostic.report);
+  assert.equal(
+    Math.abs(
+      diagnostic.testBot.finalEnemyDistance -
+        diagnostic.testBot.initialEnemyDistance,
+    ) < 24,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.travelDistance < 48,
+    true,
+    diagnostic.report,
+  );
 });
 
 test("classic ctf flank switch own flag stolen triggers carrier recovery", () => {

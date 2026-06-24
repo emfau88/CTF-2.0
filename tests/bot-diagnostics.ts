@@ -228,6 +228,29 @@ export interface TdmPickupIntentSummary {
   readonly report: string;
 }
 
+export interface TdmCombatStandoffMetric {
+  readonly actorId: string;
+  readonly enemyActorId: string;
+  readonly intentFramesByKind: ReadonlyMap<string, number>;
+  readonly holdFrames: number;
+  readonly movingFrames: number;
+  readonly pathMissCount: number;
+  readonly initialEnemyDistance: number;
+  readonly minimumEnemyDistance: number;
+  readonly maximumEnemyDistance: number;
+  readonly finalEnemyDistance: number;
+  readonly travelDistance: number;
+  readonly basicShots: number;
+}
+
+export interface TdmCombatStandoffSummary {
+  readonly durationMs: number;
+  readonly frameDeltaMs: number;
+  readonly mapId: string;
+  readonly testBot: TdmCombatStandoffMetric;
+  readonly report: string;
+}
+
 export interface ScenarioDefinition {
   readonly label: string;
   readonly modeId: GameModeId;
@@ -877,6 +900,70 @@ export function runTdmArmorAndWeaponPickupScenario(
     mapId: TRAINING_CROSSING_V2.id,
     cases,
     report: formatTdmPickupIntentReport(durationMs, cases),
+  };
+}
+
+export function runTdmCombatStandoffScenario(
+  durationMs = 850,
+): TdmCombatStandoffSummary {
+  let worldRef: WorldState | null = null;
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld: () => {
+      worldRef = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+      return worldRef;
+    },
+    basicAutoAttack: V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+    autoBasicAttackActorIds: [],
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  if (!worldRef) throw new Error("Missing TDM combat standoff scenario world.");
+  const world = worldRef;
+  configureTdmCombatStandoffWorld(world);
+
+  const testBotId = "red-player";
+  const enemyActorId = "blue-player";
+  const navigator = new GridBotNavigator();
+  const controller = new TdmBotController(
+    testBotId,
+    enemyActorId,
+    undefined,
+    navigator,
+  );
+  const metric = createTdmCombatStandoffMetric(testBotId, enemyActorId);
+  const frameCount = Math.ceil(durationMs / FRAME_DELTA_MS);
+  let snapshot = createWorldSnapshot(world);
+
+  for (let frame = 1; frame <= frameCount; frame += 1) {
+    const before = snapshot;
+    const previousPosition = actorPosition(before, testBotId);
+    const actions = controller.readActions(before, FRAME_DELTA_MS);
+    const result = runtime.advance({
+      sequence: frame,
+      timeMs: frame * FRAME_DELTA_MS,
+      deltaMs: FRAME_DELTA_MS,
+      actions,
+    });
+    captureTdmCombatStandoffFrame(
+      metric,
+      result.snapshot,
+      previousPosition,
+      navigator.debugSnapshot(),
+      controller.debugSnapshot(),
+      actions,
+      result.events,
+    );
+    snapshot = result.snapshot;
+  }
+
+  const finalized = finalizeTdmCombatStandoffMetric(metric);
+  return {
+    durationMs,
+    frameDeltaMs: FRAME_DELTA_MS,
+    mapId: TRAINING_CROSSING_V2.id,
+    testBot: finalized,
+    report: formatTdmCombatStandoffReport(durationMs, finalized),
   };
 }
 
@@ -1785,6 +1872,161 @@ function formatTdmPickupIntentReport(
       metric.finalWhipAmmo,
       summarizeCountMap(metric.intentFramesByKind, 6) || "none",
     ].join(" | ")),
+  ].join("\n");
+}
+
+interface MutableTdmCombatStandoffMetric {
+  actorId: string;
+  enemyActorId: string;
+  intentFramesByKind: Map<string, number>;
+  holdFrames: number;
+  movingFrames: number;
+  pathMissCount: number;
+  initialEnemyDistance: number | null;
+  minimumEnemyDistance: number | null;
+  maximumEnemyDistance: number | null;
+  finalEnemyDistance: number | null;
+  travelDistance: number;
+  basicShots: number;
+}
+
+function configureTdmCombatStandoffWorld(world: WorldState): void {
+  const testBot = requiredActor(world, "red-player");
+  const enemy = requiredActor(world, "blue-player");
+  testBot.position = { x: 400, y: 410 };
+  enemy.position = { x: 560, y: 410 };
+  for (const actor of [testBot, enemy]) {
+    actor.velocity = { x: 0, y: 0 };
+    actor.lastSafePosition = { ...actor.position };
+    actor.lifeState = "active";
+    actor.health = actor.maxHealth;
+    actor.armor = actor.maxArmor;
+    actor.jump.height = 0;
+    actor.jump.grounded = true;
+    actor.weapons.rocketAmmo = 0;
+    actor.weapons.railAmmo = 0;
+    actor.weapons.whipAmmo = 0;
+  }
+  world.pickups = [];
+  world.geometry.solids = [];
+  world.geometry.gaps = [];
+}
+
+function createTdmCombatStandoffMetric(
+  actorId: string,
+  enemyActorId: string,
+): MutableTdmCombatStandoffMetric {
+  return {
+    actorId,
+    enemyActorId,
+    intentFramesByKind: new Map(),
+    holdFrames: 0,
+    movingFrames: 0,
+    pathMissCount: 0,
+    initialEnemyDistance: null,
+    minimumEnemyDistance: null,
+    maximumEnemyDistance: null,
+    finalEnemyDistance: null,
+    travelDistance: 0,
+    basicShots: 0,
+  };
+}
+
+function captureTdmCombatStandoffFrame(
+  metric: MutableTdmCombatStandoffMetric,
+  snapshot: WorldSnapshot,
+  previousPosition: WorldPosition,
+  navigatorDebug: GridBotNavigatorDebugState,
+  controllerDebug: { readonly intent: string; readonly holdPosition: boolean },
+  actions: readonly { readonly action: string; readonly magnitude?: number }[],
+  events: readonly GameEvent[],
+): void {
+  const actor = snapshot.actors.find((candidate) =>
+    candidate.id === metric.actorId
+  );
+  const enemy = snapshot.actors.find((candidate) =>
+    candidate.id === metric.enemyActorId
+  );
+  if (!actor || !enemy || actor.lifeState !== "active") return;
+  metric.travelDistance += distance(previousPosition, actor.position);
+  metric.intentFramesByKind.set(
+    controllerDebug.intent,
+    (metric.intentFramesByKind.get(controllerDebug.intent) ?? 0) + 1,
+  );
+  if (controllerDebug.holdPosition) metric.holdFrames += 1;
+  if (actions.some((action) =>
+    action.action === "move" && (action.magnitude ?? 0) > 0
+  )) {
+    metric.movingFrames += 1;
+  }
+  if (!navigatorDebug.pathFound && navigatorDebug.targetKey) {
+    metric.pathMissCount += 1;
+  }
+  metric.basicShots += events.filter((event) =>
+    event.type === "projectile.spawned" &&
+    event.sourceActorId === metric.actorId &&
+    readWeaponId(event.payload) === "basic-autoshoot"
+  ).length;
+
+  const enemyDistance = distance(actor.position, enemy.position);
+  metric.initialEnemyDistance ??= distance(previousPosition, enemy.position);
+  metric.minimumEnemyDistance = metric.minimumEnemyDistance === null
+    ? enemyDistance
+    : Math.min(metric.minimumEnemyDistance, enemyDistance);
+  metric.maximumEnemyDistance = metric.maximumEnemyDistance === null
+    ? enemyDistance
+    : Math.max(metric.maximumEnemyDistance, enemyDistance);
+  metric.finalEnemyDistance = enemyDistance;
+}
+
+function finalizeTdmCombatStandoffMetric(
+  metric: MutableTdmCombatStandoffMetric,
+): TdmCombatStandoffMetric {
+  const initialEnemyDistance = metric.initialEnemyDistance ?? 0;
+  const minimumEnemyDistance = metric.minimumEnemyDistance ??
+    initialEnemyDistance;
+  const maximumEnemyDistance = metric.maximumEnemyDistance ??
+    initialEnemyDistance;
+  const finalEnemyDistance = metric.finalEnemyDistance ??
+    initialEnemyDistance;
+  return {
+    actorId: metric.actorId,
+    enemyActorId: metric.enemyActorId,
+    intentFramesByKind: metric.intentFramesByKind,
+    holdFrames: metric.holdFrames,
+    movingFrames: metric.movingFrames,
+    pathMissCount: metric.pathMissCount,
+    initialEnemyDistance,
+    minimumEnemyDistance,
+    maximumEnemyDistance,
+    finalEnemyDistance,
+    travelDistance: metric.travelDistance,
+    basicShots: metric.basicShots,
+  };
+}
+
+function formatTdmCombatStandoffReport(
+  durationMs: number,
+  metric: TdmCombatStandoffMetric,
+): string {
+  return [
+    "TDM Training Crossing Combat Standoff Scenario",
+    `durationMs=${durationMs} actor=${metric.actorId} enemy=${metric.enemyActorId}`,
+    "actor | enemy | holdFrames | movingFrames | pathMisses | initialEnemyDistance | minEnemyDistance | maxEnemyDistance | finalEnemyDistance | travel | basicShots | intents",
+    [
+      metric.actorId,
+      metric.enemyActorId,
+      metric.holdFrames,
+      metric.movingFrames,
+      metric.pathMissCount,
+      metric.initialEnemyDistance.toFixed(1),
+      metric.minimumEnemyDistance.toFixed(1),
+      metric.maximumEnemyDistance.toFixed(1),
+      metric.finalEnemyDistance.toFixed(1),
+      metric.travelDistance.toFixed(1),
+      metric.basicShots,
+      summarizeCountMap(metric.intentFramesByKind, 6) || "none",
+    ].join(" | "),
   ].join("\n");
 }
 
