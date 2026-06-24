@@ -4,6 +4,7 @@ import { shouldUseGameplayV2Shell } from "./bootSceneSelection";
 import {
   getWorldMap,
   type MatchResult,
+  type MatchStatEntry,
   type ScoreEntry,
   validateWorldMapForMode,
 } from "./core";
@@ -12,9 +13,11 @@ import {
   goToGameplayV2Menu,
   hideGameplayV2Pause,
   hideGameplayV2Result,
+  hideGameplayV2Stats,
   showGameplayV2Menu,
   showGameplayV2Pause,
   showGameplayV2Result,
+  showGameplayV2Stats,
 } from "./v2Menu";
 import {
   buildV2MatchSearch,
@@ -61,9 +64,20 @@ if (showV2Menu) {
     const menuButton = document.querySelector<HTMLButtonElement>(
       "#v2-game-menu-button",
     );
+    const statsButton = document.querySelector<HTMLButtonElement>(
+      "#v2-stats-button",
+    );
+    let latestStats: readonly MatchStatEntry[] = [];
+    const humanActorIds = activeRoute?.players === "local"
+      ? ["blue-player", "red-player"]
+      : ["blue-player"];
+    const respawnStatus = document.querySelector<HTMLElement>(
+      "#v2-respawn-status",
+    );
     const setIngameButtonsVisible = (visible: boolean): void => {
       menuButton?.classList.toggle("is-hidden", !visible);
       audioButton?.classList.toggle("is-hidden", !visible);
+      statsButton?.classList.toggle("is-hidden", !visible);
     };
     const releaseOverlayPause = (): void => {
       window.dispatchEvent(
@@ -73,6 +87,7 @@ if (showV2Menu) {
     const showMenuRoute = (): void => {
       hideGameplayV2Pause();
       hideGameplayV2Result();
+      hideGameplayV2Stats();
       releaseOverlayPause();
       if (activeRoute) {
         goToGameplayV2Menu(activeRoute);
@@ -81,6 +96,7 @@ if (showV2Menu) {
     const restartCurrentMatch = (): void => {
       hideGameplayV2Pause();
       hideGameplayV2Result();
+      hideGameplayV2Stats();
       releaseOverlayPause();
       if (activeRoute) {
         window.location.search = buildV2MatchSearch(activeRoute);
@@ -88,6 +104,7 @@ if (showV2Menu) {
     };
     const closePauseOverlay = (): void => {
       hideGameplayV2Pause();
+      hideGameplayV2Stats();
       releaseOverlayPause();
       setIngameButtonsVisible(true);
     };
@@ -106,6 +123,20 @@ if (showV2Menu) {
     menuButton?.classList.remove("is-hidden");
     if (menuButton && activeRoute) {
       menuButton.onclick = openPauseOverlay;
+    }
+    statsButton?.classList.remove("is-hidden");
+    if (statsButton && activeRoute) {
+      statsButton.onclick = () => {
+        window.dispatchEvent(
+          new CustomEvent("v2-overlay-state", { detail: { paused: true } }),
+        );
+        setIngameButtonsVisible(false);
+        showGameplayV2Stats(latestStats, humanActorIds, () => {
+          hideGameplayV2Stats();
+          releaseOverlayPause();
+          setIngameButtonsVisible(true);
+        });
+      };
     }
     const audioButton = document.querySelector<HTMLButtonElement>(
       "#v2-audio-button",
@@ -143,7 +174,21 @@ if (showV2Menu) {
         phase?: string;
         result?: MatchResult | null;
         scores?: readonly ScoreEntry[];
+        stats?: readonly MatchStatEntry[];
+        playerLifeState?: string;
+        playerRespawnMs?: number;
       }>).detail;
+      latestStats = detail.stats ?? latestStats;
+      const respawnMs = Math.max(0, detail.playerRespawnMs ?? 0);
+      const showRespawn = detail.playerLifeState === "falling" ||
+        detail.playerLifeState === "dead" ||
+        detail.playerLifeState === "respawning";
+      if (respawnStatus) {
+        respawnStatus.textContent = detail.playerLifeState === "falling"
+          ? `FALLING · RESPAWN: ${(Math.ceil(respawnMs / 100) / 10).toFixed(1)}s`
+          : `RESPAWN: ${(Math.ceil(respawnMs / 100) / 10).toFixed(1)}s`;
+        respawnStatus.classList.toggle("is-hidden", !showRespawn);
+      }
       if (detail.phase !== "ended" || !detail.result || !activeRoute) {
         return;
       }
@@ -155,6 +200,8 @@ if (showV2Menu) {
           ? "Draw"
           : `${detail.result.winnerEntryId.toUpperCase()} Wins`,
         detail: formatResultScores(detail.scores ?? []),
+        stats: latestStats,
+        humanActorIds,
         onPlayAgain: restartCurrentMatch,
         onMainMenu: showMenuRoute,
       });

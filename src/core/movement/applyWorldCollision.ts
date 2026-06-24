@@ -17,25 +17,23 @@ export function applyWorldCollision(
   const events: GameEvent[] = [];
 
   if (actor.lifeState === "falling") {
-    const respawned = updateFallRespawn(actor, ms);
-    if (respawned) {
+    const died = updateFalling(actor, ms, config);
+    if (died) {
       events.push({
-        id: `actor-respawned-${actor.id}-${timeMs}`,
-        type: "actor.respawned",
+        id: `actor-died-fall-${actor.id}-${actor.lifeId}-${timeMs}`,
+        type: "actor.died",
         timeMs,
         targetActorId: actor.id,
         teamId: actor.teamId ?? undefined,
         payload: {
-          lifeId: actor.lifeId,
-          spawnPointId: actor.spawnPointId,
-          position: { ...actor.position },
-          health: actor.health,
-          armor: actor.armor,
+          victimActorId: actor.id,
+          victimLifeId: actor.lifeId,
+          respawnDelayMs: actor.respawn?.remainingMs ?? 0,
           reason: "fall",
         },
       });
     }
-    return { collided: false, fell: false, respawned, events };
+    return { collided: false, fell: false, respawned: false, events };
   }
 
   clampToWorldBounds(actor, geometry);
@@ -141,14 +139,18 @@ function startFalling(actor: ActorState, config: CollisionConfig): void {
   actor.lifeState = "falling";
   actor.respawn = {
     reason: "fall",
-    remainingMs: config.fallRespawnMs,
+    remainingMs: config.fallDurationMs,
   };
   actor.velocity.x *= config.fallVelocityScale;
   actor.velocity.y *= config.fallVelocityScale;
   cancelJump(actor);
 }
 
-function updateFallRespawn(actor: ActorState, deltaMs: number): boolean {
+function updateFalling(
+  actor: ActorState,
+  deltaMs: number,
+  config: CollisionConfig,
+): boolean {
   if (!actor.respawn) {
     return false;
   }
@@ -160,15 +162,21 @@ function updateFallRespawn(actor: ActorState, deltaMs: number): boolean {
     return false;
   }
 
-  actor.position.x = actor.lastSafePosition.x;
-  actor.position.y = actor.lastSafePosition.y;
   actor.velocity.x = 0;
   actor.velocity.y = 0;
-  actor.lifeState = "active";
-  actor.respawn = null;
-  actor.overGap = false;
-  actor.safePositionElapsedMs = 0;
-  resetJump(actor);
+  actor.health = 0;
+  actor.armor = 0;
+  actor.weapons.rocketAmmo = 0;
+  actor.weapons.rocketCooldownMs = 0;
+  actor.weapons.railAmmo = 0;
+  actor.weapons.railCooldownMs = 0;
+  actor.weapons.whipAmmo = 0;
+  actor.weapons.whipCooldownMs = 0;
+  actor.lifeState = "dead";
+  actor.respawn = {
+    reason: "death",
+    remainingMs: Math.max(0, config.respawnDelayMs - config.fallDurationMs),
+  };
   return true;
 }
 

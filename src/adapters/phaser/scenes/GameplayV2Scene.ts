@@ -12,7 +12,9 @@ import {
   OneFlagMode,
   resolveWorldMap,
   TeamDeathmatchMode,
+  V2_ACTOR_LIFECYCLE_CONFIG,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
+  V2_COLLISION_GROUNDWORK_CONFIG,
 } from "../../../core";
 import {
   AugmentedInputAdapter,
@@ -144,6 +146,7 @@ export class GameplayV2Scene extends Phaser.Scene {
         useBotOpponent ? "blue-player" : undefined,
         route.skin,
         useBotOpponent,
+        useMobileControls ? .95 : 1,
       ),
       audio: new PhaserArenaAudioPort(this, "blue-player"),
       diagnostics: hud,
@@ -241,7 +244,20 @@ export class GameplayV2Scene extends Phaser.Scene {
     const resultKey = hudState.matchResult?.kind === "winner"
       ? `${hudState.matchResult.kind}:${hudState.matchResult.winnerEntryId}`
       : hudState.matchResult?.kind ?? "none";
-    const signature = `${hudState.phase}:${resultKey}`;
+    const stats = this.bridge?.snapshot.matchStats.entries ?? [];
+    const controlledActor = this.bridge?.snapshot.actors.find((actor) =>
+      actor.id === "blue-player"
+    );
+    const playerRespawnMs = controlledActor?.lifeState === "falling"
+      ? (controlledActor.respawn?.remainingMs ?? 0) +
+        V2_ACTOR_LIFECYCLE_CONFIG.respawnDelayMs -
+        V2_COLLISION_GROUNDWORK_CONFIG.fallDurationMs
+      : controlledActor?.respawn?.remainingMs ?? 0;
+    const statsKey = stats.map((entry) =>
+      `${entry.actorId}:${entry.kills}:${entry.deaths}:${entry.flagPickups}:${entry.flagCaptures}:${entry.flagReturns}`
+    ).join("|");
+    const respawnKey = `${controlledActor?.lifeState ?? "missing"}:${Math.ceil(playerRespawnMs / 100)}`;
+    const signature = `${hudState.phase}:${resultKey}:${statsKey}:${respawnKey}`;
     if (signature === this.lastReportedMatchSignature) {
       return;
     }
@@ -251,6 +267,9 @@ export class GameplayV2Scene extends Phaser.Scene {
         phase: hudState.phase,
         result: hudState.matchResult ?? null,
         scores: hudState.scores,
+        stats,
+        playerLifeState: controlledActor?.lifeState,
+        playerRespawnMs,
       },
     }));
   }

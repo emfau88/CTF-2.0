@@ -9,6 +9,7 @@ export const V2_COLLISION_GROUNDWORK_CONFIG: CollisionConfig = {
   gapDangerInsetRatio: .2,
   gapOverlapRadiusRatio: .68,
   safePositionIntervalMs: 120,
-  fallRespawnMs: 420,
+  fallDurationMs: 750,
+  respawnDelayMs: 4_000,
   fallVelocityScale: .18,
 };

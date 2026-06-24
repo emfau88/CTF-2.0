@@ -5,6 +5,7 @@ import {
   awardScore,
   createActorState,
   createClassicCtfWorldState,
+  createMatchStatsState,
   createOneFlagWorldState,
   createEmptyWorldState,
   createWorldSnapshot,
@@ -26,11 +27,13 @@ import {
   OneFlagBotDecisionController,
   OneFlagMode,
   resolveWorldMap,
+  recordMatchEvents,
   TeamDeathmatchMode,
   TdmBotCombatController,
   TdmBotController,
   TRAINING_CROSSING_V2,
   updatePickups,
+  updateActorLifecycle,
   updateProjectiles,
   validateWorldMapForMode,
   V2_ACTOR_LIFECYCLE_CONFIG,
@@ -218,6 +221,7 @@ export function runPhaserGameBridgeSmokeCheck(): void {
   checkAuthoredJumpReachability();
   checkCollisionAndGapGroundwork();
   checkActorLifecycle();
+  checkMatchStats();
   checkProjectilePipeline();
   checkPickupPipeline();
   checkMatchLifecycle();
@@ -1684,6 +1688,7 @@ function checkCollisionAndGapGroundwork(): void {
     id: "gap-actor",
     kind: "diagnostic",
     position: { x: 350, y: 150 },
+    spawnPosition: { x: 50, y: 50 },
     lastSafePosition: { x: 100, y: 100 },
     radius: 24,
   });
@@ -1702,23 +1707,45 @@ function checkCollisionAndGapGroundwork(): void {
     throw new Error("Grounded actor inside a gap must start falling.");
   }
 
-  let respawned = false;
-  for (let frame = 0; frame < 13; frame++) {
-    respawned = applyWorldCollision(
+  let fallDeathEvent = false;
+  for (let frame = 0; frame < 24; frame++) {
+    const result = applyWorldCollision(
       gapActor,
       geometry,
       34,
       102 + frame * 34,
       V2_COLLISION_GROUNDWORK_CONFIG,
-    ).respawned || respawned;
+    );
+    fallDeathEvent ||= result.events.some((event) =>
+      event.type === "actor.died"
+    );
+    if (fallDeathEvent) break;
+  }
+  if (
+    !fallDeathEvent ||
+    !isActorDead(gapActor) ||
+    gapActor.respawn?.reason !== "death" ||
+    gapActor.position.x !== 350 ||
+    gapActor.position.y !== 150
+  ) {
+    throw new Error("Falling actor must visibly fall before entering dead state.");
+  }
+  let respawned = false;
+  for (let frame = 0; frame < 100; frame++) {
+    respawned ||= updateActorLifecycle(
+      gapActor,
+      34,
+      950 + frame * 34,
+      V2_ACTOR_LIFECYCLE_CONFIG,
+    ).respawned;
   }
   if (
     !respawned ||
     !isActorActive(gapActor) ||
-    gapActor.position.x !== 100 ||
-    gapActor.position.y !== 100
+    Math.round(gapActor.position.x) !== 50 ||
+    Math.round(gapActor.position.y) !== 50
   ) {
-    throw new Error("Falling actor must respawn at its last safe position.");
+    throw new Error("Gap death must respawn at the assigned base spawn.");
   }
 
   const jumpingActor = createActorState({
@@ -1753,6 +1780,10 @@ function isActorActive(actor: ActorState): boolean {
   return actor.lifeState === "active";
 }
 
+function isActorDead(actor: ActorState): boolean {
+  return actor.lifeState === "dead";
+}
+
 function checkActorLifecycle(): void {
   const runtime = new GameplayCoreRuntime();
   const initial = runtime.initialize().snapshot.actors[0];
@@ -1779,6 +1810,7 @@ function checkActorLifecycle(): void {
     deadActor.lifeState !== "dead" ||
     deadActor.health !== 0 ||
     deadActor.respawn?.reason !== "death" ||
+    deadActor.respawn.remainingMs !== 4_000 ||
     !death.events.some((event) => event.type === "actor.died")
   ) {
     throw new Error("Actor must enter dead state and emit actor.died.");
@@ -1809,7 +1841,7 @@ function checkActorLifecycle(): void {
 
   let respawnEvent = false;
   let respawnedActor = blockedActor;
-  for (let frame = 0; frame < 26; frame++) {
+  for (let frame = 0; frame < 120; frame++) {
     const sequence = 5 + frame;
     const result = runtime.advance({
       sequence,
@@ -2354,7 +2386,7 @@ function checkTeamDeathmatchSlice(): void {
       throw new Error("Each TDM kill must award blue exactly one point.");
     }
     if (kill < 2) {
-      for (let wait = 0; wait < 27; wait++) {
+      for (let wait = 0; wait < 120; wait++) {
         sequence++;
         runtime.advance({
           sequence,
@@ -2378,6 +2410,15 @@ function checkTeamDeathmatchSlice(): void {
   ) {
     throw new Error("TDM score limit must end the match for blue.");
   }
+  const blueStats = runtime.snapshot.matchStats.entries.find((entry) =>
+    entry.actorId === "blue-player"
+  );
+  const redStats = runtime.snapshot.matchStats.entries.find((entry) =>
+    entry.actorId === "red-player"
+  );
+  if (blueStats?.kills !== 3 || redStats?.deaths !== 3) {
+    throw new Error("TDM match stats must record kills and deaths per actor.");
+  }
 
   const frozenTime = runtime.snapshot.timeMs;
   const restarted = runtime.advance({
@@ -2390,6 +2431,9 @@ function checkTeamDeathmatchSlice(): void {
     restarted.snapshot.match?.phase !== "running" ||
     restarted.snapshot.timeMs !== 0 ||
     restarted.snapshot.scoreBoard.entries.some((entry) => entry.score !== 0) ||
+    restarted.snapshot.matchStats.entries.some((entry) =>
+      entry.kills !== 0 || entry.deaths !== 0
+    ) ||
     restarted.snapshot.actors.some((actor) =>
       actor.lifeState !== "active" || actor.lifeId !== 1
     )
@@ -2932,6 +2976,59 @@ function checkBotDecisionAndMovementConfig(): void {
   }
 }
 
+function checkMatchStats(): void {
+  const blue = createActorState({
+    id: "blue-player",
+    kind: "player",
+    teamId: "blue",
+  });
+  const red = createActorState({
+    id: "red-player",
+    kind: "player",
+    teamId: "red",
+  });
+  const stats = createMatchStatsState([blue, red]);
+  const events = [{
+    id: "stats-pickup",
+    type: "objective.flagPickedUp",
+    timeMs: 1,
+    sourceActorId: blue.id,
+    payload: {},
+  }, {
+    id: "stats-capture",
+    type: "objective.flagCaptured",
+    timeMs: 2,
+    sourceActorId: blue.id,
+    payload: {},
+  }, {
+    id: "stats-return",
+    type: "objective.flagReset",
+    timeMs: 3,
+    sourceActorId: blue.id,
+    payload: { reason: "owner-return" },
+  }, {
+    id: "stats-death",
+    type: "actor.died",
+    timeMs: 4,
+    sourceActorId: blue.id,
+    targetActorId: red.id,
+    payload: {},
+  }];
+  recordMatchEvents(stats, [blue, red], events);
+  recordMatchEvents(stats, [blue, red], events);
+  const blueStats = stats.entries.find((entry) => entry.actorId === blue.id);
+  const redStats = stats.entries.find((entry) => entry.actorId === red.id);
+  if (
+    blueStats?.kills !== 1 ||
+    blueStats.flagPickups !== 1 ||
+    blueStats.flagCaptures !== 1 ||
+    blueStats.flagReturns !== 1 ||
+    redStats?.deaths !== 1
+  ) {
+    throw new Error("Match stats must record each combat and flag event once.");
+  }
+}
+
 function checkBotStandoffBehavior(): void {
   const world = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
   const mode = new TeamDeathmatchMode();
@@ -3067,6 +3164,7 @@ function checkBotJumpUsesCoreSystem(): void {
         activationRadius: 44,
       }],
     };
+    world.pickups = [];
     red.position = { x: 80, y: 200 };
     red.spawnPosition = { ...red.position };
     red.lastSafePosition = { ...red.position };

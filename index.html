@@ -111,13 +111,24 @@
       </div>
     </div>
     <div id="v2-result-overlay" class="v2-flow-overlay is-hidden">
-      <div class="v2-flow-card">
+      <div class="v2-flow-card v2-stats-card">
         <div class="v2-menu-kicker">RESULT</div>
         <h2 id="v2-result-title">Blue Wins</h2>
         <p id="v2-result-detail" class="v2-menu-intro">BLUE 3 : RED 2</p>
+        <div id="v2-result-stats" class="v2-stats-table-wrap"></div>
         <div class="v2-flow-actions">
           <button id="v2-result-play-again" type="button">Play Again</button>
           <button id="v2-result-main-menu" class="v2-menu-secondary" type="button">Main Menu</button>
+        </div>
+      </div>
+    </div>
+    <div id="v2-stats-overlay" class="v2-flow-overlay is-hidden">
+      <div class="v2-flow-card v2-stats-card">
+        <div class="v2-menu-kicker">MATCH STATS</div>
+        <h2>Scoreboard</h2>
+        <div id="v2-stats-table" class="v2-stats-table-wrap"></div>
+        <div class="v2-flow-actions">
+          <button id="v2-stats-close" type="button">Back to Game</button>
         </div>
       </div>
     </div>
@@ -127,6 +138,10 @@
     <button id="v2-audio-button" class="v2-game-menu-button v2-audio-button is-hidden" type="button" aria-pressed="false">
       SFX ON
     </button>
+    <button id="v2-stats-button" class="v2-game-menu-button v2-stats-button is-hidden" type="button">
+      Stats
+    </button>
+    <div id="v2-respawn-status" class="v2-respawn-status is-hidden" role="status"></div>
     <div id="hud">
       <div class="score">
         <b class="score-team score-red"><span class="score-label">RED</span><span id="red-score">0</span></b>

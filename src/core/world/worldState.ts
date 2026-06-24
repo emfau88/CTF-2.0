@@ -5,6 +5,10 @@ import type { Objective } from "../objectives";
 import type { PickupState } from "../pickups";
 import type { SpawnPoint } from "../spawning";
 import {
+  createMatchStatsState,
+  type MatchStatsState,
+} from "../stats";
+import {
   createScoreBoardState,
   type ScoreBoardState,
 } from "../scoring";
@@ -26,6 +30,7 @@ export interface WorldState {
   pickups: PickupState[];
   objectives: Objective[];
   scoreBoard: ScoreBoardState;
+  matchStats: MatchStatsState;
   match: MatchState | null;
   spawnPoints: SpawnPoint[];
   geometry: WorldGeometry;
@@ -41,6 +46,7 @@ export interface WorldSnapshot {
   readonly pickups: readonly Readonly<PickupState>[];
   readonly objectives: readonly Readonly<Objective>[];
   readonly scoreBoard: Readonly<ScoreBoardState>;
+  readonly matchStats: Readonly<MatchStatsState>;
   readonly match: Readonly<MatchState> | null;
   readonly spawnPoints: readonly SpawnPoint[];
   readonly geometry: WorldGeometry;
@@ -59,6 +65,7 @@ export function createEmptyWorldState(
     pickups: [],
     objectives: [],
     scoreBoard: createScoreBoardState(),
+    matchStats: createMatchStatsState(),
     match: null,
     spawnPoints: [],
     geometry: createEmptyWorldGeometry(),
@@ -100,6 +107,10 @@ export function createWorldSnapshot(world: WorldState): WorldSnapshot {
     scoreBoard: {
       entries: world.scoreBoard.entries.map((entry) => ({ ...entry })),
       processedAwardKeys: [...world.scoreBoard.processedAwardKeys],
+    },
+    matchStats: {
+      entries: world.matchStats.entries.map((entry) => ({ ...entry })),
+      processedEventIds: [...world.matchStats.processedEventIds],
     },
     match: world.match
       ? {

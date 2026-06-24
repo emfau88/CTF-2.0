@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "runId": "2026-06-24T18-23-47-434Z",
-  "timestamp": "2026-06-24T18:23:47.434Z",
+  "runId": "2026-06-24T18-42-51-972Z",
+  "timestamp": "2026-06-24T18:42:51.972Z",
   "git": {
     "branch": "codex/gameplay-core-v2",
-    "commit": "2a79ea2",
+    "commit": "2aea888",
     "dirty": true,
-    "statusShort": "M diagnostics/bots/latest.json\n M diagnostics/bots/latest.md\n M docs/BOT_AI_EXECUTION_ROADMAP.md\n M index.html\n M scripts/run-bot-diagnostics.ts\n M src/adapters/phaser/PhaserArenaRendererPort.ts\n M src/adapters/phaser/PhaserGameBridge.smoke.ts\n M src/adapters/phaser/scenes/GameplayV2Scene.ts\n M src/core/actors/ActorLifecycleConfig.ts\n M src/core/index.ts\n M src/core/movement/CollisionConfig.ts\n M src/core/movement/applyWorldCollision.ts\n M src/core/movement/collisionTypes.ts\n M src/core/runtime/GameplayCoreRuntime.ts\n M src/core/world/worldState.ts\n M src/main.ts\n M src/styles.css\n M src/v2Menu.ts\n M tests/bot-diagnostics.ts\n M tests/bot-simulation.test.ts\n?? diagnostics/bots/history/\n?? docs/CODEX_HANDOFF_2026-06-13.md\n?? public/assets/alien-runner-mockup-128.png\n?? public/assets/alien-runner-mockup-alpha-large.png\n?? public/assets/alien-runner-mockup-source.png\n?? public/assets/alien-runner-spritesheet-4x4-preview.png\n?? public/assets/alien-runner-spritesheet-alpha-large.png\n?? public/assets/alien-runner-spritesheet-source.png\n?? public/assets/arena-characters-indexed-preview.png\n?? public/assets/arena-runner-downright-spritesheet.png\n?? public/assets/riot-droid-spritesheet-6x4-preview.png\n?? public/assets/riot-droid-spritesheet-alpha-large.png\n?? public/assets/riot-droid-spritesheet-source.png\n?? src/core/stats/"
+    "statusShort": "M index.html\n M src/adapters/phaser/PhaserArenaRendererPort.ts\n M src/adapters/phaser/PhaserGameBridge.smoke.ts\n M src/adapters/phaser/scenes/GameplayV2Scene.ts\n M src/core/actors/ActorLifecycleConfig.ts\n M src/core/index.ts\n M src/core/movement/CollisionConfig.ts\n M src/core/movement/applyWorldCollision.ts\n M src/core/movement/collisionTypes.ts\n M src/core/runtime/GameplayCoreRuntime.ts\n M src/core/world/worldState.ts\n M src/main.ts\n M src/styles.css\n M src/v2Menu.ts\n?? diagnostics/bots/history/\n?? docs/CODEX_HANDOFF_2026-06-13.md\n?? public/assets/alien-runner-mockup-128.png\n?? public/assets/alien-runner-mockup-alpha-large.png\n?? public/assets/alien-runner-mockup-source.png\n?? public/assets/alien-runner-spritesheet-4x4-preview.png\n?? public/assets/alien-runner-spritesheet-alpha-large.png\n?? public/assets/alien-runner-spritesheet-source.png\n?? public/assets/arena-characters-indexed-preview.png\n?? public/assets/arena-runner-downright-spritesheet.png\n?? public/assets/riot-droid-spritesheet-6x4-preview.png\n?? public/assets/riot-droid-spritesheet-alpha-large.png\n?? public/assets/riot-droid-spritesheet-source.png\n?? src/core/stats/"
   },
   "diagnosticsConfig": {
     "command": "npm.cmd run bot:diagnostics",

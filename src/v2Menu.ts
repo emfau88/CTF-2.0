@@ -7,6 +7,7 @@ import {
   type V2RouteConfig,
   type V2PlayersMode,
 } from "./v2Route";
+import type { MatchStatEntry } from "./core";
 
 interface V2MenuElements {
   readonly root: HTMLElement;
@@ -36,8 +37,15 @@ interface V2ResultElements {
   readonly root: HTMLElement;
   readonly title: HTMLElement;
   readonly detail: HTMLElement;
+  readonly stats: HTMLElement;
   readonly playAgain: HTMLButtonElement;
   readonly mainMenu: HTMLButtonElement;
+}
+
+interface V2StatsElements {
+  readonly root: HTMLElement;
+  readonly table: HTMLElement;
+  readonly close: HTMLButtonElement;
 }
 
 export function showGameplayV2Menu(statusMessage?: string): void {
@@ -59,6 +67,7 @@ export function showGameplayV2Menu(statusMessage?: string): void {
   elements.root.classList.remove("is-hidden");
   hideGameplayV2Pause();
   hideGameplayV2Result();
+  hideGameplayV2Stats();
   const syncControls = (): void => {
     const localMatch = elements.players.value === "local";
     if (localMatch) {
@@ -102,6 +111,7 @@ export function showGameplayV2Pause(actions: {
   readonly onMainMenu: () => void;
 }): void {
   hideGameplayV2Result();
+  hideGameplayV2Stats();
   const elements = readPauseElements();
   elements.resume.onclick = actions.onResume;
   elements.restart.onclick = actions.onRestart;
@@ -116,6 +126,8 @@ export function hideGameplayV2Pause(): void {
 export function showGameplayV2Result(input: {
   readonly headline: string;
   readonly detail: string;
+  readonly stats: readonly MatchStatEntry[];
+  readonly humanActorIds: readonly string[];
   readonly onPlayAgain: () => void;
   readonly onMainMenu: () => void;
 }): void {
@@ -123,9 +135,25 @@ export function showGameplayV2Result(input: {
   const elements = readResultElements();
   elements.title.textContent = input.headline;
   elements.detail.textContent = input.detail;
+  renderStatsTable(elements.stats, input.stats, input.humanActorIds);
   elements.playAgain.onclick = input.onPlayAgain;
   elements.mainMenu.onclick = input.onMainMenu;
   elements.root.classList.remove("is-hidden");
+}
+
+export function showGameplayV2Stats(
+  stats: readonly MatchStatEntry[],
+  humanActorIds: readonly string[],
+  onClose: () => void,
+): void {
+  const elements = readStatsElements();
+  renderStatsTable(elements.table, stats, humanActorIds);
+  elements.close.onclick = onClose;
+  elements.root.classList.remove("is-hidden");
+}
+
+export function hideGameplayV2Stats(): void {
+  readStatsElements().root.classList.add("is-hidden");
 }
 
 export function hideGameplayV2Result(): void {
@@ -170,9 +198,74 @@ function readResultElements(): V2ResultElements {
     root: requiredElement<HTMLElement>("v2-result-overlay"),
     title: requiredElement<HTMLElement>("v2-result-title"),
     detail: requiredElement<HTMLElement>("v2-result-detail"),
+    stats: requiredElement<HTMLElement>("v2-result-stats"),
     playAgain: requiredElement<HTMLButtonElement>("v2-result-play-again"),
     mainMenu: requiredElement<HTMLButtonElement>("v2-result-main-menu"),
   };
+}
+
+function readStatsElements(): V2StatsElements {
+  return {
+    root: requiredElement<HTMLElement>("v2-stats-overlay"),
+    table: requiredElement<HTMLElement>("v2-stats-table"),
+    close: requiredElement<HTMLButtonElement>("v2-stats-close"),
+  };
+}
+
+function renderStatsTable(
+  root: HTMLElement,
+  stats: readonly MatchStatEntry[],
+  humanActorIds: readonly string[],
+): void {
+  root.replaceChildren();
+  const table = document.createElement("table");
+  table.className = "v2-stats-table";
+  const head = table.createTHead().insertRow();
+  for (const label of ["Player", "K", "D", "Flag", "Cap", "Ret"]) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = label;
+    head.append(cell);
+  }
+  const body = table.createTBody();
+  for (const entry of stats) {
+    const row = body.insertRow();
+    row.className = `v2-stats-team-${entry.teamId ?? "neutral"}`;
+    const values = [
+      formatActorName(entry, stats, new Set(humanActorIds)),
+      entry.kills,
+      entry.deaths,
+      entry.flagPickups,
+      entry.flagCaptures,
+      entry.flagReturns,
+    ];
+    for (const value of values) {
+      const cell = row.insertCell();
+      cell.textContent = String(value);
+    }
+  }
+  root.append(table);
+}
+
+function formatActorName(
+  entry: MatchStatEntry,
+  stats: readonly MatchStatEntry[],
+  humanActorIds: ReadonlySet<string>,
+): string {
+  const teamName = entry.teamId
+    ? entry.teamId.charAt(0).toUpperCase() + entry.teamId.slice(1)
+    : "Neutral";
+  if (humanActorIds.has(entry.actorId)) {
+    return entry.actorId === "blue-player"
+      ? `YOU · ${teamName}`
+      : `PLAYER 2 · ${teamName}`;
+  }
+  const teamBots = stats.filter((candidate) =>
+    candidate.teamId === entry.teamId && !humanActorIds.has(candidate.actorId)
+  );
+  return `${teamName} BOT ${teamBots.findIndex((candidate) =>
+    candidate.actorId === entry.actorId
+  ) + 1}`;
 }
 
 function requiredElement<T extends HTMLElement>(id: string): T {

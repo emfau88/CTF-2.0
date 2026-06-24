@@ -18,6 +18,7 @@ import {
 import type { CoreFrameResult, CoreRuntime } from "./coreRuntime";
 import { createDiagnosticWorldState } from "./createDiagnosticWorldState";
 import { dispatchModeEvents } from "./dispatchModeEvents";
+import { createMatchStatsState, recordMatchEvents } from "../stats";
 import { clampRuntimeDeltaMs } from "./GameplayRuntimeTiming";
 import { updateActorWorld } from "./updateActorWorld";
 import { updateCombatWorld } from "./updateCombatWorld";
@@ -55,6 +56,7 @@ export class GameplayCoreRuntime implements CoreRuntime {
     this.autoBasicAttackActorIds = options.autoBasicAttackActorIds;
     this.allowManualPrimaryFire = options.allowManualPrimaryFire ?? true;
     this.world = this.createWorld();
+    this.world.matchStats = createMatchStatsState(this.world.actors);
     this.currentSnapshot = createWorldSnapshot(this.world);
   }
 
@@ -64,6 +66,7 @@ export class GameplayCoreRuntime implements CoreRuntime {
 
   initialize(): CoreFrameResult {
     this.world = this.createWorld();
+    this.world.matchStats = createMatchStatsState(this.world.actors);
     this.currentEvents = this.mode.initialize(this.world);
     return this.createFrameResult();
   }
@@ -162,6 +165,11 @@ export class GameplayCoreRuntime implements CoreRuntime {
   }
 
   private createFrameResult(): CoreFrameResult {
+    recordMatchEvents(
+      this.world.matchStats,
+      this.world.actors,
+      this.currentEvents,
+    );
     this.currentSnapshot = createWorldSnapshot(this.world);
     return {
       snapshot: this.currentSnapshot,

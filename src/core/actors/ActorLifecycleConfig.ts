@@ -5,7 +5,7 @@ export interface ActorLifecycleConfig {
 }
 
 export const V2_ACTOR_LIFECYCLE_CONFIG: ActorLifecycleConfig = {
-  respawnDelayMs: 900,
+  respawnDelayMs: 4_000,
   respawnArmor: 0,
   diagnosticDamage: 35,
 };

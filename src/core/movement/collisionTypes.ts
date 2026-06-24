@@ -9,7 +9,8 @@ export interface CollisionConfig {
   readonly gapDangerInsetRatio: number;
   readonly gapOverlapRadiusRatio: number;
   readonly safePositionIntervalMs: number;
-  readonly fallRespawnMs: number;
+  readonly fallDurationMs: number;
+  readonly respawnDelayMs: number;
   readonly fallVelocityScale: number;
 }
 

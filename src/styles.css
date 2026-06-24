@@ -184,6 +184,37 @@ canvas { display: block; }
 }
 .v2-game-menu-button:active { transform: translateY(1px); }
 .v2-audio-button { top: max(38px, calc(env(safe-area-inset-top) + 30px)); min-width: 74px; }
+.v2-stats-button {
+  top: max(38px, calc(env(safe-area-inset-top) + 30px));
+  right: max(92px, calc(env(safe-area-inset-right) + 82px));
+  min-width: 64px;
+}
+.v2-stats-card { width: min(760px, calc(100vw - 28px)); }
+.v2-stats-table-wrap { max-width: 100%; overflow-x: auto; }
+.v2-stats-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.v2-stats-table th,
+.v2-stats-table td { padding: 7px 8px; border-bottom: 1px solid rgb(23 48 45 / .14); text-align: center; }
+.v2-stats-table th:first-child,
+.v2-stats-table td:first-child { text-align: left; }
+.v2-stats-team-blue td:first-child { color: #2459a9; }
+.v2-stats-team-red td:first-child { color: #a9262d; }
+.v2-respawn-status {
+  position: fixed;
+  z-index: 1880;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  translate: -50% 0;
+  padding: 9px 15px;
+  border: 1px solid rgb(255 255 255 / .22);
+  border-radius: 8px;
+  background: rgb(23 48 45 / .9);
+  color: white;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .25);
+}
+.v2-stats-card { max-height: calc(100vh - 16px); overflow-y: auto; }
 #hud { position: fixed; inset: 0; pointer-events: none; color: #17302d; font-size: 13px; }
 .score { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); display: flex; justify-content: space-between; align-items: center; }
 .score-team, #debug, .hud-actions button, .settings-panel { background: rgb(255 255 255 / .78); border: 1px solid rgb(30 50 45 / .15); border-radius: 8px; box-shadow: 0 8px 22px rgb(20 40 34 / .12); backdrop-filter: blur(10px); }
@@ -299,6 +330,18 @@ canvas { display: block; }
     top: max(32px, calc(env(safe-area-inset-top) + 24px));
     min-width: 68px;
   }
+  .v2-stats-button {
+    top: max(32px, calc(env(safe-area-inset-top) + 24px));
+    right: max(80px, calc(env(safe-area-inset-right) + 72px));
+    min-width: 56px;
+  }
+  .v2-stats-card { padding: 14px; gap: 9px; }
+  .v2-stats-card h2 { margin: 0; font-size: 24px; }
+  .v2-stats-table { font-size: 10px; }
+  .v2-stats-table th,
+  .v2-stats-table td { padding: 3px 5px; }
+  .v2-stats-card .v2-flow-actions button { min-height: 34px; }
+  .v2-respawn-status { bottom: max(8px, env(safe-area-inset-bottom)); padding: 7px 11px; font-size: 11px; }
 }
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
   .v2-main-menu {

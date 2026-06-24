@@ -147,6 +147,12 @@ export {
   type GameplayCoreRuntimeOptions,
 } from "./runtime";
 export {
+  createMatchStatsState,
+  recordMatchEvents,
+  type MatchStatEntry,
+  type MatchStatsState,
+} from "./stats";
+export {
   awardScore,
   createScoreBoardState,
   scoreFor,

@@ -9,6 +9,7 @@ import type {
   WorldMapData,
   WorldSnapshot,
 } from "../../core";
+import { V2_COLLISION_GROUNDWORK_CONFIG } from "../../core";
 import { renderArena } from "../../arenaRenderer";
 import type { LevelData } from "../../level";
 import type { RendererPort } from "../rendering";
@@ -68,8 +69,9 @@ export class PhaserArenaRendererPort implements RendererPort {
     private readonly followActorId?: ActorId,
     private readonly playerSkinId: V2PlayerSkinId = "alien-runner",
     enableManualCamera = false,
+    cameraZoom = 1,
   ) {
-    scene.cameras.main.setRoundPixels(true);
+    scene.cameras.main.setRoundPixels(true).setZoom(cameraZoom);
     if (enableManualCamera && scene.input.keyboard) {
       this.cameraCursorKeys = scene.input.keyboard.createCursorKeys();
       this.cameraResetKey = scene.input.keyboard.addKey(
@@ -131,6 +133,15 @@ export class PhaserArenaRendererPort implements RendererPort {
     const view = this.actorViews.get(actor.id) ?? this.createActorView(actor);
     const height = actor.jump.height;
     const scale = 1 + height / 210;
+    const fallProgress = actor.lifeState === "falling"
+      ? Phaser.Math.Clamp(
+        1 - (actor.respawn?.remainingMs ?? 0) /
+          V2_COLLISION_GROUNDWORK_CONFIG.fallDurationMs,
+        0,
+        1,
+      )
+      : 0;
+    const fallScale = Math.max(.08, 1 - fallProgress * .92);
 
     view.shadow
       .setPosition(actor.position.x, actor.position.y + 8)
@@ -142,8 +153,9 @@ export class PhaserArenaRendererPort implements RendererPort {
       );
     view.container
       .setPosition(actor.position.x, actor.position.y - height)
-      .setScale(scale)
-      .setAlpha(actor.lifeState === "active" ? 1 : .35)
+      .setScale(scale * fallScale)
+      .setRotation(actor.lifeState === "falling" ? fallProgress * 1.3 : 0)
+      .setAlpha(actor.lifeState === "active" ? 1 : Math.max(.05, 1 - fallProgress))
       .setVisible(actor.lifeState !== "dead");
     updateActorSprite(view.sprite, view.character, actor);
     view.sprite
@@ -608,8 +620,8 @@ export class PhaserArenaRendererPort implements RendererPort {
       (sum, actor) => sum + actor.position.y,
       0,
     ) / followed.length;
-    const targetScrollX = centerX - camera.width / 2;
-    const targetScrollY = centerY - camera.height / 2;
+    const targetScrollX = centerX - camera.width / (2 * camera.zoom);
+    const targetScrollY = centerY - camera.height / (2 * camera.zoom);
     if (!this.cameraInitialized) {
       camera.centerOn(centerX, centerY);
       this.cameraInitialized = true;
