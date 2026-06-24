@@ -3,6 +3,7 @@ import test from "node:test";
 import { V2_ACTOR_LIFECYCLE_CONFIG } from "../src/core";
 import {
   bothTeamsExceed,
+  createAllModeMapTeamSizeSmokeScenarios,
   createSimulationScenarios,
   groupProgressByTeam,
   runClassicCtfOwnFlagStolenScenario,
@@ -29,6 +30,31 @@ test("headless bot simulation matrix keeps bots active across arena modes", () =
       `${scenario.label} yielded frames without bot actions`,
     );
     assertScenarioSummary(summary);
+  }
+});
+
+test("all arena modes start on every v2 map from 1v1 through 4v4", () => {
+  const scenarios = createAllModeMapTeamSizeSmokeScenarios();
+  assert.equal(scenarios.length, 60);
+
+  for (const scenario of scenarios) {
+    const summary = runSimulationScenario(scenario);
+    const teamProgress = groupProgressByTeam(summary.movementByActor);
+    assert.equal(
+      summary.invalidPositionFrames,
+      0,
+      `${scenario.label} produced invalid actor positions`,
+    );
+    assert.equal(
+      summary.idleActionFrames,
+      0,
+      `${scenario.label} yielded frames without bot actions`,
+    );
+    assert.equal(
+      bothTeamsExceed(teamProgress, "highestTravelDistance", 60),
+      true,
+      `${scenario.label} did not move both teams enough`,
+    );
   }
 });
 

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  createAllModeMapTeamSizeSmokeScenarios,
   FRAME_DELTA_MS,
   generateBotDiagnosticsReport,
   groupProgressByTeam,
@@ -10,6 +11,7 @@ import {
   runTdmArmorAndWeaponPickupScenario,
   runTdmCombatStandoffScenario,
   runTdmLowHealthVsEnemyScenario,
+  runSimulationScenario,
   type BotMovementMetric,
   type ClassicCtfOwnFlagStolenSummary,
   type OneFlagEscortCarrierHotzoneSummary,
@@ -50,6 +52,9 @@ function createDiagnosticsArtifact() {
   const timestamp = new Date().toISOString();
   const git = readGitMetadata();
   const matrix = diagnostics.matrix.map(serializeSimulationSummary);
+  const fullSmokeMatrix = createAllModeMapTeamSizeSmokeScenarios()
+    .map(runSimulationScenario)
+    .map(serializeSimulationSummary);
   const scenarioBaselines = {
     oneFlagEscortCarrier: serializeOneFlagEscortCarrierScenario(
       runOneFlagEscortCarrierHotzoneScenario(),
@@ -80,6 +85,7 @@ function createDiagnosticsArtifact() {
   };
   const warnings = [
     ...collectWarnings(matrix, oneFlag),
+    ...collectFullSmokeWarnings(fullSmokeMatrix),
     ...collectScenarioWarnings(scenarioBaselines),
   ];
 
@@ -154,11 +160,12 @@ function createDiagnosticsArtifact() {
     reports: {
       stdout: diagnostics.report,
       matrix,
+      fullSmokeMatrix,
       oneFlag,
       scenarioBaselines,
     },
     warnings,
-    passHints: collectPassHints(matrix, warnings),
+    passHints: collectPassHints(matrix, fullSmokeMatrix, warnings),
     notMeasured: [
       "damage_caused_per_bot",
       "damage_received_per_bot",
@@ -590,8 +597,33 @@ function collectScenarioWarnings(scenarios: {
   return warnings;
 }
 
+function collectFullSmokeWarnings(
+  fullSmokeMatrix: ReturnType<typeof serializeSimulationSummary>[],
+): readonly string[] {
+  const warnings: string[] = [];
+  for (const summary of fullSmokeMatrix) {
+    const teamMetrics = summary.teamMetrics;
+    if (summary.invalidPositionFrames > 0) {
+      warnings.push(`${summary.label}: smoke invalidPositionFrames=${summary.invalidPositionFrames}`);
+    }
+    if (summary.idleActionFrames > 0) {
+      warnings.push(`${summary.label}: smoke idleActionFrames=${summary.idleActionFrames}`);
+    }
+    if (
+      teamMetrics.blue.highestTravelDistance <= 60 ||
+      teamMetrics.red.highestTravelDistance <= 60
+    ) {
+      warnings.push(
+        `${summary.label}: smoke low travel ${teamMetrics.blue.highestTravelDistance.toFixed(1)}/${teamMetrics.red.highestTravelDistance.toFixed(1)}`,
+      );
+    }
+  }
+  return warnings;
+}
+
 function collectPassHints(
   matrix: ReturnType<typeof serializeSimulationSummary>[],
+  fullSmokeMatrix: ReturnType<typeof serializeSimulationSummary>[],
   warnings: readonly string[],
 ): readonly string[] {
   const passHints = [
@@ -605,6 +637,19 @@ function collectPassHints(
   }
   if (matrix.every((summary) => summary.idleActionFrames === 0)) {
     passHints.push("no_idle_action_frames_in_matrix");
+  }
+  if (fullSmokeMatrix.length === 60) {
+    passHints.push("full_mode_map_team_smoke_matrix_60_cases");
+  }
+  if (
+    fullSmokeMatrix.every((summary) =>
+      summary.invalidPositionFrames === 0 &&
+      summary.idleActionFrames === 0 &&
+      summary.teamMetrics.blue.highestTravelDistance > 60 &&
+      summary.teamMetrics.red.highestTravelDistance > 60
+    )
+  ) {
+    passHints.push("full_smoke_matrix_passed");
   }
   if (warnings.length === 0) passHints.push("no_hotzone_warnings");
   return passHints;
@@ -647,6 +692,17 @@ function formatMarkdownReport(
   }
 
   lines.push(
+    "",
+    "## Full Smoke Matrix",
+    "",
+    `- Kombinationen: ${artifact.reports.fullSmokeMatrix.length}`,
+    `- Modi: ${uniqueCount(artifact.reports.fullSmokeMatrix.map((summary) => summary.mode))}`,
+    `- Maps: ${uniqueCount(artifact.reports.fullSmokeMatrix.map((summary) => summary.map))}`,
+    `- Teamgroessen: ${uniqueCount(artifact.reports.fullSmokeMatrix.map((summary) => `${summary.teamSize}v${summary.teamSize}`))}`,
+    `- Invalid Position Frames: ${sumNumbers(artifact.reports.fullSmokeMatrix.map((summary) => summary.invalidPositionFrames))}`,
+    `- Idle Action Frames: ${sumNumbers(artifact.reports.fullSmokeMatrix.map((summary) => summary.idleActionFrames))}`,
+    "",
+    "Diese Matrix prueft Startbarkeit, gueltige Positionen, Bot-Aktionen und Mindestbewegung fuer alle Modi, registrierten V2-Maps und Teamgroessen. Sie ist kein finaler Gameplay-Qualitaetsbeweis.",
     "",
     "## Auffaellige Hotzones",
     "",
@@ -747,4 +803,12 @@ function mapToRecord<TValue>(
   map: ReadonlyMap<string, TValue>,
 ): Record<string, TValue> {
   return Object.fromEntries(map.entries());
+}
+
+function uniqueCount(values: readonly string[]): number {
+  return new Set(values).size;
+}
+
+function sumNumbers(values: readonly number[]): number {
+  return values.reduce((total, value) => total + value, 0);
 }

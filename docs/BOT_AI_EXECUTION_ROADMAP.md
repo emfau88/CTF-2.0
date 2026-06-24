@@ -169,6 +169,17 @@ Checks laufen auf der erweiterten Matrix gruen. Das belegt technische
 Stabilitaet und messbaren Fortschritt, aber noch keine finale Gameplay-
 Qualitaet fuer jede Teamgroesse.
 
+Zusaetzlich gibt es jetzt eine Full-Smoke-Matrix:
+
+- `3` Modi
+- `5` registrierte V2-Maps
+- `4` Teamgroessen
+- insgesamt `60` Kombinationen
+
+Diese Full-Smoke-Matrix prueft nur Startbarkeit, gueltige Positionen,
+Bot-Aktionen und Mindestbewegung. Sie ist bewusst kein strenger
+Gameplay-Qualitaetstest fuer jede einzelne Kombination.
+
 ## Bulk 5: TDM-Verhalten verbessern
 
 Voraussetzung: Bulk 1 und Intent-Sichtbarkeit fuer TDM.

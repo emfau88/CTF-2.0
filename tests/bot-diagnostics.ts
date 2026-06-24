@@ -22,6 +22,7 @@ import {
   V2_ARENA_PICKUP_PARITY_CONFIG,
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_BOT_NAVIGATION_CONFIG,
+  WORLD_MAPS,
   type ArenaTeamId,
   type ArenaTeamSlot,
   type ArenaTeamSize,
@@ -301,6 +302,31 @@ export function createSimulationScenarios(): readonly ScenarioDefinition[] {
   ];
 }
 
+export function createAllModeMapTeamSizeSmokeScenarios():
+  readonly ScenarioDefinition[] {
+  const teamSizes: readonly ArenaTeamSize[] = [1, 2, 3, 4];
+  const modeIds: readonly GameModeId[] = [
+    "team-deathmatch",
+    "classic-ctf",
+    "one-flag",
+  ];
+  return modeIds.flatMap((modeId) =>
+    WORLD_MAPS.flatMap((map) =>
+      teamSizes.map((teamSize): ScenarioDefinition => ({
+        label: `${labelForMode(modeId)} ${map.id} ${teamSize}v${teamSize}`,
+        modeId,
+        map,
+        teamSize,
+        durationMs: modeId === "classic-ctf" ? 8_000 : 6_000,
+        createMode: () => createGameMode(modeId, map),
+        createWorld: (scenarioMap, size) =>
+          createWorldForMode(modeId, scenarioMap, size),
+        objectiveTarget: objectiveTargetForMode(modeId),
+      }))
+    )
+  );
+}
+
 export function runSimulationScenario(
   scenario: ScenarioDefinition,
 ): SimulationSummary {
@@ -455,6 +481,43 @@ export function runSimulationScenario(
 
 export function runSimulationMatrix(): readonly SimulationSummary[] {
   return createSimulationScenarios().map(runSimulationScenario);
+}
+
+function createGameMode(
+  modeId: GameModeId,
+  map: WorldMapData,
+): GameMode {
+  if (modeId === "team-deathmatch") return new TeamDeathmatchMode();
+  if (modeId === "classic-ctf") return new ClassicCtfMode(map);
+  return new OneFlagMode(map);
+}
+
+function createWorldForMode(
+  modeId: GameModeId,
+  map: WorldMapData,
+  teamSize: ArenaTeamSize,
+): WorldState {
+  if (modeId === "team-deathmatch") {
+    return createTeamDeathmatchWorldState(map, { teamSize });
+  }
+  if (modeId === "classic-ctf") {
+    return createClassicCtfWorldState(map, { teamSize });
+  }
+  return createOneFlagWorldState(map, { teamSize });
+}
+
+function objectiveTargetForMode(
+  modeId: GameModeId,
+): ScenarioDefinition["objectiveTarget"] {
+  if (modeId === "team-deathmatch") return nearestEnemyPosition;
+  if (modeId === "classic-ctf") return enemyFlagHomePosition;
+  return neutralFlagHomePosition;
+}
+
+function labelForMode(modeId: GameModeId): string {
+  if (modeId === "team-deathmatch") return "TDM";
+  if (modeId === "classic-ctf") return "Classic CTF";
+  return "One Flag";
 }
 
 export function runOneFlagNavigatorDiagnostics(

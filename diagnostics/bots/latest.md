@@ -1,7 +1,7 @@
 # Bot Diagnostics Baseline
 
-Timestamp: 2026-06-24T18:13:51.572Z
-Git: branch=codex/gameplay-core-v2, commit=59b2a1a, dirty=true
+Timestamp: 2026-06-24T18:23:47.434Z
+Git: branch=codex/gameplay-core-v2, commit=2a79ea2, dirty=true
 
 ## Kurzurteil
 
@@ -23,6 +23,17 @@ Die Diagnose lief durch, markiert aber 3 Hotzone-Hinweis(e).
 | One Flag Grand Archive 2v2 | one-flag | grand-archive-v2 | 2v2 | 18020ms | 1 | 1/3 | 0/0 | 0 | 0 |
 | One Flag Grand Archive 3v3 | one-flag | grand-archive-v2 | 3v3 | 18020ms | 1 | 3/4 | 5/3 | 0 | 0 |
 | One Flag Grand Archive 4v4 | one-flag | grand-archive-v2 | 4v4 | 18020ms | 1 | 2/4 | 3/6 | 0 | 0 |
+
+## Full Smoke Matrix
+
+- Kombinationen: 60
+- Modi: 3
+- Maps: 5
+- Teamgroessen: 4
+- Invalid Position Frames: 0
+- Idle Action Frames: 0
+
+Diese Matrix prueft Startbarkeit, gueltige Positionen, Bot-Aktionen und Mindestbewegung fuer alle Modi, registrierten V2-Maps und Teamgroessen. Sie ist kein finaler Gameplay-Qualitaetsbeweis.
 
 ## Auffaellige Hotzones
 
