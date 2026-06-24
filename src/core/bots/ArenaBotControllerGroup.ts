@@ -45,7 +45,14 @@ export function createArenaBotControllerGroup(
 ): ArenaBotControllerGroup {
   return new ArenaBotControllerGroup(participants.map((participant) => {
     if (modeId === "team-deathmatch") {
-      return new TdmBotController(participant.actorId);
+      return new TdmBotController(
+        participant.actorId,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        participant.slot,
+      );
     }
     if (modeId === "classic-ctf") {
       return new ClassicCtfBotController(

@@ -1,7 +1,7 @@
 # Bot Diagnostics Baseline
 
-Timestamp: 2026-06-24T17:53:17.954Z
-Git: branch=codex/gameplay-core-v2, commit=c4ced7b, dirty=true
+Timestamp: 2026-06-24T18:07:36.365Z
+Git: branch=codex/gameplay-core-v2, commit=fab10a8, dirty=true
 
 ## Kurzurteil
 
@@ -45,11 +45,12 @@ Die Diagnose lief durch, markiert aber 3 Hotzone-Hinweis(e).
 | One Flag Grand Archive Escort/Carrier Hotzone | one-flag | grand-archive-v2 | 3400ms | escort=escort-carrier, chaser=chase-enemy-carrier | escort/chaser progress | 0/0 | 662.1/258.7 | escort_path_found, chaser_path_found, escort_progress, chaser_progress |
 | Classic CTF Flank Switch Own Flag Stolen | classic-ctf | flank-switch-v2 | 1360ms | recover-own-flag | recover own flag | 0 | 160.6 | path_found, recovery_goal_selected, carrier_distance_reduced, no_attack_flag_drift |
 | TDM Training Crossing Low Health vs Enemy | team-deathmatch | training-crossing-v2 | 1700ms | seek-health | seek health before fight | 0 | 149.4 | path_found, pickup_prioritized, health_distance_reduced, pickup_collected, health_restored |
+| TDM Training Crossing Armor/Weapon Pickup Intents | team-deathmatch | training-crossing-v2 | 1700ms | armor=seek-armor, weapon=seek-weapon | seek armor/weapon pickups | armor:0, weapon:0 | armor:149.4, weapon:149.4 | paths_found, expected_intents_seen, pickups_collected |
 
 ### Intent-Sichtbarkeit
 
 - One Flag und Classic CTF nutzen aktuell die vorhandenen Goal-Frames als Intent-Baseline.
-- TDM nutzt aktuell Navigator-Target-Frames: `seek-health` und `fight-enemy`.
+- TDM nutzt aktuell Controller-Debug-Intents wie `seek-health`, `hold-standoff` und `fight-enemy`.
 - Noch nicht gemessen: Utility-Scores, Zielbindungsbonus, Combat-Prioritaet und Team-Claims.
 
 ## Aktuell NICHT gemessen

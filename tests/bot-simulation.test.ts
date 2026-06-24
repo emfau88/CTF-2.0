@@ -9,6 +9,7 @@ import {
   runOneFlagEscortCarrierHotzoneScenario,
   runOneFlagNavigatorDiagnostics,
   runSimulationScenario,
+  runTdmArmorAndWeaponPickupScenario,
   runTdmLowHealthVsEnemyScenario,
   type SimulationSummary,
 } from "./bot-diagnostics";
@@ -44,6 +45,12 @@ test("tdm low health bot prioritizes health pickup over visible enemy", () => {
     diagnostic.report,
   );
   assert.equal(
+    (diagnostic.testBot.intentFramesByKind.get("seek-health") ?? 0) >
+      (diagnostic.testBot.intentFramesByKind.get("fight-enemy") ?? 0),
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
     diagnostic.testBot.pathMissCount,
     0,
     diagnostic.report,
@@ -73,6 +80,36 @@ test("tdm low health bot prioritizes health pickup over visible enemy", () => {
     true,
     diagnostic.report,
   );
+});
+
+test("tdm bots expose armor and weapon pickup intents", () => {
+  const diagnostic = runTdmArmorAndWeaponPickupScenario();
+
+  for (const metric of diagnostic.cases) {
+    assert.equal(
+      (metric.intentFramesByKind.get(metric.expectedIntent) ?? 0) > 0,
+      true,
+      diagnostic.report,
+    );
+    assert.equal(
+      metric.pickupTargetFrames > metric.enemyTargetFrames,
+      true,
+      diagnostic.report,
+    );
+    assert.equal(metric.pathMissCount, 0, diagnostic.report);
+    assert.equal(
+      metric.pickupDistanceReduction > 120,
+      true,
+      diagnostic.report,
+    );
+    assert.equal(metric.pickupCollected, true, diagnostic.report);
+  }
+  const armor = diagnostic.cases.find((metric) => metric.label === "armor");
+  const weapon = diagnostic.cases.find((metric) => metric.label === "weapon");
+  assert.ok(armor, diagnostic.report);
+  assert.ok(weapon, diagnostic.report);
+  assert.equal(armor.finalArmor > 0, true, diagnostic.report);
+  assert.equal(weapon.finalRailAmmo > 0, true, diagnostic.report);
 });
 
 test("classic ctf flank switch own flag stolen triggers carrier recovery", () => {

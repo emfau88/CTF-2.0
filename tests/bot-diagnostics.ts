@@ -23,6 +23,7 @@ import {
   V2_BASIC_AUTOSHOOT_PARITY_CONFIG,
   V2_BOT_NAVIGATION_CONFIG,
   type ArenaTeamId,
+  type ArenaTeamSlot,
   type ArenaTeamSize,
   type ClassicCtfBotGoalKind,
   type GameMode,
@@ -31,6 +32,7 @@ import {
   type GridBotNavigatorDebugState,
   type OneFlagBotControllerDebugState,
   type OneFlagBotGoalKind,
+  type PickupType,
   type WorldMapData,
   type WorldPosition,
   type WorldSnapshot,
@@ -172,6 +174,7 @@ export interface TdmLowHealthVsEnemyMetric {
   readonly healthPickupId: string;
   readonly pickupTargetFrames: number;
   readonly enemyTargetFrames: number;
+  readonly intentFramesByKind: ReadonlyMap<string, number>;
   readonly pathMissCount: number;
   readonly longestNoProgressMs: number;
   readonly longestSameCellMs: number;
@@ -191,6 +194,37 @@ export interface TdmLowHealthVsEnemySummary {
   readonly frameDeltaMs: number;
   readonly mapId: string;
   readonly testBot: TdmLowHealthVsEnemyMetric;
+  readonly report: string;
+}
+
+export interface TdmPickupIntentMetric {
+  readonly label: string;
+  readonly actorId: string;
+  readonly enemyActorId: string;
+  readonly pickupId: string;
+  readonly pickupType: PickupType;
+  readonly expectedIntent: string;
+  readonly intentFramesByKind: ReadonlyMap<string, number>;
+  readonly pickupTargetFrames: number;
+  readonly enemyTargetFrames: number;
+  readonly pathMissCount: number;
+  readonly initialPickupDistance: number;
+  readonly minimumPickupDistance: number;
+  readonly finalPickupDistance: number;
+  readonly pickupDistanceReduction: number;
+  readonly travelDistance: number;
+  readonly pickupCollected: boolean;
+  readonly finalArmor: number;
+  readonly finalRocketAmmo: number;
+  readonly finalRailAmmo: number;
+  readonly finalWhipAmmo: number;
+}
+
+export interface TdmPickupIntentSummary {
+  readonly durationMs: number;
+  readonly frameDeltaMs: number;
+  readonly mapId: string;
+  readonly cases: readonly TdmPickupIntentMetric[];
   readonly report: string;
 }
 
@@ -798,6 +832,7 @@ export function runTdmLowHealthVsEnemyScenario(
       result.snapshot,
       previousPosition,
       navigator.debugSnapshot(),
+      controller.debugSnapshot(),
       result.events,
     );
     snapshot = result.snapshot;
@@ -810,6 +845,38 @@ export function runTdmLowHealthVsEnemyScenario(
     mapId: TRAINING_CROSSING_V2.id,
     testBot: finalized,
     report: formatTdmLowHealthVsEnemyReport(durationMs, finalized),
+  };
+}
+
+export function runTdmArmorAndWeaponPickupScenario(
+  durationMs = 1_700,
+): TdmPickupIntentSummary {
+  const cases = [
+    runTdmPickupIntentCase({
+      label: "armor",
+      durationMs,
+      slot: 4,
+      pickupId: "scenario-armor",
+      pickupType: "armor",
+      expectedIntent: "seek-armor",
+      initialArmor: 0,
+    }),
+    runTdmPickupIntentCase({
+      label: "weapon",
+      durationMs,
+      slot: 2,
+      pickupId: "scenario-rail",
+      pickupType: "rail",
+      expectedIntent: "seek-weapon",
+      initialArmor: 80,
+    }),
+  ];
+  return {
+    durationMs,
+    frameDeltaMs: FRAME_DELTA_MS,
+    mapId: TRAINING_CROSSING_V2.id,
+    cases,
+    report: formatTdmPickupIntentReport(durationMs, cases),
   };
 }
 
@@ -1255,6 +1322,7 @@ interface MutableTdmLowHealthVsEnemyMetric {
   healthPickupId: string;
   pickupTargetFrames: number;
   enemyTargetFrames: number;
+  intentFramesByKind: Map<string, number>;
   pathMissCount: number;
   previousHealthDistance: number | null;
   initialHealthDistance: number | null;
@@ -1308,6 +1376,7 @@ function createTdmLowHealthVsEnemyMetric(
     healthPickupId,
     pickupTargetFrames: 0,
     enemyTargetFrames: 0,
+    intentFramesByKind: new Map(),
     pathMissCount: 0,
     previousHealthDistance: null,
     initialHealthDistance: null,
@@ -1331,6 +1400,7 @@ function captureTdmLowHealthVsEnemyFrame(
   snapshot: WorldSnapshot,
   previousPosition: WorldPosition,
   navigatorDebug: GridBotNavigatorDebugState,
+  controllerDebug: { readonly intent: string },
   events: readonly GameEvent[],
 ): void {
   const actor = snapshot.actors.find((candidate) =>
@@ -1350,6 +1420,10 @@ function captureTdmLowHealthVsEnemyFrame(
   } else if (navigatorDebug.targetKey.includes(metric.enemyActorId)) {
     metric.enemyTargetFrames += 1;
   }
+  metric.intentFramesByKind.set(
+    controllerDebug.intent,
+    (metric.intentFramesByKind.get(controllerDebug.intent) ?? 0) + 1,
+  );
   if (!navigatorDebug.pathFound) metric.pathMissCount += 1;
   metric.pickupCollected ||= events.some((event) =>
     event.type === "pickup.collected" &&
@@ -1412,6 +1486,7 @@ function finalizeTdmLowHealthVsEnemyMetric(
     healthPickupId: metric.healthPickupId,
     pickupTargetFrames: metric.pickupTargetFrames,
     enemyTargetFrames: metric.enemyTargetFrames,
+    intentFramesByKind: metric.intentFramesByKind,
     pathMissCount: metric.pathMissCount,
     longestNoProgressMs: metric.longestNoProgressMs,
     longestSameCellMs: metric.longestSameCellMs,
@@ -1434,7 +1509,7 @@ function formatTdmLowHealthVsEnemyReport(
   return [
     "TDM Training Crossing Low Health vs Enemy Scenario",
     `durationMs=${durationMs} actor=${metric.actorId} enemy=${metric.enemyActorId} healthPickup=${metric.healthPickupId}`,
-    "actor | enemy | pickupTargetFrames | enemyTargetFrames | pathMisses | noProgressMs | sameCellMs | initialHealthDistance | minHealthDistance | finalHealthDistance | healthReduction | initialEnemyDistance | finalEnemyDistance | travel | pickupCollected | finalHealth",
+    "actor | enemy | pickupTargetFrames | enemyTargetFrames | pathMisses | noProgressMs | sameCellMs | initialHealthDistance | minHealthDistance | finalHealthDistance | healthReduction | initialEnemyDistance | finalEnemyDistance | travel | pickupCollected | finalHealth | intents",
     [
       metric.actorId,
       metric.enemyActorId,
@@ -1452,7 +1527,264 @@ function formatTdmLowHealthVsEnemyReport(
       metric.travelDistance.toFixed(1),
       metric.pickupCollected,
       metric.finalHealth,
+      summarizeCountMap(metric.intentFramesByKind, 6) || "none",
     ].join(" | "),
+  ].join("\n");
+}
+
+interface TdmPickupIntentCaseInput {
+  readonly label: string;
+  readonly durationMs: number;
+  readonly slot: ArenaTeamSlot;
+  readonly pickupId: string;
+  readonly pickupType: PickupType;
+  readonly expectedIntent: string;
+  readonly initialArmor: number;
+}
+
+interface MutableTdmPickupIntentMetric {
+  label: string;
+  actorId: string;
+  enemyActorId: string;
+  pickupId: string;
+  pickupType: PickupType;
+  expectedIntent: string;
+  intentFramesByKind: Map<string, number>;
+  pickupTargetFrames: number;
+  enemyTargetFrames: number;
+  pathMissCount: number;
+  initialPickupDistance: number | null;
+  minimumPickupDistance: number | null;
+  finalPickupDistance: number | null;
+  travelDistance: number;
+  pickupCollected: boolean;
+  finalArmor: number;
+  finalRocketAmmo: number;
+  finalRailAmmo: number;
+  finalWhipAmmo: number;
+}
+
+function runTdmPickupIntentCase(
+  input: TdmPickupIntentCaseInput,
+): TdmPickupIntentMetric {
+  let worldRef: WorldState | null = null;
+  const runtime = new GameplayCoreRuntime({
+    mode: new TeamDeathmatchMode(),
+    createWorld: () => {
+      worldRef = createTeamDeathmatchWorldState(TRAINING_CROSSING_V2);
+      return worldRef;
+    },
+    allowManualPrimaryFire: false,
+  });
+  runtime.initialize();
+  if (!worldRef) throw new Error("Missing TDM pickup intent scenario world.");
+  const world = worldRef;
+  configureTdmPickupIntentWorld(world, input);
+
+  const testBotId = "red-player";
+  const enemyActorId = "blue-player";
+  const navigator = new GridBotNavigator();
+  const controller = new TdmBotController(
+    testBotId,
+    enemyActorId,
+    undefined,
+    navigator,
+    undefined,
+    input.slot,
+  );
+  const metric = createTdmPickupIntentMetric(input, testBotId, enemyActorId);
+  const frameCount = Math.ceil(input.durationMs / FRAME_DELTA_MS);
+  let snapshot = createWorldSnapshot(world);
+
+  for (let frame = 1; frame <= frameCount; frame += 1) {
+    const before = snapshot;
+    const previousPosition = actorPosition(before, testBotId);
+    const actions = controller.readActions(before, FRAME_DELTA_MS);
+    const result = runtime.advance({
+      sequence: frame,
+      timeMs: frame * FRAME_DELTA_MS,
+      deltaMs: FRAME_DELTA_MS,
+      actions,
+    });
+    captureTdmPickupIntentFrame(
+      metric,
+      result.snapshot,
+      previousPosition,
+      navigator.debugSnapshot(),
+      controller.debugSnapshot(),
+      result.events,
+    );
+    snapshot = result.snapshot;
+  }
+
+  return finalizeTdmPickupIntentMetric(metric);
+}
+
+function configureTdmPickupIntentWorld(
+  world: WorldState,
+  input: TdmPickupIntentCaseInput,
+): void {
+  const testBot = requiredActor(world, "red-player");
+  const enemy = requiredActor(world, "blue-player");
+  testBot.position = { x: 340, y: 410 };
+  enemy.position = { x: 760, y: 410 };
+  for (const actor of [testBot, enemy]) {
+    actor.velocity = { x: 0, y: 0 };
+    actor.lastSafePosition = { ...actor.position };
+    actor.lifeState = "active";
+    actor.health = actor.maxHealth;
+    actor.armor = 0;
+    actor.jump.height = 0;
+    actor.jump.grounded = true;
+    actor.weapons.rocketAmmo = 0;
+    actor.weapons.railAmmo = 0;
+    actor.weapons.whipAmmo = 0;
+  }
+  testBot.armor = input.initialArmor;
+  world.pickups = [createPickupState({
+    id: input.pickupId,
+    type: input.pickupType,
+    position: { x: 520, y: 410 },
+  }, V2_ARENA_PICKUP_PARITY_CONFIG)];
+}
+
+function createTdmPickupIntentMetric(
+  input: TdmPickupIntentCaseInput,
+  actorId: string,
+  enemyActorId: string,
+): MutableTdmPickupIntentMetric {
+  return {
+    label: input.label,
+    actorId,
+    enemyActorId,
+    pickupId: input.pickupId,
+    pickupType: input.pickupType,
+    expectedIntent: input.expectedIntent,
+    intentFramesByKind: new Map(),
+    pickupTargetFrames: 0,
+    enemyTargetFrames: 0,
+    pathMissCount: 0,
+    initialPickupDistance: null,
+    minimumPickupDistance: null,
+    finalPickupDistance: null,
+    travelDistance: 0,
+    pickupCollected: false,
+    finalArmor: 0,
+    finalRocketAmmo: 0,
+    finalRailAmmo: 0,
+    finalWhipAmmo: 0,
+  };
+}
+
+function captureTdmPickupIntentFrame(
+  metric: MutableTdmPickupIntentMetric,
+  snapshot: WorldSnapshot,
+  previousPosition: WorldPosition,
+  navigatorDebug: GridBotNavigatorDebugState,
+  controllerDebug: { readonly intent: string },
+  events: readonly GameEvent[],
+): void {
+  const actor = snapshot.actors.find((candidate) =>
+    candidate.id === metric.actorId
+  );
+  const enemy = snapshot.actors.find((candidate) =>
+    candidate.id === metric.enemyActorId
+  );
+  const pickup = snapshot.pickups.find((candidate) =>
+    candidate.id === metric.pickupId
+  );
+  if (!actor || !enemy || actor.lifeState !== "active") return;
+  metric.travelDistance += distance(previousPosition, actor.position);
+  metric.finalArmor = actor.armor;
+  metric.finalRocketAmmo = actor.weapons.rocketAmmo;
+  metric.finalRailAmmo = actor.weapons.railAmmo;
+  metric.finalWhipAmmo = actor.weapons.whipAmmo;
+  metric.intentFramesByKind.set(
+    controllerDebug.intent,
+    (metric.intentFramesByKind.get(controllerDebug.intent) ?? 0) + 1,
+  );
+  if (navigatorDebug.targetKey === `pickup:${metric.pickupId}`) {
+    metric.pickupTargetFrames += 1;
+  } else if (navigatorDebug.targetKey.includes(metric.enemyActorId)) {
+    metric.enemyTargetFrames += 1;
+  }
+  if (!navigatorDebug.pathFound) metric.pathMissCount += 1;
+  metric.pickupCollected ||= events.some((event) =>
+    event.type === "pickup.collected" &&
+    event.targetActorId === metric.actorId &&
+    event.payload &&
+    typeof event.payload === "object" &&
+    "pickupId" in event.payload &&
+    event.payload.pickupId === metric.pickupId
+  );
+
+  const pickupPosition = pickup?.position ?? { x: 520, y: 410 };
+  const pickupDistance = distance(actor.position, pickupPosition);
+  metric.initialPickupDistance ??= distance(previousPosition, pickupPosition);
+  metric.minimumPickupDistance = metric.minimumPickupDistance === null
+    ? pickupDistance
+    : Math.min(metric.minimumPickupDistance, pickupDistance);
+  metric.finalPickupDistance = pickupDistance;
+}
+
+function finalizeTdmPickupIntentMetric(
+  metric: MutableTdmPickupIntentMetric,
+): TdmPickupIntentMetric {
+  const initialPickupDistance = metric.initialPickupDistance ?? 0;
+  const minimumPickupDistance = metric.minimumPickupDistance ??
+    initialPickupDistance;
+  const finalPickupDistance = metric.finalPickupDistance ??
+    minimumPickupDistance;
+  return {
+    label: metric.label,
+    actorId: metric.actorId,
+    enemyActorId: metric.enemyActorId,
+    pickupId: metric.pickupId,
+    pickupType: metric.pickupType,
+    expectedIntent: metric.expectedIntent,
+    intentFramesByKind: metric.intentFramesByKind,
+    pickupTargetFrames: metric.pickupTargetFrames,
+    enemyTargetFrames: metric.enemyTargetFrames,
+    pathMissCount: metric.pathMissCount,
+    initialPickupDistance,
+    minimumPickupDistance,
+    finalPickupDistance,
+    pickupDistanceReduction: initialPickupDistance - minimumPickupDistance,
+    travelDistance: metric.travelDistance,
+    pickupCollected: metric.pickupCollected,
+    finalArmor: metric.finalArmor,
+    finalRocketAmmo: metric.finalRocketAmmo,
+    finalRailAmmo: metric.finalRailAmmo,
+    finalWhipAmmo: metric.finalWhipAmmo,
+  };
+}
+
+function formatTdmPickupIntentReport(
+  durationMs: number,
+  cases: readonly TdmPickupIntentMetric[],
+): string {
+  return [
+    "TDM Training Crossing Armor/Weapon Pickup Intent Scenario",
+    `durationMs=${durationMs}`,
+    "case | pickup | expectedIntent | pickupTargetFrames | enemyTargetFrames | pathMisses | initialPickupDistance | minPickupDistance | reduction | travel | pickupCollected | armor | rocket | rail | whip | intents",
+    ...cases.map((metric) => [
+      metric.label,
+      `${metric.pickupType}:${metric.pickupId}`,
+      metric.expectedIntent,
+      metric.pickupTargetFrames,
+      metric.enemyTargetFrames,
+      metric.pathMissCount,
+      metric.initialPickupDistance.toFixed(1),
+      metric.minimumPickupDistance.toFixed(1),
+      metric.pickupDistanceReduction.toFixed(1),
+      metric.travelDistance.toFixed(1),
+      metric.pickupCollected,
+      metric.finalArmor,
+      metric.finalRocketAmmo,
+      metric.finalRailAmmo,
+      metric.finalWhipAmmo,
+      summarizeCountMap(metric.intentFramesByKind, 6) || "none",
+    ].join(" | ")),
   ].join("\n");
 }
 

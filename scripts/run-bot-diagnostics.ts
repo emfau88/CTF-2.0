@@ -7,12 +7,14 @@ import {
   groupProgressByTeam,
   runClassicCtfOwnFlagStolenScenario,
   runOneFlagEscortCarrierHotzoneScenario,
+  runTdmArmorAndWeaponPickupScenario,
   runTdmLowHealthVsEnemyScenario,
   type BotMovementMetric,
   type ClassicCtfOwnFlagStolenSummary,
   type OneFlagEscortCarrierHotzoneSummary,
   type OneFlagNavigatorMetric,
   type SimulationSummary,
+  type TdmPickupIntentSummary,
   type TdmLowHealthVsEnemySummary,
 } from "../tests/bot-diagnostics";
 
@@ -55,6 +57,9 @@ function createDiagnosticsArtifact() {
     ),
     tdmLowHealthVsEnemy: serializeTdmLowHealthVsEnemyScenario(
       runTdmLowHealthVsEnemyScenario(),
+    ),
+    tdmArmorAndWeaponPickup: serializeTdmArmorAndWeaponPickupScenario(
+      runTdmArmorAndWeaponPickupScenario(),
     ),
   };
   const oneFlag = {
@@ -121,6 +126,14 @@ function createDiagnosticsArtifact() {
           durationMs: scenarioBaselines.tdmLowHealthVsEnemy.durationMs,
           frames: Math.ceil(
             scenarioBaselines.tdmLowHealthVsEnemy.durationMs / FRAME_DELTA_MS,
+          ),
+        },
+        tdmArmorAndWeaponPickup: {
+          mode: "team-deathmatch",
+          map: scenarioBaselines.tdmArmorAndWeaponPickup.map,
+          durationMs: scenarioBaselines.tdmArmorAndWeaponPickup.durationMs,
+          frames: Math.ceil(
+            scenarioBaselines.tdmArmorAndWeaponPickup.durationMs / FRAME_DELTA_MS,
           ),
         },
       },
@@ -226,13 +239,11 @@ function serializeTdmLowHealthVsEnemyScenario(
     frameDeltaMs: summary.frameDeltaMs,
     testBot: {
       ...summary.testBot,
+      intentFramesByKind: mapToRecord(summary.testBot.intentFramesByKind),
       intent: createIntentSummary(
         summary.testBot.actorId,
         "team-deathmatch",
-        {
-          "seek-health": summary.testBot.pickupTargetFrames,
-          "fight-enemy": summary.testBot.enemyTargetFrames,
-        },
+        mapToRecord(summary.testBot.intentFramesByKind),
         [
           "seek-armor",
           "seek-weapon",
@@ -249,6 +260,41 @@ function serializeTdmLowHealthVsEnemyScenario(
       summary.testBot.healthDistanceReduction > 120 ? "health_distance_reduced" : null,
       summary.testBot.pickupCollected ? "pickup_collected" : null,
       summary.testBot.finalHealth > 24 ? "health_restored" : null,
+    ].filter((hint): hint is string => hint !== null),
+  };
+}
+
+function serializeTdmArmorAndWeaponPickupScenario(
+  summary: TdmPickupIntentSummary,
+) {
+  return {
+    label: "TDM Training Crossing Armor/Weapon Pickup Intents",
+    mode: "team-deathmatch",
+    map: summary.mapId,
+    durationMs: summary.durationMs,
+    frameDeltaMs: summary.frameDeltaMs,
+    cases: summary.cases.map((metric) => ({
+      ...metric,
+      intentFramesByKind: mapToRecord(metric.intentFramesByKind),
+      intent: createIntentSummary(
+        metric.actorId,
+        "team-deathmatch",
+        mapToRecord(metric.intentFramesByKind),
+        ["utility_score", "pickup_contention"],
+      ),
+    })),
+    passHints: [
+      summary.cases.every((metric) => metric.pathMissCount === 0)
+        ? "paths_found"
+        : null,
+      summary.cases.every((metric) =>
+        (metric.intentFramesByKind.get(metric.expectedIntent) ?? 0) > 0
+      )
+        ? "expected_intents_seen"
+        : null,
+      summary.cases.every((metric) => metric.pickupCollected)
+        ? "pickups_collected"
+        : null,
     ].filter((hint): hint is string => hint !== null),
   };
 }
@@ -419,6 +465,7 @@ function collectScenarioWarnings(scenarios: {
   readonly oneFlagEscortCarrier: ReturnType<typeof serializeOneFlagEscortCarrierScenario>;
   readonly classicCtfOwnFlagStolen: ReturnType<typeof serializeClassicCtfOwnFlagStolenScenario>;
   readonly tdmLowHealthVsEnemy: ReturnType<typeof serializeTdmLowHealthVsEnemyScenario>;
+  readonly tdmArmorAndWeaponPickup: ReturnType<typeof serializeTdmArmorAndWeaponPickupScenario>;
 }): readonly string[] {
   const warnings: string[] = [];
   if (scenarios.oneFlagEscortCarrier.escort.pathMissCount > 0) {
@@ -469,6 +516,23 @@ function collectScenarioWarnings(scenarios: {
   }
   if (!scenarios.tdmLowHealthVsEnemy.testBot.pickupCollected) {
     warnings.push(`${scenarios.tdmLowHealthVsEnemy.label}: health pickup not collected`);
+  }
+  for (const metric of scenarios.tdmArmorAndWeaponPickup.cases) {
+    if (metric.pathMissCount > 0) {
+      warnings.push(
+        `${scenarios.tdmArmorAndWeaponPickup.label} ${metric.label}: pathMissCount=${metric.pathMissCount}`,
+      );
+    }
+    if ((metric.intentFramesByKind[metric.expectedIntent] ?? 0) <= 0) {
+      warnings.push(
+        `${scenarios.tdmArmorAndWeaponPickup.label} ${metric.label}: expected intent ${metric.expectedIntent} not observed`,
+      );
+    }
+    if (!metric.pickupCollected) {
+      warnings.push(
+        `${scenarios.tdmArmorAndWeaponPickup.label} ${metric.label}: pickup not collected`,
+      );
+    }
   }
   return warnings;
 }
@@ -582,11 +646,28 @@ function formatMarkdownReport(
       artifact.reports.scenarioBaselines.tdmLowHealthVsEnemy.testBot.healthDistanceReduction.toFixed(1),
       artifact.reports.scenarioBaselines.tdmLowHealthVsEnemy.passHints.join(", ") || "none",
     ].join(" | ").replace(/^/, "| ").replace(/$/, " |"),
+    [
+      artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.label,
+      artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.mode,
+      artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.map,
+      `${artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.durationMs}ms`,
+      artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.cases
+        .map((metric) => `${metric.label}=${metric.intent.primaryIntent ?? "none"}`)
+        .join(", "),
+      "seek armor/weapon pickups",
+      artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.cases
+        .map((metric) => `${metric.label}:${metric.pathMissCount}`)
+        .join(", "),
+      artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.cases
+        .map((metric) => `${metric.label}:${metric.pickupDistanceReduction.toFixed(1)}`)
+        .join(", "),
+      artifact.reports.scenarioBaselines.tdmArmorAndWeaponPickup.passHints.join(", ") || "none",
+    ].join(" | ").replace(/^/, "| ").replace(/$/, " |"),
     "",
     "### Intent-Sichtbarkeit",
     "",
     "- One Flag und Classic CTF nutzen aktuell die vorhandenen Goal-Frames als Intent-Baseline.",
-    "- TDM nutzt aktuell Navigator-Target-Frames: `seek-health` und `fight-enemy`.",
+    "- TDM nutzt aktuell Controller-Debug-Intents wie `seek-health`, `hold-standoff` und `fight-enemy`.",
     "- Noch nicht gemessen: Utility-Scores, Zielbindungsbonus, Combat-Prioritaet und Team-Claims.",
     "",
     "## Aktuell NICHT gemessen",

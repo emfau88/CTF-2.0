@@ -141,9 +141,8 @@ einen normalisierten `intent`-Block:
 - `unmeasured`
 
 Wichtig: Das ist Diagnose-Instrumentierung, keine neue Bot-Entscheidung.
-TDM nutzt aktuell vorhandene Navigator-Targets als Intent-Quelle
-(`seek-health`, `fight-enemy`). Classic CTF und One Flag nutzen vorhandene
-Goal-Frames als Intent-Quelle.
+TDM nutzt jetzt Controller-Debug-Intents als Intent-Quelle. Classic CTF und
+One Flag nutzen vorhandene Goal-Frames als Intent-Quelle.
 
 ## Bulk 4: 1v1 bis 4v4 Modus-Matrix
 
@@ -176,11 +175,44 @@ Voraussetzung: Bulk 1 und Intent-Sichtbarkeit fuer TDM.
 
 Tasks:
 
-- [ ] TDM Utility-Mini-Slice planen.
-- [ ] Fight / Seek Health / Seek Armor / Seek Weapon als vergleichbare
+- [x] TDM Utility-Mini-Slice planen.
+- [x] Fight / Seek Health / Seek Armor / Seek Weapon als vergleichbare
       Kandidaten bewerten.
-- [ ] Zielbindung einfuehren, damit Bots nicht zu schnell umschalten.
+- [x] Zielbindung einfuehren, damit Bots nicht zu schnell umschalten.
 - [ ] Pickup-Konflikte messen, bevor Claims eingefuehrt werden.
+
+### Status
+
+Erster kleiner TDM-Slice ist umgesetzt:
+
+- TDM-Bots schreiben jetzt einen Debug-Intent:
+  - `seek-health`
+  - `seek-armor`
+  - `seek-weapon`
+  - `hold-standoff`
+  - `fight-enemy`
+  - `idle`
+- Der Low-Health-Szenariotest prueft jetzt explizit, dass `seek-health`
+  gegenueber `fight-enemy` dominiert.
+- Ein Armor-/Weapon-Szenariotest prueft jetzt explizit:
+  - Slot-4-Bot waehlt `seek-armor` und sammelt Armor ein.
+  - Slot-2-Bot waehlt `seek-weapon` und sammelt Rail ein.
+- TDM-Pickup-Ziele haben eine kurze Zielbindung. Wenn ein Bot ein passendes
+  Pickup anlaeuft, bleibt er fuer ein kurzes Zeitfenster bei diesem Ziel,
+  solange es noch aktiv und sinnvoll ist.
+
+Erwarteter Spieleffekt:
+
+- Weniger nervoeses Umschalten zwischen Pickup- und Kampfziel.
+- Pickup-Routen wirken stabiler.
+- Das Verhalten bleibt weiterhin lokal und klein; es ist noch keine grosse
+  Utility-AI.
+
+Noch offen:
+
+- `hold-standoff` gezielt als Szenario messen.
+- Pickup-Konflikte in `3v3/4v4` sichtbar machen, bevor Team-Claims gebaut
+  werden.
 
 ## Bulk 6: Objective-Modi absichern
 
