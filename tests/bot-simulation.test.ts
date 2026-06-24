@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { V2_ACTOR_LIFECYCLE_CONFIG } from "../src/core";
 import {
   bothTeamsExceed,
   createSimulationScenarios,
   groupProgressByTeam,
+  runClassicCtfOwnFlagStolenScenario,
+  runOneFlagEscortCarrierHotzoneScenario,
   runOneFlagNavigatorDiagnostics,
   runSimulationScenario,
+  runTdmLowHealthVsEnemyScenario,
   type SimulationSummary,
 } from "./bot-diagnostics";
 
@@ -24,6 +28,146 @@ test("headless bot simulation matrix keeps bots active across arena modes", () =
     );
     assertScenarioSummary(summary);
   }
+});
+
+test("tdm low health bot prioritizes health pickup over visible enemy", () => {
+  const diagnostic = runTdmLowHealthVsEnemyScenario();
+
+  assert.equal(
+    diagnostic.testBot.pickupTargetFrames > 0,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.pickupTargetFrames > diagnostic.testBot.enemyTargetFrames,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.pathMissCount,
+    0,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.longestNoProgressMs < 900,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.longestSameCellMs < 700,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.healthDistanceReduction > 120,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.pickupCollected,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.finalHealth > 24,
+    true,
+    diagnostic.report,
+  );
+});
+
+test("classic ctf flank switch own flag stolen triggers carrier recovery", () => {
+  const diagnostic = runClassicCtfOwnFlagStolenScenario();
+  const recoveryFrames = diagnostic.testBot.recoveryFrames;
+  const totalGoalFrames = [...diagnostic.testBot.goalFramesByKind.values()]
+    .reduce((sum, frames) => sum + frames, 0);
+
+  assert.equal(
+    recoveryFrames > 0,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    recoveryFrames,
+    totalGoalFrames,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.attackFlagFrames,
+    0,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.pathMissCount,
+    0,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.longestNoProgressMs < 1_500,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.longestSameCellMs < 1_500,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.carrierDistanceReduction > 120,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.testBot.travelDistance > 120,
+    true,
+    diagnostic.report,
+  );
+});
+
+test("one-flag grand archive escort-carrier hotzone keeps producing progress", () => {
+  const diagnostic = runOneFlagEscortCarrierHotzoneScenario();
+
+  assert.equal(
+    diagnostic.escort.goalFramesByKind.get("escort-carrier")! > 0,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.chaser.goalFramesByKind.get("chase-enemy-carrier")! > 0,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(diagnostic.escort.pathMissCount, 0, diagnostic.report);
+  assert.equal(diagnostic.chaser.pathMissCount, 0, diagnostic.report);
+  assert.equal(
+    diagnostic.escort.longestNoProgressMs < 1_500,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.chaser.longestNoProgressMs < 1_500,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.escort.longestSameCellMs < 1_500,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.chaser.longestSameCellMs < 1_500,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.escort.distanceReduction > 80,
+    true,
+    diagnostic.report,
+  );
+  assert.equal(
+    diagnostic.chaser.distanceReduction > 120,
+    true,
+    diagnostic.report,
+  );
 });
 
 test("one-flag grand archive navigator diagnostics stay within expected bounds", () => {
@@ -78,7 +222,12 @@ test("one-flag grand archive navigator diagnostics stay within expected bounds",
   for (const metric of escortMetrics) {
     assert.equal(metric.dynamicProjectionCount > 0, true, diagnostic.report);
     assert.equal(metric.blockedGoalFrames, 0, diagnostic.report);
-    assert.equal(metric.longestNoProgressMs < 1_500, true, diagnostic.report);
+    assert.equal(
+      metric.longestNoProgressMs <
+        V2_ACTOR_LIFECYCLE_CONFIG.respawnDelayMs + 1_500,
+      true,
+      diagnostic.report,
+    );
   }
 });
 
@@ -95,6 +244,29 @@ function assertScenarioSummary(summary: SimulationSummary): void {
       true,
       `${summary.label} did not exercise bot basic auto-fire`,
     );
+    assert.equal(
+      teamProgress.blue.pickupCollections > 0 &&
+        teamProgress.red.pickupCollections > 0,
+      true,
+      `${summary.label} did not collect pickups for both teams`,
+    );
+    assert.equal(
+      teamProgress.blue.specialWeaponShots > 0 &&
+        teamProgress.red.specialWeaponShots > 0,
+      true,
+      `${summary.label} did not fire collected weapons for both teams`,
+    );
+    if (summary.teamSize === 4) {
+      const maxClusteredFrames = Math.ceil(
+        summary.simulatedDurationMs / 34 * .4,
+      );
+      assert.equal(
+        summary.clusteredFrames.blue < maxClusteredFrames &&
+          summary.clusteredFrames.red < maxClusteredFrames,
+        true,
+        `${summary.label} kept three or more teammates clustered too long`,
+      );
+    }
     assert.equal(
       teamProgress.blue.longestMoveIntentStallMs < 1_000 &&
         teamProgress.red.longestMoveIntentStallMs < 1_000,

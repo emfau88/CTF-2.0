@@ -1,0 +1,2154 @@
+{
+  "schemaVersion": 1,
+  "runId": "2026-06-24T17-53-17-954Z",
+  "timestamp": "2026-06-24T17:53:17.954Z",
+  "git": {
+    "branch": "codex/gameplay-core-v2",
+    "commit": "c4ced7b",
+    "dirty": true,
+    "statusShort": "M index.html\n M scripts/run-bot-diagnostics.ts\n M src/adapters/phaser/PhaserArenaRendererPort.ts\n M src/adapters/phaser/PhaserGameBridge.smoke.ts\n M src/adapters/phaser/scenes/GameplayV2Scene.ts\n M src/core/actors/ActorLifecycleConfig.ts\n M src/core/bots/ArenaBotControllerGroup.ts\n M src/core/bots/TdmBotController.ts\n M src/core/index.ts\n M src/core/movement/CollisionConfig.ts\n M src/core/movement/applyWorldCollision.ts\n M src/core/movement/collisionTypes.ts\n M src/core/runtime/GameplayCoreRuntime.ts\n M src/core/world/worldState.ts\n M src/main.ts\n M src/styles.css\n M src/v2Menu.ts\n M tests/bot-diagnostics.ts\n M tests/bot-simulation.test.ts\n?? diagnostics/\n?? docs/BOT_AI_EXECUTION_ROADMAP.md\n?? docs/CODEX_HANDOFF_2026-06-13.md\n?? public/assets/alien-runner-mockup-128.png\n?? public/assets/alien-runner-mockup-alpha-large.png\n?? public/assets/alien-runner-mockup-source.png\n?? public/assets/alien-runner-spritesheet-4x4-preview.png\n?? public/assets/alien-runner-spritesheet-alpha-large.png\n?? public/assets/alien-runner-spritesheet-source.png\n?? public/assets/arena-characters-indexed-preview.png\n?? public/assets/arena-runner-downright-spritesheet.png\n?? public/assets/riot-droid-spritesheet-6x4-preview.png\n?? public/assets/riot-droid-spritesheet-alpha-large.png\n?? public/assets/riot-droid-spritesheet-source.png\n?? src/core/stats/"
+  },
+  "diagnosticsConfig": {
+    "command": "npm.cmd run bot:diagnostics",
+    "frameDeltaMs": 34,
+    "seed": null,
+    "seedStatus": "not_available",
+    "scenarios": [
+      {
+        "label": "TDM Training Crossing 1v1",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 1,
+        "durationMs": 18020,
+        "frames": 530
+      },
+      {
+        "label": "TDM Training Crossing 2v2",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 2,
+        "durationMs": 18020,
+        "frames": 530
+      },
+      {
+        "label": "TDM Training Crossing 3v3",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 3,
+        "durationMs": 18020,
+        "frames": 530
+      },
+      {
+        "label": "TDM Training Crossing 4v4",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 4,
+        "durationMs": 18020,
+        "frames": 530
+      },
+      {
+        "label": "Classic CTF Flank Switch 1v1",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 1,
+        "durationMs": 22032,
+        "frames": 648
+      },
+      {
+        "label": "Classic CTF Flank Switch 2v2",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 2,
+        "durationMs": 22032,
+        "frames": 648
+      },
+      {
+        "label": "Classic CTF Flank Switch 3v3",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 3,
+        "durationMs": 22032,
+        "frames": 648
+      },
+      {
+        "label": "Classic CTF Flank Switch 4v4",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 4,
+        "durationMs": 22032,
+        "frames": 648
+      },
+      {
+        "label": "One Flag Grand Archive 1v1",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 1,
+        "durationMs": 18020,
+        "frames": 530
+      },
+      {
+        "label": "One Flag Grand Archive 2v2",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 2,
+        "durationMs": 18020,
+        "frames": 530
+      },
+      {
+        "label": "One Flag Grand Archive 3v3",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 3,
+        "durationMs": 18020,
+        "frames": 530
+      },
+      {
+        "label": "One Flag Grand Archive 4v4",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 4,
+        "durationMs": 18020,
+        "frames": 530
+      }
+    ],
+    "detailedOneFlag": {
+      "mode": "one-flag",
+      "map": "grand-archive-v2",
+      "teamSize": 2,
+      "durationMs": 18000,
+      "frames": 530
+    },
+    "scenarioBaselines": {
+      "oneFlagEscortCarrier": {
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "durationMs": 3400,
+        "frames": 100
+      },
+      "classicCtfOwnFlagStolen": {
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "durationMs": 1360,
+        "frames": 40
+      },
+      "tdmLowHealthVsEnemy": {
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "durationMs": 1700,
+        "frames": 50
+      }
+    }
+  },
+  "reports": {
+    "stdout": "Bot Simulation Matrix\nscenario | durationMs | ended | scoreEvents | basicShots | pickups | specialShots | clusteredFrames | flagPickups | flagCaptures | invalidFrames | idleFrames | bestBlueProgress | bestRedProgress | blueTravel | redTravel | blueHoldMs | redHoldMs | blueMoveStallMs | redMoveStallMs\nTDM Training Crossing 1v1 | 18020 | false | 3 | 4/4 | 2/5 | 8/2 | 0/0 | 0 | 0 | 0 | 0 | 1033.4 | 1035.0 | 1219.9 | 1396.4 | 12648 | 612 | 0 | 34\nTDM Training Crossing 2v2 | 18020 | false | 3 | 10/8 | 5/5 | 7/3 | 0/0 | 0 | 0 | 0 | 0 | 1153.1 | 1158.8 | 1931.6 | 1999.7 | 10302 | 6086 | 34 | 68\nTDM Training Crossing 3v3 | 18020 | false | 6 | 14/12 | 5/5 | 10/2 | 269/57 | 0 | 0 | 0 | 0 | 1153.3 | 1121.1 | 2127.9 | 1805.8 | 12410 | 6290 | 34 | 34\nTDM Training Crossing 4v4 | 18020 | false | 8 | 18/17 | 5/6 | 7/5 | 104/105 | 0 | 0 | 0 | 0 | 1003.3 | 1068.9 | 2618.0 | 2240.6 | 12070 | 9520 | 34 | 34\nClassic CTF Flank Switch 1v1 | 22032 | false | 2 | 2/2 | 3/2 | 2/2 | 0/0 | 2 | 2 | 0 | 0 | 2156.0 | 2156.0 | 4858.0 | 4857.9 | 0 | 0 | 34 | 34\nClassic CTF Flank Switch 2v2 | 22032 | false | 0 | 5/6 | 7/6 | 5/6 | 0/0 | 0 | 0 | 0 | 0 | 2062.0 | 1867.8 | 6040.7 | 6109.5 | 102 | 578 | 0 | 34\nClassic CTF Flank Switch 3v3 | 22032 | false | 0 | 10/11 | 7/6 | 6/7 | 23/24 | 0 | 0 | 0 | 0 | 2062.0 | 1867.8 | 6040.7 | 6109.5 | 102 | 578 | 34 | 34\nClassic CTF Flank Switch 4v4 | 22032 | false | 1 | 19/12 | 7/5 | 14/3 | 384/147 | 1 | 1 | 0 | 0 | 2155.6 | 2106.3 | 4850.5 | 5651.7 | 2108 | 918 | 68 | 34\nOne Flag Grand Archive 1v1 | 18020 | false | 1 | 3/3 | 1/2 | 0/0 | 0/0 | 2 | 1 | 0 | 0 | 1088.6 | 1088.6 | 3648.0 | 3726.5 | 952 | 0 | 102 | 0\nOne Flag Grand Archive 2v2 | 18020 | false | 1 | 6/5 | 1/3 | 0/0 | 0/0 | 2 | 1 | 0 | 0 | 1088.6 | 1096.7 | 3548.8 | 4052.4 | 1394 | 0 | 5814 | 0\nOne Flag Grand Archive 3v3 | 18020 | false | 1 | 6/9 | 3/4 | 5/3 | 42/120 | 3 | 1 | 0 | 0 | 1086.6 | 1096.7 | 3814.9 | 4508.8 | 374 | 34 | 5814 | 34\nOne Flag Grand Archive 4v4 | 18020 | false | 1 | 14/14 | 2/4 | 3/6 | 180/208 | 2 | 1 | 0 | 0 | 1026.7 | 1093.2 | 3772.4 | 4201.8 | 1054 | 408 | 5814 | 34\n\nOne Flag Grand Archive Navigator Report\nmode=one-flag map=grand-archive-v2 teamSize=2 flagPickups=2 flagCaptures=1 invalidFrames=0 idleFrames=0\nblockedGoalKinds=escort-carrier:78, chase-enemy-carrier:12 blockedGoalCells=escort-carrier@22,9:9, escort-carrier@39,9:8, escort-carrier@42,5:8, escort-carrier@21,7:7, escort-carrier@39,8:7, escort-carrier@40,7:7\ntimeline=6086:flagPickedUp:red:red-player-2, 11968:flagCaptured:red:red-player-2, 16932:flagPickedUp:blue:blue-player\nactor | repaths | pathMisses | goalSwitches | blockedGoalFrames | noProgressMs | sameCellMs | dynamicProjectionCount | avgProjection | maxProjection | standoff | goalKinds\nblue-player | 17 | 0 | 3 | 0 | 1360 | 1496 | 3 | 224.0 | 224.0 | hold:41, pursue:40, close:5 | take-center-flag:293, chase-enemy-carrier:86, capture-flag:32\nblue-player-2 | 10 | 0 | 3 | 0 | 4930 | 6460 | 33 | 65.0 | 224.0 | pursue:62, close:36 | take-center-flag:281, chase-enemy-carrier:98, escort-carrier:32\nred-player | 18 | 0 | 2 | 0 | 680 | 204 | 51 | 48.6 | 176.0 | none | take-center-flag:302, escort-carrier:59\nred-player-2 | 38 | 0 | 2 | 0 | 748 | 238 | 0 | 0.0 | 0.0 | none | take-center-flag:312, capture-flag:173",
+    "matrix": [
+      {
+        "label": "TDM Training Crossing 1v1",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 1,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 3,
+        "flagPickups": 0,
+        "flagCaptures": 0,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 0,
+          "red": 0
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1033.3827650253031,
+            "highestTravelDistance": 1219.9139241068572,
+            "longestStationaryMs": 4216,
+            "longestMoveIntentStallMs": 0,
+            "intentionalHoldMs": 12648,
+            "inactiveMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 8
+          },
+          "red": {
+            "bestDistanceReduction": 1035.0046989763036,
+            "highestTravelDistance": 1396.3994520255183,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 612,
+            "inactiveMs": 12036,
+            "basicShots": 4,
+            "pickupCollections": 5,
+            "specialWeaponShots": 2
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1200.3200296323494,
+            "minimumDistanceToObjective": 166.93726460704616,
+            "bestDistanceReduction": 1033.3827650253031,
+            "totalTravelDistance": 1219.9139241068572,
+            "longestStationaryMs": 4216,
+            "intentionalHoldMs": 12648,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 8
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1199.6820899903314,
+            "minimumDistanceToObjective": 164.6773910140278,
+            "bestDistanceReduction": 1035.0046989763036,
+            "totalTravelDistance": 1396.3994520255183,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 612,
+            "inactiveMs": 12036,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 5,
+            "specialWeaponShots": 2
+          }
+        ]
+      },
+      {
+        "label": "TDM Training Crossing 2v2",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 2,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 3,
+        "flagPickups": 0,
+        "flagCaptures": 0,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 0,
+          "red": 0
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1153.1205167771734,
+            "highestTravelDistance": 1931.5804675156987,
+            "longestStationaryMs": 7378,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 10302,
+            "inactiveMs": 0,
+            "basicShots": 10,
+            "pickupCollections": 5,
+            "specialWeaponShots": 7
+          },
+          "red": {
+            "bestDistanceReduction": 1158.8461768238737,
+            "highestTravelDistance": 1999.6727972053457,
+            "longestStationaryMs": 6902,
+            "longestMoveIntentStallMs": 68,
+            "intentionalHoldMs": 6086,
+            "inactiveMs": 8024,
+            "basicShots": 8,
+            "pickupCollections": 5,
+            "specialWeaponShots": 3
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1161.836009356154,
+            "minimumDistanceToObjective": 8.71549257898044,
+            "bestDistanceReduction": 1153.1205167771734,
+            "totalTravelDistance": 1611.7438593525756,
+            "longestStationaryMs": 7378,
+            "intentionalHoldMs": 10302,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 5,
+            "pickupCollections": 3,
+            "specialWeaponShots": 7
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1120.6050602087792,
+            "minimumDistanceToObjective": 158.04159458744522,
+            "bestDistanceReduction": 962.563465621334,
+            "totalTravelDistance": 1931.5804675156987,
+            "longestStationaryMs": 5236,
+            "intentionalHoldMs": 9146,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 5,
+            "pickupCollections": 2,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1160.6292062721,
+            "minimumDistanceToObjective": 1.7830294482261742,
+            "bestDistanceReduction": 1158.8461768238737,
+            "totalTravelDistance": 1999.6727972053457,
+            "longestStationaryMs": 5848,
+            "intentionalHoldMs": 6086,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 68,
+            "basicShots": 4,
+            "pickupCollections": 3,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 1119.396975882396,
+            "minimumDistanceToObjective": 20.49536770132221,
+            "bestDistanceReduction": 1098.9016081810737,
+            "totalTravelDistance": 1811.1463115915803,
+            "longestStationaryMs": 6902,
+            "intentionalHoldMs": 4522,
+            "inactiveMs": 8024,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 2
+          }
+        ]
+      },
+      {
+        "label": "TDM Training Crossing 3v3",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 3,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 6,
+        "flagPickups": 0,
+        "flagCaptures": 0,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 269,
+          "red": 57
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1153.3390512698224,
+            "highestTravelDistance": 2127.862167640271,
+            "longestStationaryMs": 4862,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 12410,
+            "inactiveMs": 0,
+            "basicShots": 14,
+            "pickupCollections": 5,
+            "specialWeaponShots": 10
+          },
+          "red": {
+            "bestDistanceReduction": 1121.1256874554758,
+            "highestTravelDistance": 1805.8175242759748,
+            "longestStationaryMs": 6698,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 6290,
+            "inactiveMs": 8024,
+            "basicShots": 12,
+            "pickupCollections": 5,
+            "specialWeaponShots": 2
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1159.6879944783745,
+            "minimumDistanceToObjective": 6.348943208552146,
+            "bestDistanceReduction": 1153.3390512698224,
+            "totalTravelDistance": 1670.2258392798476,
+            "longestStationaryMs": 4828,
+            "intentionalHoldMs": 10506,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 5,
+            "pickupCollections": 3,
+            "specialWeaponShots": 9
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1120.6050602087792,
+            "minimumDistanceToObjective": 153.98027894469524,
+            "bestDistanceReduction": 966.6247812640839,
+            "totalTravelDistance": 2127.862167640271,
+            "longestStationaryMs": 4862,
+            "intentionalHoldMs": 8330,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-3",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1118.3957265803654,
+            "minimumDistanceToObjective": 97.81864450721727,
+            "bestDistanceReduction": 1020.5770820731481,
+            "totalTravelDistance": 1256.484540209529,
+            "longestStationaryMs": 3230,
+            "intentionalHoldMs": 12410,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 5,
+            "pickupCollections": 1,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1160.044511706842,
+            "minimumDistanceToObjective": 38.91882425136614,
+            "bestDistanceReduction": 1121.1256874554758,
+            "totalTravelDistance": 1443.7642578360403,
+            "longestStationaryMs": 6698,
+            "intentionalHoldMs": 4760,
+            "inactiveMs": 8024,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 1,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 1119.396975882396,
+            "minimumDistanceToObjective": 6.348943208552146,
+            "bestDistanceReduction": 1113.0480326738439,
+            "totalTravelDistance": 1805.8175242759748,
+            "longestStationaryMs": 5270,
+            "intentionalHoldMs": 4556,
+            "inactiveMs": 8024,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-3",
+            "teamId": "red",
+            "initialDistanceToObjective": 1118.7916096050544,
+            "minimumDistanceToObjective": 58.464555630399516,
+            "bestDistanceReduction": 1060.327053974655,
+            "totalTravelDistance": 1426.4583488488092,
+            "longestStationaryMs": 5236,
+            "intentionalHoldMs": 6290,
+            "inactiveMs": 6018,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 0
+          }
+        ]
+      },
+      {
+        "label": "TDM Training Crossing 4v4",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "teamSize": 4,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 8,
+        "flagPickups": 0,
+        "flagCaptures": 0,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 104,
+          "red": 105
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1003.3189827568187,
+            "highestTravelDistance": 2618.049731667012,
+            "longestStationaryMs": 8976,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 12070,
+            "inactiveMs": 4012,
+            "basicShots": 18,
+            "pickupCollections": 5,
+            "specialWeaponShots": 7
+          },
+          "red": {
+            "bestDistanceReduction": 1068.8651071287236,
+            "highestTravelDistance": 2240.6138160109904,
+            "longestStationaryMs": 9078,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 9520,
+            "inactiveMs": 4012,
+            "basicShots": 17,
+            "pickupCollections": 6,
+            "specialWeaponShots": 5
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1120.5153861878316,
+            "minimumDistanceToObjective": 170.50061852896536,
+            "bestDistanceReduction": 950.0147676588663,
+            "totalTravelDistance": 1852.294575984989,
+            "longestStationaryMs": 8194,
+            "intentionalHoldMs": 8534,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 7
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1081.8358738324098,
+            "minimumDistanceToObjective": 78.51689107559099,
+            "bestDistanceReduction": 1003.3189827568187,
+            "totalTravelDistance": 2618.049731667012,
+            "longestStationaryMs": 5134,
+            "intentionalHoldMs": 3468,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-3",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1081.992750272741,
+            "minimumDistanceToObjective": 152.9026499690416,
+            "bestDistanceReduction": 929.0901003036994,
+            "totalTravelDistance": 795.700617537752,
+            "longestStationaryMs": 8976,
+            "intentionalHoldMs": 12070,
+            "inactiveMs": 2482,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 5,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-4",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1040.5154678666906,
+            "minimumDistanceToObjective": 70.0112078904107,
+            "bestDistanceReduction": 970.50425997628,
+            "totalTravelDistance": 1899.088720545338,
+            "longestStationaryMs": 7004,
+            "intentionalHoldMs": 7140,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 5,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1121.1506529213698,
+            "minimumDistanceToObjective": 162.25936314229247,
+            "bestDistanceReduction": 958.8912897790773,
+            "totalTravelDistance": 1500.751989472222,
+            "longestStationaryMs": 8908,
+            "intentionalHoldMs": 9044,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 1,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 1082.4903115337727,
+            "minimumDistanceToObjective": 13.62520440504918,
+            "bestDistanceReduction": 1068.8651071287236,
+            "totalTravelDistance": 2004.3423096289002,
+            "longestStationaryMs": 8704,
+            "intentionalHoldMs": 7276,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 1,
+            "specialWeaponShots": 4
+          },
+          {
+            "actorId": "red-player-3",
+            "teamId": "red",
+            "initialDistanceToObjective": 1082.6071718023275,
+            "minimumDistanceToObjective": 94.46217901295226,
+            "bestDistanceReduction": 988.1449927893752,
+            "totalTravelDistance": 2240.6138160109904,
+            "longestStationaryMs": 9078,
+            "intentionalHoldMs": 5576,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 5,
+            "pickupCollections": 2,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player-4",
+            "teamId": "red",
+            "initialDistanceToObjective": 1041.150698245122,
+            "minimumDistanceToObjective": 145.8608685735036,
+            "bestDistanceReduction": 895.2898296716183,
+            "totalTravelDistance": 1527.1885866179882,
+            "longestStationaryMs": 7922,
+            "intentionalHoldMs": 9520,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 0
+          }
+        ]
+      },
+      {
+        "label": "Classic CTF Flank Switch 1v1",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 1,
+        "durationMs": 22032,
+        "frames": 648,
+        "matchEnded": false,
+        "scoreEvents": 2,
+        "flagPickups": 2,
+        "flagCaptures": 2,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 0,
+          "red": 0
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 2155.9999152635296,
+            "highestTravelDistance": 4857.9813889237785,
+            "longestStationaryMs": 34,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "basicShots": 2,
+            "pickupCollections": 3,
+            "specialWeaponShots": 2
+          },
+          "red": {
+            "bestDistanceReduction": 2155.9999152635296,
+            "highestTravelDistance": 4857.913069790789,
+            "longestStationaryMs": 34,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "basicShots": 2,
+            "pickupCollections": 2,
+            "specialWeaponShots": 2
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 24.000084736470587,
+            "bestDistanceReduction": 2155.9999152635296,
+            "totalTravelDistance": 4857.9813889237785,
+            "longestStationaryMs": 34,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 2,
+            "pickupCollections": 3,
+            "specialWeaponShots": 2
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 24.00008473647053,
+            "bestDistanceReduction": 2155.9999152635296,
+            "totalTravelDistance": 4857.913069790789,
+            "longestStationaryMs": 34,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 2,
+            "pickupCollections": 2,
+            "specialWeaponShots": 2
+          }
+        ]
+      },
+      {
+        "label": "Classic CTF Flank Switch 2v2",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 2,
+        "durationMs": 22032,
+        "frames": 648,
+        "matchEnded": false,
+        "scoreEvents": 0,
+        "flagPickups": 0,
+        "flagCaptures": 0,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 0,
+          "red": 0
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 2061.9604386797896,
+            "highestTravelDistance": 6040.671476070337,
+            "longestStationaryMs": 3978,
+            "longestMoveIntentStallMs": 0,
+            "intentionalHoldMs": 102,
+            "inactiveMs": 4182,
+            "basicShots": 5,
+            "pickupCollections": 7,
+            "specialWeaponShots": 5
+          },
+          "red": {
+            "bestDistanceReduction": 1867.8199389292542,
+            "highestTravelDistance": 6109.485872663267,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 578,
+            "inactiveMs": 8024,
+            "basicShots": 6,
+            "pickupCollections": 6,
+            "specialWeaponShots": 6
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 118.03956132021023,
+            "bestDistanceReduction": 2061.9604386797896,
+            "totalTravelDistance": 6040.671476070337,
+            "longestStationaryMs": 3978,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4182,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 3,
+            "specialWeaponShots": 2
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 2003.1750901694297,
+            "bestDistanceReduction": 137.53156885697695,
+            "totalTravelDistance": 4780.88328384294,
+            "longestStationaryMs": 0,
+            "intentionalHoldMs": 102,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 1,
+            "pickupCollections": 4,
+            "specialWeaponShots": 3
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 312.1800610707457,
+            "bestDistanceReduction": 1867.8199389292542,
+            "totalTravelDistance": 6109.485872663267,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 8024,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 2013.4905346974638,
+            "bestDistanceReduction": 127.2161243289429,
+            "totalTravelDistance": 4701.926893709036,
+            "longestStationaryMs": 204,
+            "intentionalHoldMs": 578,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 2,
+            "pickupCollections": 4,
+            "specialWeaponShots": 5
+          }
+        ]
+      },
+      {
+        "label": "Classic CTF Flank Switch 3v3",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 3,
+        "durationMs": 22032,
+        "frames": 648,
+        "matchEnded": false,
+        "scoreEvents": 0,
+        "flagPickups": 0,
+        "flagCaptures": 0,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 23,
+          "red": 24
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 2061.9604386797896,
+            "highestTravelDistance": 6040.671476070337,
+            "longestStationaryMs": 3978,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 102,
+            "inactiveMs": 4182,
+            "basicShots": 10,
+            "pickupCollections": 7,
+            "specialWeaponShots": 6
+          },
+          "red": {
+            "bestDistanceReduction": 1867.8199389292542,
+            "highestTravelDistance": 6109.485872663267,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 578,
+            "inactiveMs": 8024,
+            "basicShots": 11,
+            "pickupCollections": 6,
+            "specialWeaponShots": 7
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 118.03956132021023,
+            "bestDistanceReduction": 2061.9604386797896,
+            "totalTravelDistance": 6040.671476070337,
+            "longestStationaryMs": 3978,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4182,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 3,
+            "specialWeaponShots": 3
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 2003.1750901694297,
+            "bestDistanceReduction": 137.53156885697695,
+            "totalTravelDistance": 4780.88328384294,
+            "longestStationaryMs": 0,
+            "intentionalHoldMs": 102,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 1,
+            "pickupCollections": 4,
+            "specialWeaponShots": 3
+          },
+          {
+            "actorId": "blue-player-3",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 1232.6145630568772,
+            "bestDistanceReduction": 908.0920959695295,
+            "totalTravelDistance": 3427.1257250782746,
+            "longestStationaryMs": 3978,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 5,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 312.1800610707457,
+            "bestDistanceReduction": 1867.8199389292542,
+            "totalTravelDistance": 6109.485872663267,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 8024,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 2,
+            "specialWeaponShots": 2
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 2013.4905346974638,
+            "bestDistanceReduction": 127.2161243289429,
+            "totalTravelDistance": 4701.926893709036,
+            "longestStationaryMs": 204,
+            "intentionalHoldMs": 578,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 2,
+            "pickupCollections": 4,
+            "specialWeaponShots": 5
+          },
+          {
+            "actorId": "red-player-3",
+            "teamId": "red",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 1234.8429151038295,
+            "bestDistanceReduction": 905.8637439225772,
+            "totalTravelDistance": 4101.107632197688,
+            "longestStationaryMs": 3978,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 5,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          }
+        ]
+      },
+      {
+        "label": "Classic CTF Flank Switch 4v4",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "teamSize": 4,
+        "durationMs": 22032,
+        "frames": 648,
+        "matchEnded": false,
+        "scoreEvents": 1,
+        "flagPickups": 1,
+        "flagCaptures": 1,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 384,
+          "red": 147
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 2155.6294594653077,
+            "highestTravelDistance": 4850.493111658265,
+            "longestStationaryMs": 986,
+            "longestMoveIntentStallMs": 68,
+            "intentionalHoldMs": 2108,
+            "inactiveMs": 0,
+            "basicShots": 19,
+            "pickupCollections": 7,
+            "specialWeaponShots": 14
+          },
+          "red": {
+            "bestDistanceReduction": 2106.2611101639313,
+            "highestTravelDistance": 5651.677254411107,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 918,
+            "inactiveMs": 8024,
+            "basicShots": 12,
+            "pickupCollections": 5,
+            "specialWeaponShots": 3
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 24.370540534692317,
+            "bestDistanceReduction": 2155.6294594653077,
+            "totalTravelDistance": 4782.967008311627,
+            "longestStationaryMs": 34,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 6,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 165.06935845097757,
+            "bestDistanceReduction": 1975.637300575429,
+            "totalTravelDistance": 4277.732741003081,
+            "longestStationaryMs": 986,
+            "intentionalHoldMs": 2108,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 68,
+            "basicShots": 3,
+            "pickupCollections": 4,
+            "specialWeaponShots": 7
+          },
+          {
+            "actorId": "blue-player-3",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 24.527174990338697,
+            "bestDistanceReduction": 2116.179484036068,
+            "totalTravelDistance": 3754.7286055196037,
+            "longestStationaryMs": 34,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-4",
+            "teamId": "blue",
+            "initialDistanceToObjective": 2100,
+            "minimumDistanceToObjective": 22.82073089235666,
+            "bestDistanceReduction": 2077.1792691076434,
+            "totalTravelDistance": 4850.493111658265,
+            "longestStationaryMs": 34,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 6,
+            "pickupCollections": 3,
+            "specialWeaponShots": 7
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 2180,
+            "minimumDistanceToObjective": 73.73888983606888,
+            "bestDistanceReduction": 2106.2611101639313,
+            "totalTravelDistance": 5651.677254411107,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4454,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 1137.0040496514284,
+            "bestDistanceReduction": 1003.7026093749782,
+            "totalTravelDistance": 3837.4221649566266,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 918,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 1,
+            "pickupCollections": 3,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-3",
+            "teamId": "red",
+            "initialDistanceToObjective": 2140.7066590264067,
+            "minimumDistanceToObjective": 934.0695756405416,
+            "bestDistanceReduction": 1206.637083385865,
+            "totalTravelDistance": 4888.608931612291,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 8024,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 4,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player-4",
+            "teamId": "red",
+            "initialDistanceToObjective": 2100,
+            "minimumDistanceToObjective": 311.56302254235754,
+            "bestDistanceReduction": 1788.4369774576426,
+            "totalTravelDistance": 5295.560494018493,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 6188,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 3,
+            "pickupCollections": 2,
+            "specialWeaponShots": 2
+          }
+        ]
+      },
+      {
+        "label": "One Flag Grand Archive 1v1",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 1,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 1,
+        "flagPickups": 2,
+        "flagCaptures": 1,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 0,
+          "red": 0
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1088.6267024338692,
+            "highestTravelDistance": 3647.95022177194,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 102,
+            "intentionalHoldMs": 952,
+            "inactiveMs": 4046,
+            "basicShots": 3,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          "red": {
+            "bestDistanceReduction": 1088.6238113341108,
+            "highestTravelDistance": 3726.455650516895,
+            "longestStationaryMs": 1190,
+            "longestMoveIntentStallMs": 0,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 1190,
+            "basicShots": 3,
+            "pickupCollections": 2,
+            "specialWeaponShots": 0
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 16.373297566130706,
+            "bestDistanceReduction": 1088.6267024338692,
+            "totalTravelDistance": 3647.95022177194,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 952,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 102,
+            "basicShots": 3,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 16.37618866588927,
+            "bestDistanceReduction": 1088.6238113341108,
+            "totalTravelDistance": 3726.455650516895,
+            "longestStationaryMs": 1190,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 1190,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 3,
+            "pickupCollections": 2,
+            "specialWeaponShots": 0
+          }
+        ]
+      },
+      {
+        "label": "One Flag Grand Archive 2v2",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 2,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 1,
+        "flagPickups": 2,
+        "flagCaptures": 1,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 0,
+          "red": 0
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1088.6267023315204,
+            "highestTravelDistance": 3548.805424966478,
+            "longestStationaryMs": 5814,
+            "longestMoveIntentStallMs": 5814,
+            "intentionalHoldMs": 1394,
+            "inactiveMs": 4046,
+            "basicShots": 6,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          "red": {
+            "bestDistanceReduction": 1096.7280535836326,
+            "highestTravelDistance": 4052.434916672291,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 0,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 5746,
+            "basicShots": 5,
+            "pickupCollections": 3,
+            "specialWeaponShots": 0
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 16.37329766847958,
+            "bestDistanceReduction": 1088.6267023315204,
+            "totalTravelDistance": 3548.805424966478,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 1394,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 102,
+            "basicShots": 3,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 99.94611049652998,
+            "bestDistanceReduction": 966.4731316404449,
+            "totalTravelDistance": 2586.315955060572,
+            "longestStationaryMs": 5814,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 5814,
+            "basicShots": 3,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 8.27194641636736,
+            "bestDistanceReduction": 1096.7280535836326,
+            "totalTravelDistance": 4052.434916672291,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 5746,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 2,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 16.374706964806528,
+            "bestDistanceReduction": 1050.0445351721683,
+            "totalTravelDistance": 3653.3182559054267,
+            "longestStationaryMs": 1530,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 1530,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 3,
+            "pickupCollections": 2,
+            "specialWeaponShots": 0
+          }
+        ]
+      },
+      {
+        "label": "One Flag Grand Archive 3v3",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 3,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 1,
+        "flagPickups": 3,
+        "flagCaptures": 1,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 42,
+          "red": 120
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1086.6294813554675,
+            "highestTravelDistance": 3814.882031911228,
+            "longestStationaryMs": 5814,
+            "longestMoveIntentStallMs": 5814,
+            "intentionalHoldMs": 374,
+            "inactiveMs": 4046,
+            "basicShots": 6,
+            "pickupCollections": 3,
+            "specialWeaponShots": 5
+          },
+          "red": {
+            "bestDistanceReduction": 1096.7280535836326,
+            "highestTravelDistance": 4508.792051155637,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 34,
+            "inactiveMs": 5746,
+            "basicShots": 9,
+            "pickupCollections": 4,
+            "specialWeaponShots": 3
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 18.370518644532428,
+            "bestDistanceReduction": 1086.6294813554675,
+            "totalTravelDistance": 3814.882031911228,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 102,
+            "basicShots": 2,
+            "pickupCollections": 2,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 99.94611049652998,
+            "bestDistanceReduction": 966.4731316404449,
+            "totalTravelDistance": 2586.315955060572,
+            "longestStationaryMs": 5814,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 5814,
+            "basicShots": 1,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-3",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 16.37332805330402,
+            "bestDistanceReduction": 1050.0459140836708,
+            "totalTravelDistance": 3513.8036670821157,
+            "longestStationaryMs": 1564,
+            "intentionalHoldMs": 374,
+            "inactiveMs": 1564,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 3,
+            "pickupCollections": 1,
+            "specialWeaponShots": 4
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 8.27194641636736,
+            "bestDistanceReduction": 1096.7280535836326,
+            "totalTravelDistance": 4052.434916672291,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 5746,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 3,
+            "pickupCollections": 1,
+            "specialWeaponShots": 2
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 16.374706964806528,
+            "bestDistanceReduction": 1050.0445351721683,
+            "totalTravelDistance": 4508.792051155637,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 34,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 3,
+            "pickupCollections": 3,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-3",
+            "teamId": "red",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 11.604142426934466,
+            "bestDistanceReduction": 1054.8150997100404,
+            "totalTravelDistance": 4026.5447448474933,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 5644,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 3,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          }
+        ]
+      },
+      {
+        "label": "One Flag Grand Archive 4v4",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 4,
+        "durationMs": 18020,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 1,
+        "flagPickups": 2,
+        "flagCaptures": 1,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 180,
+          "red": 208
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1026.7477565978782,
+            "highestTravelDistance": 3772.398209033937,
+            "longestStationaryMs": 5814,
+            "longestMoveIntentStallMs": 5814,
+            "intentionalHoldMs": 1054,
+            "inactiveMs": 4046,
+            "basicShots": 14,
+            "pickupCollections": 2,
+            "specialWeaponShots": 3
+          },
+          "red": {
+            "bestDistanceReduction": 1093.1884072290197,
+            "highestTravelDistance": 4201.795880114767,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "intentionalHoldMs": 408,
+            "inactiveMs": 5678,
+            "basicShots": 14,
+            "pickupCollections": 4,
+            "specialWeaponShots": 6
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 111.43186485882717,
+            "bestDistanceReduction": 993.5681351411729,
+            "totalTravelDistance": 3626.377059427104,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 1054,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 102,
+            "basicShots": 4,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 99.95048953557642,
+            "bestDistanceReduction": 966.4687526013984,
+            "totalTravelDistance": 2586.315955060572,
+            "longestStationaryMs": 5814,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 5814,
+            "basicShots": 3,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-3",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 39.67148553909667,
+            "bestDistanceReduction": 1026.7477565978782,
+            "totalTravelDistance": 3577.0702663286916,
+            "longestStationaryMs": 3978,
+            "intentionalHoldMs": 204,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 3,
+            "pickupCollections": 1,
+            "specialWeaponShots": 3
+          },
+          {
+            "actorId": "blue-player-4",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1025,
+            "minimumDistanceToObjective": 16.373279037493557,
+            "bestDistanceReduction": 1008.6267209625064,
+            "totalTravelDistance": 3772.398209033937,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 11.811592770980347,
+            "bestDistanceReduction": 1093.1884072290197,
+            "totalTravelDistance": 4201.795880114767,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 408,
+            "inactiveMs": 4012,
+            "longestMoveIntentStallMs": 34,
+            "basicShots": 2,
+            "pickupCollections": 1,
+            "specialWeaponShots": 1
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 23.22111092008662,
+            "bestDistanceReduction": 1043.1981312168882,
+            "totalTravelDistance": 3459.17004038434,
+            "longestStationaryMs": 2448,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 2448,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 4,
+            "pickupCollections": 1,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player-3",
+            "teamId": "red",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 17.634611419364,
+            "bestDistanceReduction": 1048.7846307176108,
+            "totalTravelDistance": 4020.941590066919,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 5678,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 3,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player-4",
+            "teamId": "red",
+            "initialDistanceToObjective": 1025,
+            "minimumDistanceToObjective": 16.37474144996545,
+            "bestDistanceReduction": 1008.6252585500346,
+            "totalTravelDistance": 3993.111912077969,
+            "longestStationaryMs": 0,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 0,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 5,
+            "pickupCollections": 2,
+            "specialWeaponShots": 5
+          }
+        ]
+      }
+    ],
+    "oneFlag": {
+      "summary": {
+        "label": "One Flag Grand Archive Detailed 2v2",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "teamSize": 2,
+        "durationMs": 18000,
+        "frames": 530,
+        "matchEnded": false,
+        "scoreEvents": 1,
+        "flagPickups": 2,
+        "flagCaptures": 1,
+        "invalidPositionFrames": 0,
+        "idleActionFrames": 0,
+        "clusteredFrames": {
+          "blue": 0,
+          "red": 0
+        },
+        "teamMetrics": {
+          "blue": {
+            "bestDistanceReduction": 1088.6267023315204,
+            "highestTravelDistance": 3548.805424966478,
+            "longestStationaryMs": 5814,
+            "longestMoveIntentStallMs": 0,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "basicShots": 0,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          "red": {
+            "bestDistanceReduction": 1096.7280535836326,
+            "highestTravelDistance": 4052.434916672291,
+            "longestStationaryMs": 4012,
+            "longestMoveIntentStallMs": 0,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 5746,
+            "basicShots": 0,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          }
+        },
+        "actors": [
+          {
+            "actorId": "blue-player",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 16.37329766847958,
+            "bestDistanceReduction": 1088.6267023315204,
+            "totalTravelDistance": 3548.805424966478,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 0,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "blue-player-2",
+            "teamId": "blue",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 99.94611049652998,
+            "bestDistanceReduction": 966.4731316404449,
+            "totalTravelDistance": 2586.315955060572,
+            "longestStationaryMs": 5814,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 4046,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 0,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player",
+            "teamId": "red",
+            "initialDistanceToObjective": 1105,
+            "minimumDistanceToObjective": 8.27194641636736,
+            "bestDistanceReduction": 1096.7280535836326,
+            "totalTravelDistance": 4052.434916672291,
+            "longestStationaryMs": 4012,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 5746,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 0,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          },
+          {
+            "actorId": "red-player-2",
+            "teamId": "red",
+            "initialDistanceToObjective": 1066.4192421369748,
+            "minimumDistanceToObjective": 16.374706964806528,
+            "bestDistanceReduction": 1050.0445351721683,
+            "totalTravelDistance": 3653.3182559054267,
+            "longestStationaryMs": 1530,
+            "intentionalHoldMs": 0,
+            "inactiveMs": 1530,
+            "longestMoveIntentStallMs": 0,
+            "basicShots": 0,
+            "pickupCollections": 0,
+            "specialWeaponShots": 0
+          }
+        ]
+      },
+      "blockedGoalFramesByKind": {
+        "escort-carrier": 78,
+        "chase-enemy-carrier": 12
+      },
+      "blockedGoalFramesByCell": {
+        "escort-carrier@39,10": 2,
+        "escort-carrier@39,9": 8,
+        "escort-carrier@39,8": 7,
+        "escort-carrier@39,7": 3,
+        "escort-carrier@40,7": 7,
+        "escort-carrier@40,6": 4,
+        "escort-carrier@41,6": 2,
+        "escort-carrier@41,5": 7,
+        "escort-carrier@42,5": 8,
+        "escort-carrier@43,5": 3,
+        "chase-enemy-carrier@43,4": 2,
+        "chase-enemy-carrier@44,3": 4,
+        "chase-enemy-carrier@50,3": 2,
+        "chase-enemy-carrier@50,4": 4,
+        "escort-carrier@22,9": 9,
+        "escort-carrier@22,8": 5,
+        "escort-carrier@21,8": 4,
+        "escort-carrier@21,7": 7,
+        "escort-carrier@21,6": 2
+      },
+      "takeCenterBlockedFrames": 0,
+      "chaseBlockedFrames": 12,
+      "timeline": [
+        {
+          "timeMs": 6086,
+          "type": "flagPickedUp",
+          "actorId": "red-player-2",
+          "teamId": "red"
+        },
+        {
+          "timeMs": 11968,
+          "type": "flagCaptured",
+          "actorId": "red-player-2",
+          "teamId": "red"
+        },
+        {
+          "timeMs": 16932,
+          "type": "flagPickedUp",
+          "actorId": "blue-player",
+          "teamId": "blue"
+        }
+      ],
+      "movementByActor": [
+        {
+          "actorId": "blue-player",
+          "teamId": "blue",
+          "initialDistanceToObjective": 1105,
+          "minimumDistanceToObjective": 16.37329766847958,
+          "bestDistanceReduction": 1088.6267023315204,
+          "totalTravelDistance": 3548.805424966478,
+          "longestStationaryMs": 4012,
+          "intentionalHoldMs": 0,
+          "inactiveMs": 4046,
+          "longestMoveIntentStallMs": 0,
+          "basicShots": 0,
+          "pickupCollections": 0,
+          "specialWeaponShots": 0,
+          "repathCount": 17,
+          "pathMissCount": 0,
+          "blockedGoalFrames": 0,
+          "jumpFrames": 209,
+          "longestPathLength": 32,
+          "longestPathMissStreak": 0,
+          "lastGoalCell": "4,10",
+          "distinctGoalCells": [
+            "31,10",
+            "42,3",
+            "43,3",
+            "43,4",
+            "48,6",
+            "49,6",
+            "44,3",
+            "45,3",
+            "46,3",
+            "47,3",
+            "48,3",
+            "49,3",
+            "51,7",
+            "50,7",
+            "51,9",
+            "52,9",
+            "4,10"
+          ],
+          "repathReasons": {
+            "initial": 1,
+            "interval": 15,
+            "target-changed": 1
+          },
+          "goalFramesByKind": {
+            "take-center-flag": 293,
+            "chase-enemy-carrier": 86,
+            "capture-flag": 32
+          },
+          "goalSwitchCount": 3,
+          "lastGoalKind": "capture-flag",
+          "dynamicProjectionCount": 3,
+          "totalProjectionDistance": 671.9999999999999,
+          "maxProjectionDistance": 224,
+          "standoffByKey": {
+            "pursue": 40,
+            "close": 5,
+            "hold": 41
+          },
+          "longestNoProgressMs": 1360,
+          "longestSameCellMs": 1496
+        },
+        {
+          "actorId": "blue-player-2",
+          "teamId": "blue",
+          "initialDistanceToObjective": 1066.4192421369748,
+          "minimumDistanceToObjective": 99.94611049652998,
+          "bestDistanceReduction": 966.4731316404449,
+          "totalTravelDistance": 2586.315955060572,
+          "longestStationaryMs": 5814,
+          "intentionalHoldMs": 0,
+          "inactiveMs": 4046,
+          "longestMoveIntentStallMs": 0,
+          "basicShots": 0,
+          "pickupCollections": 0,
+          "specialWeaponShots": 0,
+          "repathCount": 10,
+          "pathMissCount": 0,
+          "blockedGoalFrames": 0,
+          "jumpFrames": 289,
+          "longestPathLength": 28,
+          "longestPathMissStreak": 0,
+          "lastGoalCell": "23,6",
+          "distinctGoalCells": [
+            "31,10",
+            "40,3",
+            "41,3",
+            "42,3",
+            "43,3",
+            "43,4",
+            "48,6",
+            "49,6",
+            "44,3",
+            "45,3",
+            "46,3",
+            "47,3",
+            "48,3",
+            "49,3",
+            "50,4",
+            "51,4",
+            "47,7",
+            "48,7",
+            "49,7",
+            "50,8",
+            "51,8",
+            "52,8",
+            "23,10",
+            "23,9",
+            "23,8",
+            "23,7",
+            "23,6"
+          ],
+          "repathReasons": {
+            "initial": 1,
+            "interval": 9
+          },
+          "goalFramesByKind": {
+            "take-center-flag": 281,
+            "chase-enemy-carrier": 98,
+            "escort-carrier": 32
+          },
+          "goalSwitchCount": 3,
+          "lastGoalKind": "escort-carrier",
+          "dynamicProjectionCount": 33,
+          "totalProjectionDistance": 2144,
+          "maxProjectionDistance": 224.0000000000001,
+          "standoffByKey": {
+            "pursue": 62,
+            "close": 36
+          },
+          "longestNoProgressMs": 4930,
+          "longestSameCellMs": 6460
+        },
+        {
+          "actorId": "red-player",
+          "teamId": "red",
+          "initialDistanceToObjective": 1105,
+          "minimumDistanceToObjective": 8.27194641636736,
+          "bestDistanceReduction": 1096.7280535836326,
+          "totalTravelDistance": 4052.434916672291,
+          "longestStationaryMs": 4012,
+          "intentionalHoldMs": 0,
+          "inactiveMs": 5746,
+          "longestMoveIntentStallMs": 0,
+          "basicShots": 0,
+          "pickupCollections": 0,
+          "specialWeaponShots": 0,
+          "repathCount": 18,
+          "pathMissCount": 0,
+          "blockedGoalFrames": 0,
+          "jumpFrames": 140,
+          "longestPathLength": 33,
+          "longestPathMissStreak": 0,
+          "lastGoalCell": "31,10",
+          "distinctGoalCells": [
+            "31,10",
+            "39,9",
+            "39,10",
+            "39,8",
+            "39,7",
+            "41,6",
+            "40,6",
+            "39,6",
+            "38,6",
+            "42,3",
+            "43,3"
+          ],
+          "repathReasons": {
+            "initial": 1,
+            "interval": 16,
+            "target-changed": 1
+          },
+          "goalFramesByKind": {
+            "take-center-flag": 302,
+            "escort-carrier": 59
+          },
+          "goalSwitchCount": 2,
+          "lastGoalKind": "take-center-flag",
+          "dynamicProjectionCount": 51,
+          "totalProjectionDistance": 2480,
+          "maxProjectionDistance": 175.99999999999991,
+          "standoffByKey": {},
+          "longestNoProgressMs": 680,
+          "longestSameCellMs": 204
+        },
+        {
+          "actorId": "red-player-2",
+          "teamId": "red",
+          "initialDistanceToObjective": 1066.4192421369748,
+          "minimumDistanceToObjective": 16.374706964806528,
+          "bestDistanceReduction": 1050.0445351721683,
+          "totalTravelDistance": 3653.3182559054267,
+          "longestStationaryMs": 1530,
+          "intentionalHoldMs": 0,
+          "inactiveMs": 1530,
+          "longestMoveIntentStallMs": 0,
+          "basicShots": 0,
+          "pickupCollections": 0,
+          "specialWeaponShots": 0,
+          "repathCount": 38,
+          "pathMissCount": 0,
+          "blockedGoalFrames": 0,
+          "jumpFrames": 13,
+          "longestPathLength": 32,
+          "longestPathMissStreak": 0,
+          "lastGoalCell": "31,10",
+          "distinctGoalCells": [
+            "31,10",
+            "58,10"
+          ],
+          "repathReasons": {
+            "initial": 1,
+            "interval": 35,
+            "target-changed": 2
+          },
+          "goalFramesByKind": {
+            "take-center-flag": 312,
+            "capture-flag": 173
+          },
+          "goalSwitchCount": 2,
+          "lastGoalKind": "take-center-flag",
+          "dynamicProjectionCount": 0,
+          "totalProjectionDistance": 0,
+          "maxProjectionDistance": 0,
+          "standoffByKey": {},
+          "longestNoProgressMs": 748,
+          "longestSameCellMs": 238
+        }
+      ]
+    },
+    "scenarioBaselines": {
+      "oneFlagEscortCarrier": {
+        "label": "One Flag Grand Archive Escort/Carrier Hotzone",
+        "mode": "one-flag",
+        "map": "grand-archive-v2",
+        "durationMs": 3400,
+        "frameDeltaMs": 34,
+        "blockedGoalFramesByKind": {
+          "escort-carrier": 100
+        },
+        "blockedGoalFramesByCell": {
+          "escort-carrier@39,9": 100
+        },
+        "escort": {
+          "actorId": "red-player",
+          "role": "escort",
+          "goalFramesByKind": {
+            "escort-carrier": 100
+          },
+          "blockedGoalFrames": 0,
+          "pathMissCount": 0,
+          "longestNoProgressMs": 136,
+          "longestSameCellMs": 204,
+          "dynamicProjectionCount": 100,
+          "initialDistance": 664.883743710848,
+          "minimumDistance": 2.782117308810421,
+          "finalDistance": 10.756798170032777,
+          "distanceReduction": 662.1016264020376,
+          "intent": {
+            "actorId": "red-player",
+            "mode": "one-flag",
+            "framesByIntent": {
+              "escort-carrier": 100
+            },
+            "primaryIntent": "escort-carrier",
+            "totalMeasuredFrames": 100,
+            "unmeasured": [
+              "combat_priority_score",
+              "utility_score"
+            ]
+          }
+        },
+        "chaser": {
+          "actorId": "blue-player",
+          "role": "chaser",
+          "goalFramesByKind": {
+            "chase-enemy-carrier": 51
+          },
+          "blockedGoalFrames": 0,
+          "pathMissCount": 0,
+          "longestNoProgressMs": 442,
+          "longestSameCellMs": 170,
+          "dynamicProjectionCount": 0,
+          "initialDistance": 517.3760866538815,
+          "minimumDistance": 258.6895958605366,
+          "finalDistance": 258.6895958605366,
+          "distanceReduction": 258.68649079334494,
+          "intent": {
+            "actorId": "blue-player",
+            "mode": "one-flag",
+            "framesByIntent": {
+              "chase-enemy-carrier": 51
+            },
+            "primaryIntent": "chase-enemy-carrier",
+            "totalMeasuredFrames": 51,
+            "unmeasured": [
+              "combat_priority_score",
+              "utility_score"
+            ]
+          }
+        },
+        "passHints": [
+          "escort_path_found",
+          "chaser_path_found",
+          "escort_progress",
+          "chaser_progress"
+        ]
+      },
+      "classicCtfOwnFlagStolen": {
+        "label": "Classic CTF Flank Switch Own Flag Stolen",
+        "mode": "classic-ctf",
+        "map": "flank-switch-v2",
+        "durationMs": 1360,
+        "frameDeltaMs": 34,
+        "testBot": {
+          "actorId": "red-player",
+          "carrierActorId": "blue-player",
+          "goalFramesByKind": {
+            "recover-own-flag": 40
+          },
+          "pathMissCount": 0,
+          "longestNoProgressMs": 612,
+          "longestSameCellMs": 442,
+          "initialCarrierDistance": 340,
+          "minimumCarrierDistance": 179.37660760249767,
+          "finalCarrierDistance": 179.37660760249767,
+          "carrierDistanceReduction": 160.62339239750233,
+          "travelDistance": 161.77056398806198,
+          "attackFlagFrames": 0,
+          "recoveryFrames": 40,
+          "intent": {
+            "actorId": "red-player",
+            "mode": "classic-ctf",
+            "framesByIntent": {
+              "recover-own-flag": 40
+            },
+            "primaryIntent": "recover-own-flag",
+            "totalMeasuredFrames": 40,
+            "unmeasured": [
+              "combat_priority_score",
+              "role_utility_score"
+            ]
+          }
+        },
+        "passHints": [
+          "path_found",
+          "recovery_goal_selected",
+          "carrier_distance_reduced",
+          "no_attack_flag_drift"
+        ]
+      },
+      "tdmLowHealthVsEnemy": {
+        "label": "TDM Training Crossing Low Health vs Enemy",
+        "mode": "team-deathmatch",
+        "map": "training-crossing-v2",
+        "durationMs": 1700,
+        "frameDeltaMs": 34,
+        "testBot": {
+          "actorId": "red-player",
+          "enemyActorId": "blue-player",
+          "healthPickupId": "scenario-health",
+          "pickupTargetFrames": 47,
+          "enemyTargetFrames": 3,
+          "pathMissCount": 0,
+          "longestNoProgressMs": 748,
+          "longestSameCellMs": 204,
+          "initialHealthDistance": 180,
+          "minimumHealthDistance": 30.63978397839446,
+          "finalHealthDistance": 32.25287614482863,
+          "healthDistanceReduction": 149.36021602160554,
+          "initialEnemyDistance": 420,
+          "finalEnemyDistance": 208.13264056051582,
+          "travelDistance": 350.49340261928836,
+          "pickupCollected": true,
+          "finalHealth": 74,
+          "intent": {
+            "actorId": "red-player",
+            "mode": "team-deathmatch",
+            "framesByIntent": {
+              "seek-health": 47,
+              "fight-enemy": 3
+            },
+            "primaryIntent": "seek-health",
+            "totalMeasuredFrames": 50,
+            "unmeasured": [
+              "seek-armor",
+              "seek-weapon",
+              "hold-standoff",
+              "combat_priority_score"
+            ]
+          }
+        },
+        "passHints": [
+          "path_found",
+          "pickup_prioritized",
+          "health_distance_reduced",
+          "pickup_collected",
+          "health_restored"
+        ]
+      }
+    }
+  },
+  "warnings": [
+    "One Flag Grand Archive: chase-enemy-carrier blocked frames=12",
+    "One Flag Grand Archive: blocked escort-carrier frames=78",
+    "One Flag Grand Archive: blocked chase-enemy-carrier frames=12"
+  ],
+  "passHints": [
+    "diagnostics_completed",
+    "stdout_report_generated",
+    "json_artifact_written",
+    "markdown_artifact_written",
+    "no_invalid_positions_in_matrix",
+    "no_idle_action_frames_in_matrix"
+  ],
+  "notMeasured": [
+    "damage_caused_per_bot",
+    "damage_received_per_bot",
+    "reaction_time_to_flag_event",
+    "pickup_contention_per_target",
+    "stuck_recovery_count",
+    "goal_switches_for_tdm_and_classic_ctf",
+    "browser_visual_playability",
+    "mobile_human_playtest_quality",
+    "deterministic_seed_or_replay_file"
+  ]
+}
